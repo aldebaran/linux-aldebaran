@@ -27,8 +27,7 @@ static struct stack_trace max_stack_trace = {
 };
 
 static unsigned long max_stack_size;
-static raw_spinlock_t max_stack_lock =
-	(raw_spinlock_t)__RAW_SPIN_LOCK_UNLOCKED;
+static __raw_spinlock_t max_stack_lock = __RAW_SPIN_LOCK_UNLOCKED;
 
 static int stack_trace_disabled __read_mostly;
 static DEFINE_PER_CPU(int, trace_active);
@@ -245,16 +244,31 @@ static int trace_lookup_stack(struct seq_file *m, long i)
 #endif
 }
 
+static void print_disabled(struct seq_file *m)
+{
+	seq_puts(m, "#\n"
+		 "#  Stack tracer disabled\n"
+		 "#\n"
+		 "# To enable the stack tracer, either add 'stacktrace' to the\n"
+		 "# kernel command line\n"
+		 "# or 'echo 1 > /proc/sys/kernel/stack_tracer_enabled'\n"
+		 "#\n");
+}
+
 static int t_show(struct seq_file *m, void *v)
 {
 	long i;
 	int size;
 
 	if (v == SEQ_START_TOKEN) {
-		seq_printf(m, "        Depth   Size      Location"
+		seq_printf(m, "        Depth    Size   Location"
 			   "    (%d entries)\n"
-			   "        -----   ----      --------\n",
+			   "        -----    ----   --------\n",
 			   max_stack_trace.nr_entries);
+
+		if (!stack_tracer_enabled && !max_stack_size)
+			print_disabled(m);
+
 		return 0;
 	}
 

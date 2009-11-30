@@ -18,7 +18,7 @@ void move_masked_irq(int irq)
 
 	desc->status &= ~IRQ_MOVE_PENDING;
 
-	if (unlikely(cpumask_empty(&desc->pending_mask)))
+	if (unlikely(cpumask_empty(desc->pending_mask)))
 		return;
 
 	if (!desc->chip->set_affinity)
@@ -38,18 +38,19 @@ void move_masked_irq(int irq)
 	 * For correct operation this depends on the caller
 	 * masking the irqs.
 	 */
-	if (likely(cpumask_any_and(&desc->pending_mask, cpu_online_mask)
+	if (likely(cpumask_any_and(desc->pending_mask, cpu_online_mask)
 		   < nr_cpu_ids)) {
-		cpumask_and(&desc->affinity,
-			    &desc->pending_mask, cpu_online_mask);
-		desc->chip->set_affinity(irq, &desc->affinity);
+		cpumask_and(desc->affinity,
+			    desc->pending_mask, cpu_online_mask);
+		desc->chip->set_affinity(irq, desc->affinity);
 	}
-	cpumask_clear(&desc->pending_mask);
+	cpumask_clear(desc->pending_mask);
 }
 
 void move_native_irq(int irq)
 {
 	struct irq_desc *desc = irq_to_desc(irq);
+	int mask = 1;
 
 	if (likely(!(desc->status & IRQ_MOVE_PENDING)))
 		return;
@@ -57,8 +58,17 @@ void move_native_irq(int irq)
 	if (unlikely(desc->status & IRQ_DISABLED))
 		return;
 
-	desc->chip->mask(irq);
+	/*
+	 * If the irq is already in progress, it should be masked.
+	 * If we unmask it, we might cause an interrupt storm on RT.
+	 */
+	if (unlikely(desc->status & IRQ_INPROGRESS))
+		mask = 0;
+
+	if (mask)
+		desc->chip->mask(irq);
 	move_masked_irq(irq);
-	desc->chip->unmask(irq);
+	if (mask)
+		desc->chip->unmask(irq);
 }
 

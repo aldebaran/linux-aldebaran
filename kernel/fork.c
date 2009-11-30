@@ -39,6 +39,7 @@
 #include <linux/syscalls.h>
 #include <linux/jiffies.h>
 #include <linux/tracehook.h>
+#include <linux/interrupt.h>
 #include <linux/futex.h>
 #include <linux/compat.h>
 #include <linux/task_io_accounting_ops.h>
@@ -49,6 +50,8 @@
 #include <linux/memcontrol.h>
 #include <linux/ftrace.h>
 #include <linux/profile.h>
+#include <linux/kthread.h>
+#include <linux/notifier.h>
 #include <linux/rmap.h>
 #include <linux/acct.h>
 #include <linux/tsacct_kern.h>
@@ -61,6 +64,7 @@
 #include <linux/proc_fs.h>
 #include <linux/blkdev.h>
 #include <trace/sched.h>
+#include <linux/magic.h>
 
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
@@ -79,9 +83,22 @@ int max_threads;		/* tunable limit on nr_threads */
 
 DEFINE_PER_CPU(unsigned long, process_counts) = 0;
 
+#ifdef CONFIG_PREEMPT_RT
+DEFINE_RWLOCK(tasklist_lock);  /* outer */
+#else
 __cacheline_aligned DEFINE_RWLOCK(tasklist_lock);  /* outer */
+#endif
 
 DEFINE_TRACE(sched_process_fork);
+
+/*
+ * Delayed mmdrop. In the PREEMPT_RT case we
+ * dont want to do this from the scheduling
+ * context.
+ */
+static DEFINE_PER_CPU(struct task_struct *, desched_task);
+
+static DEFINE_PER_CPU(struct list_head, delayed_drop_list);
 
 int nr_processes(void)
 {
@@ -159,6 +176,16 @@ void __put_task_struct(struct task_struct *tsk)
 		free_task(tsk);
 }
 
+#ifdef CONFIG_PREEMPT_RT
+void __put_task_struct_cb(struct rcu_head *rhp)
+{
+	struct task_struct *tsk = container_of(rhp, struct task_struct, rcu);
+
+	__put_task_struct(tsk);
+
+}
+#endif
+
 /*
  * macro override instead of weak attribute alias, to workaround
  * gcc 4.1.0 and 4.1.1 bugs with weak attribute and empty functions.
@@ -169,6 +196,8 @@ void __put_task_struct(struct task_struct *tsk)
 
 void __init fork_init(unsigned long mempages)
 {
+	int i;
+
 #ifndef __HAVE_ARCH_TASK_STRUCT_ALLOCATOR
 #ifndef ARCH_MIN_TASKALIGN
 #define ARCH_MIN_TASKALIGN	L1_CACHE_BYTES
@@ -176,7 +205,7 @@ void __init fork_init(unsigned long mempages)
 	/* create a slab on which task_structs can be allocated */
 	task_struct_cachep =
 		kmem_cache_create("task_struct", sizeof(struct task_struct),
-			ARCH_MIN_TASKALIGN, SLAB_PANIC, NULL);
+			ARCH_MIN_TASKALIGN, SLAB_PANIC | SLAB_NOTRACK, NULL);
 #endif
 
 	/* do the arch specific task caches init */
@@ -199,6 +228,9 @@ void __init fork_init(unsigned long mempages)
 	init_task.signal->rlim[RLIMIT_NPROC].rlim_max = max_threads/2;
 	init_task.signal->rlim[RLIMIT_SIGPENDING] =
 		init_task.signal->rlim[RLIMIT_NPROC];
+
+	for (i = 0; i < NR_CPUS; i++)
+		INIT_LIST_HEAD(&per_cpu(delayed_drop_list, i));
 }
 
 int __attribute__((weak)) arch_dup_task_struct(struct task_struct *dst,
@@ -212,6 +244,8 @@ static struct task_struct *dup_task_struct(struct task_struct *orig)
 {
 	struct task_struct *tsk;
 	struct thread_info *ti;
+	unsigned long *stackend;
+
 	int err;
 
 	prepare_to_copy(orig);
@@ -237,6 +271,8 @@ static struct task_struct *dup_task_struct(struct task_struct *orig)
 		goto out;
 
 	setup_thread_stack(tsk, orig);
+	stackend = end_of_stack(tsk);
+	*stackend = STACK_END_MAGIC;	/* for overflow detection */
 
 #ifdef CONFIG_CC_STACKPROTECTOR
 	tsk->stack_canary = get_random_int();
@@ -276,6 +312,7 @@ static int dup_mmap(struct mm_struct *mm, struct mm_struct *oldmm)
 	mm->locked_vm = 0;
 	mm->mmap = NULL;
 	mm->mmap_cache = NULL;
+	INIT_LIST_HEAD(&mm->delayed_drop);
 	mm->free_area_cache = oldmm->mmap_base;
 	mm->cached_hole_size = ~0UL;
 	mm->map_count = 0;
@@ -639,6 +676,9 @@ static int copy_mm(unsigned long clone_flags, struct task_struct * tsk)
 
 	tsk->min_flt = tsk->maj_flt = 0;
 	tsk->nvcsw = tsk->nivcsw = 0;
+#ifdef CONFIG_DETECT_HUNG_TASK
+	tsk->last_switch_count = tsk->nvcsw + tsk->nivcsw;
+#endif
 
 	tsk->mm = NULL;
 	tsk->active_mm = NULL;
@@ -901,6 +941,9 @@ static void rt_mutex_init_task(struct task_struct *p)
 #ifdef CONFIG_RT_MUTEXES
 	plist_head_init(&p->pi_waiters, &p->pi_lock);
 	p->pi_blocked_on = NULL;
+# ifdef CONFIG_DEBUG_RT_MUTEXES
+	p->last_kernel_lock = NULL;
+# endif
 #endif
 }
 
@@ -972,6 +1015,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 		goto fork_out;
 
 	rt_mutex_init_task(p);
+	perf_counter_init_task(p);
 
 #ifdef CONFIG_PROVE_LOCKING
 	DEBUG_LOCKS_WARN_ON(!p->hardirqs_enabled);
@@ -1018,6 +1062,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 
 	clear_tsk_thread_flag(p, TIF_SIGPENDING);
 	init_sigpending(&p->pending);
+	p->sigqueue_cache = NULL;
 
 	p->utime = cputime_zero;
 	p->stime = cputime_zero;
@@ -1029,16 +1074,11 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 
 	p->default_timer_slack_ns = current->timer_slack_ns;
 
-#ifdef CONFIG_DETECT_SOFTLOCKUP
-	p->last_switch_count = 0;
-	p->last_switch_timestamp = 0;
-#endif
-
 	task_io_accounting_init(&p->ioac);
 	acct_clear_integrals(p);
 
 	posix_cpu_timers_init(p);
-
+	p->posix_timer_list = NULL;
 	p->lock_depth = -1;		/* -1 = no lock */
 	do_posix_clock_monotonic_gettime(&p->start_time);
 	p->real_start_time = p->start_time;
@@ -1074,6 +1114,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	p->hardirq_context = 0;
 	p->softirq_context = 0;
 #endif
+	p->pagefault_disabled = 0;
 #ifdef CONFIG_LOCKDEP
 	p->lockdep_depth = 0; /* no locks held yet */
 	p->curr_chain_key = 0;
@@ -1111,6 +1152,9 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	retval = copy_thread(0, clone_flags, stack_start, stack_size, p, regs);
 	if (retval)
 		goto bad_fork_cleanup_io;
+#ifdef CONFIG_DEBUG_PREEMPT
+	atomic_set(&p->lock_count, 0);
+#endif
 
 	if (pid != &init_struct_pid) {
 		retval = -ENOMEM;
@@ -1150,6 +1194,7 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 #endif
 	INIT_LIST_HEAD(&p->pi_state_list);
 	p->pi_state_cache = NULL;
+	p->futex_wakeup = NULL;
 #endif
 	/*
 	 * sigaltstack should be cleared when sharing the same VM
@@ -1197,11 +1242,13 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 	 * to ensure it is on a valid CPU (and if not, just force it back to
 	 * parent's CPU). This avoids alot of nasty races.
 	 */
+	preempt_disable();
 	p->cpus_allowed = current->cpus_allowed;
 	p->rt.nr_cpus_allowed = current->rt.nr_cpus_allowed;
 	if (unlikely(!cpu_isset(task_cpu(p), p->cpus_allowed) ||
 			!cpu_online(task_cpu(p))))
 		set_task_cpu(p, smp_processor_id());
+	preempt_enable();
 
 	/* CLONE_PARENT re-uses the old parent */
 	if (clone_flags & (CLONE_PARENT|CLONE_THREAD)) {
@@ -1251,7 +1298,9 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 			attach_pid(p, PIDTYPE_PGID, task_pgrp(current));
 			attach_pid(p, PIDTYPE_SID, task_session(current));
 			list_add_tail_rcu(&p->tasks, &init_task.tasks);
+			preempt_disable();
 			__get_cpu_var(process_counts)++;
+			preempt_enable();
 		}
 		attach_pid(p, PIDTYPE_PID, pid);
 		nr_threads++;
@@ -1457,20 +1506,20 @@ void __init proc_caches_init(void)
 {
 	sighand_cachep = kmem_cache_create("sighand_cache",
 			sizeof(struct sighand_struct), 0,
-			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_DESTROY_BY_RCU,
-			sighand_ctor);
+			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_DESTROY_BY_RCU|
+			SLAB_NOTRACK, sighand_ctor);
 	signal_cachep = kmem_cache_create("signal_cache",
 			sizeof(struct signal_struct), 0,
-			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
+			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK, NULL);
 	files_cachep = kmem_cache_create("files_cache",
 			sizeof(struct files_struct), 0,
-			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
+			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK, NULL);
 	fs_cachep = kmem_cache_create("fs_cache",
 			sizeof(struct fs_struct), 0,
-			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
+			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK, NULL);
 	mm_cachep = kmem_cache_create("mm_struct",
 			sizeof(struct mm_struct), ARCH_MIN_MMSTRUCT_ALIGN,
-			SLAB_HWCACHE_ALIGN|SLAB_PANIC, NULL);
+			SLAB_HWCACHE_ALIGN|SLAB_PANIC|SLAB_NOTRACK, NULL);
 	mmap_init();
 }
 
@@ -1726,3 +1775,138 @@ int unshare_files(struct files_struct **displaced)
 	task_unlock(task);
 	return 0;
 }
+
+static int mmdrop_complete(void)
+{
+	struct list_head *head;
+	int ret = 0;
+
+	head = &get_cpu_var(delayed_drop_list);
+	while (!list_empty(head)) {
+		struct mm_struct *mm = list_entry(head->next,
+					struct mm_struct, delayed_drop);
+		list_del(&mm->delayed_drop);
+		put_cpu_var(delayed_drop_list);
+
+		__mmdrop(mm);
+		ret = 1;
+
+		head = &get_cpu_var(delayed_drop_list);
+	}
+	put_cpu_var(delayed_drop_list);
+
+	return ret;
+}
+
+/*
+ * We dont want to do complex work from the scheduler, thus
+ * we delay the work to a per-CPU worker thread:
+ */
+void  __mmdrop_delayed(struct mm_struct *mm)
+{
+	struct task_struct *desched_task;
+	struct list_head *head;
+
+	head = &get_cpu_var(delayed_drop_list);
+	list_add_tail(&mm->delayed_drop, head);
+	desched_task = __get_cpu_var(desched_task);
+	if (desched_task)
+		wake_up_process(desched_task);
+	put_cpu_var(delayed_drop_list);
+}
+
+static void takeover_delayed_drop(int hotcpu)
+{
+	struct list_head *head = &per_cpu(delayed_drop_list, hotcpu);
+
+	while (!list_empty(head)) {
+		struct mm_struct *mm = list_entry(head->next,
+				struct mm_struct, delayed_drop);
+
+		list_del(&mm->delayed_drop);
+		__mmdrop_delayed(mm);
+	}
+}
+
+static int desched_thread(void * __bind_cpu)
+{
+	set_user_nice(current, -10);
+	current->flags |= PF_NOFREEZE | PF_SOFTIRQ;
+
+	set_current_state(TASK_INTERRUPTIBLE);
+
+	while (!kthread_should_stop()) {
+
+		if (mmdrop_complete())
+			continue;
+		schedule();
+
+		/*
+ 		 * This must be called from time to time on ia64, and is a
+ 		 * no-op on other archs. Used to be in cpu_idle(), but with
+ 		 * the new -rt semantics it can't stay there.
+		 */
+		check_pgt_cache();
+
+		set_current_state(TASK_INTERRUPTIBLE);
+	}
+	__set_current_state(TASK_RUNNING);
+	return 0;
+}
+
+static int __devinit cpu_callback(struct notifier_block *nfb,
+				  unsigned long action,
+				  void *hcpu)
+{
+	int hotcpu = (unsigned long)hcpu;
+	struct task_struct *p;
+
+	switch (action) {
+	case CPU_UP_PREPARE:
+
+		BUG_ON(per_cpu(desched_task, hotcpu));
+		INIT_LIST_HEAD(&per_cpu(delayed_drop_list, hotcpu));
+		p = kthread_create(desched_thread, hcpu, "desched/%d", hotcpu);
+		if (IS_ERR(p)) {
+			printk("desched_thread for %i failed\n", hotcpu);
+			return NOTIFY_BAD;
+		}
+		per_cpu(desched_task, hotcpu) = p;
+		kthread_bind(p, hotcpu);
+		break;
+	case CPU_ONLINE:
+
+		wake_up_process(per_cpu(desched_task, hotcpu));
+		break;
+#ifdef CONFIG_HOTPLUG_CPU
+	case CPU_UP_CANCELED:
+
+		/* Unbind so it can run.  Fall thru. */
+		kthread_bind(per_cpu(desched_task, hotcpu), smp_processor_id());
+	case CPU_DEAD:
+
+		p = per_cpu(desched_task, hotcpu);
+		per_cpu(desched_task, hotcpu) = NULL;
+		kthread_stop(p);
+		takeover_delayed_drop(hotcpu);
+		takeover_tasklets(hotcpu);
+		break;
+#endif /* CONFIG_HOTPLUG_CPU */
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block __devinitdata cpu_nfb = {
+	.notifier_call = cpu_callback
+};
+
+__init int spawn_desched_task(void)
+{
+	void *cpu = (void *)(long)smp_processor_id();
+
+	cpu_callback(&cpu_nfb, CPU_UP_PREPARE, cpu);
+	cpu_callback(&cpu_nfb, CPU_ONLINE, cpu);
+	register_cpu_notifier(&cpu_nfb);
+	return 0;
+}
+

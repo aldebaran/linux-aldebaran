@@ -156,7 +156,7 @@ struct kretprobe {
 	int nmissed;
 	size_t data_size;
 	struct hlist_head free_instances;
-	spinlock_t lock;
+	raw_spinlock_t lock;
 };
 
 struct kretprobe_instance {
@@ -181,6 +181,14 @@ struct kprobe_blackpoint {
 #ifdef CONFIG_KPROBES
 DECLARE_PER_CPU(struct kprobe *, current_kprobe);
 DECLARE_PER_CPU(struct kprobe_ctlblk, kprobe_ctlblk);
+
+/*
+ * For #ifdef avoidance:
+ */
+static inline int kprobes_built_in(void)
+{
+	return 1;
+}
 
 #ifdef CONFIG_KRETPROBES
 extern void arch_prepare_kretprobe(struct kretprobe_instance *ri,
@@ -271,8 +279,16 @@ void unregister_kretprobes(struct kretprobe **rps, int num);
 void kprobe_flush_task(struct task_struct *tk);
 void recycle_rp_inst(struct kretprobe_instance *ri, struct hlist_head *head);
 
-#else /* CONFIG_KPROBES */
+#else /* !CONFIG_KPROBES: */
 
+static inline int kprobes_built_in(void)
+{
+	return 0;
+}
+static inline int kprobe_fault_handler(struct pt_regs *regs, int trapnr)
+{
+	return 0;
+}
 static inline struct kprobe *get_kprobe(void *addr)
 {
 	return NULL;
@@ -329,5 +345,5 @@ static inline void unregister_kretprobes(struct kretprobe **rps, int num)
 static inline void kprobe_flush_task(struct task_struct *tk)
 {
 }
-#endif				/* CONFIG_KPROBES */
-#endif				/* _LINUX_KPROBES_H */
+#endif /* CONFIG_KPROBES */
+#endif /* _LINUX_KPROBES_H */

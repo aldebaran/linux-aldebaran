@@ -33,7 +33,7 @@ static __cpuinitdata atomic_t stop_count;
  * we want to have the fastest, inlined, non-debug version
  * of a critical section, to be able to prove TSC time-warps:
  */
-static __cpuinitdata raw_spinlock_t sync_lock = __RAW_SPIN_LOCK_UNLOCKED;
+static __cpuinitdata __raw_spinlock_t sync_lock = __RAW_SPIN_LOCK_UNLOCKED;
 static __cpuinitdata cycles_t last_tsc;
 static __cpuinitdata cycles_t max_warp;
 static __cpuinitdata int nr_warps;
@@ -103,6 +103,7 @@ static __cpuinit void check_tsc_warp(void)
  */
 void __cpuinit check_tsc_sync_source(int cpu)
 {
+	unsigned long flags;
 	int cpus = 2;
 
 	/*
@@ -129,8 +130,11 @@ void __cpuinit check_tsc_sync_source(int cpu)
 	/*
 	 * Wait for the target to arrive:
 	 */
+	local_save_flags(flags);
+	local_irq_enable();
 	while (atomic_read(&start_count) != cpus-1)
 		cpu_relax();
+	local_irq_restore(flags);
 	/*
 	 * Trigger the target to continue into the measurement too:
 	 */

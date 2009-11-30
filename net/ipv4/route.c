@@ -204,13 +204,13 @@ struct rt_hash_bucket {
 };
 
 #if defined(CONFIG_SMP) || defined(CONFIG_DEBUG_SPINLOCK) || \
-	defined(CONFIG_PROVE_LOCKING)
+	defined(CONFIG_PROVE_LOCKING) || defined(CONFIG_PREEMPT_RT)
 /*
  * Instead of using one spinlock for each rt_hash_bucket, we use a table of spinlocks
  * The size of this table is a power of two and depends on the number of CPUS.
  * (on lockdep we have a quite big spinlock_t, so keep the size down there)
  */
-#ifdef CONFIG_LOCKDEP
+#if defined(CONFIG_LOCKDEP) || defined(CONFIG_PREEMPT_RT)
 # define RT_HASH_LOCK_SZ	256
 #else
 # if NR_CPUS >= 32
@@ -242,7 +242,7 @@ static __init void rt_hash_lock_init(void)
 		spin_lock_init(&rt_hash_locks[i]);
 }
 #else
-# define rt_hash_lock_addr(slot) NULL
+# define rt_hash_lock_addr(slot) ((spinlock_t *)NULL)
 
 static inline void rt_hash_lock_init(void)
 {
@@ -3356,7 +3356,7 @@ int __init ip_rt_init(void)
 	int rc = 0;
 
 #ifdef CONFIG_NET_CLS_ROUTE
-	ip_rt_acct = __alloc_percpu(256 * sizeof(struct ip_rt_acct));
+	ip_rt_acct = __alloc_percpu(256 * sizeof(struct ip_rt_acct), __alignof__(struct ip_rt_acct));
 	if (!ip_rt_acct)
 		panic("IP: failed to allocate ip_rt_acct\n");
 #endif

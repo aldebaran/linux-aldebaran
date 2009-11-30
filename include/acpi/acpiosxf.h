@@ -61,7 +61,7 @@ typedef enum {
 	OSL_EC_BURST_HANDLER
 } acpi_execute_type;
 
-#define ACPI_NO_UNIT_LIMIT          ((u32) -1)
+#define ACPI_NO_UNIT_LIMIT          (INT_MAX/2)
 #define ACPI_MUTEX_SEM              1
 
 /* Functions for acpi_os_signal */
@@ -144,6 +144,7 @@ void __iomem *acpi_os_map_memory(acpi_physical_address where,
 				acpi_size length);
 
 void acpi_os_unmap_memory(void __iomem * logical_address, acpi_size size);
+void early_acpi_os_unmap_memory(void __iomem * virt, acpi_size size);
 
 #ifdef ACPI_FUTURE_USAGE
 acpi_status

@@ -10,6 +10,7 @@
 #include <linux/user_namespace.h>
 #include <linux/securebits.h>
 #include <net/net_namespace.h>
+#include <linux/spinlock.h>
 
 extern struct files_struct init_files;
 extern struct fs_struct init_fs;
@@ -51,7 +52,7 @@ extern struct fs_struct init_fs;
 	.cputimer	= { 						\
 		.cputime = INIT_CPUTIME,				\
 		.running = 0,						\
-		.lock = __SPIN_LOCK_UNLOCKED(sig.cputimer.lock),	\
+		.lock = RAW_SPIN_LOCK_UNLOCKED(sig.cputimer.lock),	\
 	},								\
 }
 
@@ -120,6 +121,18 @@ extern struct group_info init_groups;
 
 extern struct cred init_cred;
 
+#ifdef CONFIG_PERF_COUNTERS
+# define INIT_PERF_COUNTERS(tsk)					\
+	.perf_counter_ctx.counter_list =				\
+		LIST_HEAD_INIT(tsk.perf_counter_ctx.counter_list),	\
+	.perf_counter_ctx.event_list =					\
+		LIST_HEAD_INIT(tsk.perf_counter_ctx.event_list),	\
+	.perf_counter_ctx.lock =					\
+		RAW_SPIN_LOCK_UNLOCKED(tsk.perf_counter_ctx.lock),
+#else
+# define INIT_PERF_COUNTERS(tsk)
+#endif
+
 /*
  *  INIT_TASK is used to set up the first task table, touch at
  * your own risk!. Base=0, limit=0x1fffff (=2MB)
@@ -147,6 +160,7 @@ extern struct cred init_cred;
 		.nr_cpus_allowed = NR_CPUS,				\
 	},								\
 	.tasks		= LIST_HEAD_INIT(tsk.tasks),			\
+	.pushable_tasks = PLIST_NODE_INIT(tsk.pushable_tasks, MAX_PRIO), \
 	.ptraced	= LIST_HEAD_INIT(tsk.ptraced),			\
 	.ptrace_entry	= LIST_HEAD_INIT(tsk.ptrace_entry),		\
 	.real_parent	= &tsk,						\
@@ -173,8 +187,9 @@ extern struct cred init_cred;
 	.journal_info	= NULL,						\
 	.cpu_timers	= INIT_CPU_TIMERS(tsk.cpu_timers),		\
 	.fs_excl	= ATOMIC_INIT(0),				\
-	.pi_lock	= __SPIN_LOCK_UNLOCKED(tsk.pi_lock),		\
 	.timer_slack_ns = 50000, /* 50 usec default slack */		\
+	.posix_timer_list = NULL,					\
+	.pi_lock	= RAW_SPIN_LOCK_UNLOCKED(tsk.pi_lock),		\
 	.pids = {							\
 		[PIDTYPE_PID]  = INIT_PID_LINK(PIDTYPE_PID),		\
 		[PIDTYPE_PGID] = INIT_PID_LINK(PIDTYPE_PGID),		\
@@ -184,6 +199,7 @@ extern struct cred init_cred;
 	INIT_IDS							\
 	INIT_TRACE_IRQFLAGS						\
 	INIT_LOCKDEP							\
+	INIT_PERF_COUNTERS(tsk)						\
 }
 
 

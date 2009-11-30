@@ -1823,7 +1823,7 @@ static size_t __iovec_copy_from_user_inatomic(char *vaddr,
 		int copy = min(bytes, iov->iov_len - base);
 
 		base = 0;
-		left = __copy_from_user_inatomic_nocache(vaddr, buf, copy);
+		left = __copy_from_user_inatomic(vaddr, buf, copy);
 		copied += copy;
 		bytes -= copy;
 		vaddr += copy;
@@ -1846,13 +1846,12 @@ size_t iov_iter_copy_from_user_atomic(struct page *page,
 	char *kaddr;
 	size_t copied;
 
-	BUG_ON(!in_atomic());
+//	BUG_ON(!in_atomic());
 	kaddr = kmap_atomic(page, KM_USER0);
 	if (likely(i->nr_segs == 1)) {
 		int left;
 		char __user *buf = i->iov->iov_base + i->iov_offset;
-		left = __copy_from_user_inatomic_nocache(kaddr + offset,
-							buf, bytes);
+		left = __copy_from_user_inatomic(kaddr + offset, buf, bytes);
 		copied = bytes - left;
 	} else {
 		copied = __iovec_copy_from_user_inatomic(kaddr + offset,
@@ -1880,7 +1879,7 @@ size_t iov_iter_copy_from_user(struct page *page,
 	if (likely(i->nr_segs == 1)) {
 		int left;
 		char __user *buf = i->iov->iov_base + i->iov_offset;
-		left = __copy_from_user_nocache(kaddr + offset, buf, bytes);
+		left = __copy_from_user(kaddr + offset, buf, bytes);
 		copied = bytes - left;
 	} else {
 		copied = __iovec_copy_from_user_inatomic(kaddr + offset,

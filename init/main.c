@@ -14,6 +14,7 @@
 #include <linux/proc_fs.h>
 #include <linux/kernel.h>
 #include <linux/syscalls.h>
+#include <linux/stackprotector.h>
 #include <linux/string.h>
 #include <linux/ctype.h>
 #include <linux/delay.h>
@@ -35,6 +36,7 @@
 #include <linux/workqueue.h>
 #include <linux/profile.h>
 #include <linux/rcupdate.h>
+#include <linux/posix-timers.h>
 #include <linux/moduleparam.h>
 #include <linux/kallsyms.h>
 #include <linux/writeback.h>
@@ -48,6 +50,7 @@
 #include <linux/delayacct.h>
 #include <linux/unistd.h>
 #include <linux/rmap.h>
+#include <linux/irq.h>
 #include <linux/mempolicy.h>
 #include <linux/key.h>
 #include <linux/buffer_head.h>
@@ -61,6 +64,7 @@
 #include <linux/sched.h>
 #include <linux/signal.h>
 #include <linux/idr.h>
+#include <linux/kmemcheck.h>
 #include <linux/ftrace.h>
 #include <linux/async.h>
 #include <trace/boot.h>
@@ -70,6 +74,7 @@
 #include <asm/setup.h>
 #include <asm/sections.h>
 #include <asm/cacheflush.h>
+#include <trace/kmemtrace.h>
 
 #ifdef CONFIG_X86_LOCAL_APIC
 #include <asm/smp.h>
@@ -135,14 +140,14 @@ unsigned int __initdata setup_max_cpus = NR_CPUS;
  * greater than 0, limits the maximum number of CPUs activated in
  * SMP mode to <NUM>.
  */
-#ifndef CONFIG_X86_IO_APIC
-static inline void disable_ioapic_setup(void) {};
-#endif
+
+void __weak arch_disable_smp_support(void) { }
 
 static int __init nosmp(char *str)
 {
 	setup_max_cpus = 0;
-	disable_ioapic_setup();
+	arch_disable_smp_support();
+
 	return 0;
 }
 
@@ -152,14 +157,14 @@ static int __init maxcpus(char *str)
 {
 	get_option(&str, &setup_max_cpus);
 	if (setup_max_cpus == 0)
-		disable_ioapic_setup();
+		arch_disable_smp_support();
 
 	return 0;
 }
 
 early_param("maxcpus", maxcpus);
 #else
-#define setup_max_cpus NR_CPUS
+const unsigned int setup_max_cpus = NR_CPUS;
 #endif
 
 /*
@@ -452,6 +457,8 @@ static noinline void __init_refok rest_init(void)
 {
 	int pid;
 
+	system_state = SYSTEM_BOOTING_SCHEDULER_OK;
+
 	kernel_thread(kernel_init, NULL, CLONE_FS | CLONE_SIGHAND);
 	numa_default_policy();
 	pid = kernel_thread(kthreadd, NULL, CLONE_FS | CLONE_FILES);
@@ -464,7 +471,7 @@ static noinline void __init_refok rest_init(void)
 	 */
 	init_idle_bootup_task(current);
 	rcu_scheduler_starting();
-	preempt_enable_no_resched();
+	__preempt_enable_no_resched();
 	schedule();
 	preempt_disable();
 
@@ -540,6 +547,12 @@ asmlinkage void __init start_kernel(void)
 	 */
 	lockdep_init();
 	debug_objects_early_init();
+
+	/*
+	 * Set up the the initial canary ASAP:
+	 */
+	boot_init_stack_canary();
+
 	cgroup_init_early();
 
 	local_irq_disable();
@@ -574,8 +587,10 @@ asmlinkage void __init start_kernel(void)
 	 * fragile until we cpu_idle() for the first time.
 	 */
 	preempt_disable();
+
 	build_all_zonelists();
 	page_alloc_init();
+	early_init_hardirqs();
 	printk(KERN_NOTICE "Kernel command line: %s\n", boot_command_line);
 	parse_early_param();
 	parse_args("Booting kernel", static_command_line, __start___param,
@@ -642,6 +657,7 @@ asmlinkage void __init start_kernel(void)
 	enable_debug_pagealloc();
 	cpu_hotplug_init();
 	kmem_cache_init();
+	kmemtrace_init();
 	debug_objects_mem_init();
 	idr_init_cache();
 	setup_per_cpu_pageset();
@@ -683,6 +699,9 @@ asmlinkage void __init start_kernel(void)
 
 	ftrace_init();
 
+#ifdef CONFIG_PREEMPT_RT
+	WARN_ON(irqs_disabled());
+#endif
 	/* Do the rest non-__init'ed, we're now alive */
 	rest_init();
 }
@@ -763,6 +782,7 @@ static void __init do_basic_setup(void)
 {
 	rcu_init_sched(); /* needed by module_init stage. */
 	init_workqueues();
+	cpuset_init_smp();
 	usermodehelper_init();
 	driver_init();
 	init_irq_proc();
@@ -772,9 +792,14 @@ static void __init do_basic_setup(void)
 static void __init do_pre_smp_initcalls(void)
 {
 	initcall_t *call;
+	extern int spawn_desched_task(void);
+
+	/* kmemcheck must initialize before all early initcalls: */
+	kmemcheck_init();
 
 	for (call = __initcall_start; call < __early_initcall_end; call++)
 		do_one_initcall(*call);
+	spawn_desched_task();
 }
 
 static void run_init_process(char *init_filename)
@@ -809,6 +834,9 @@ static noinline int init_post(void)
 		printk(KERN_WARNING "Failed to execute %s\n",
 				ramdisk_execute_command);
 	}
+#ifdef CONFIG_PREEMPT_RT
+	WARN_ON(irqs_disabled());
+#endif
 
 	/*
 	 * We try each of these until one succeeds.
@@ -850,13 +878,13 @@ static int __init kernel_init(void * unused)
 
 	smp_prepare_cpus(setup_max_cpus);
 
+	init_hardirqs();
+
 	do_pre_smp_initcalls();
 	start_boot_trace();
 
 	smp_init();
 	sched_init_smp();
-
-	cpuset_init_smp();
 
 	do_basic_setup();
 
@@ -872,7 +900,57 @@ static int __init kernel_init(void * unused)
 		ramdisk_execute_command = NULL;
 		prepare_namespace();
 	}
+#ifdef CONFIG_PREEMPT_RT
+	WARN_ON(irqs_disabled());
+#endif
 
+#define DEBUG_COUNT (defined(CONFIG_DEBUG_RT_MUTEXES) + defined(CONFIG_IRQSOFF_TRACER) + defined(CONFIG_PREEMPT_TRACER) + defined(CONFIG_STACK_TRACER) + defined(CONFIG_INTERRUPT_OFF_HIST) + defined(CONFIG_PREEMPT_OFF_HIST) + defined(CONFIG_DEBUG_SLAB) + defined(CONFIG_DEBUG_PAGEALLOC) + defined(CONFIG_LOCKDEP) + (defined(CONFIG_FTRACE) - defined(CONFIG_FTRACE_MCOUNT_RECORD)))
+
+#if DEBUG_COUNT > 0
+	printk(KERN_ERR "*****************************************************************************\n");
+	printk(KERN_ERR "*                                                                           *\n");
+#if DEBUG_COUNT == 1
+	printk(KERN_ERR "*  REMINDER, the following debugging option is turned on in your .config:   *\n");
+#else
+	printk(KERN_ERR "*  REMINDER, the following debugging options are turned on in your .config: *\n");
+#endif
+	printk(KERN_ERR "*                                                                           *\n");
+#ifdef CONFIG_FTRACE
+	printk(KERN_ERR "*        CONFIG_FTRACE                                                      *\n");
+#endif
+#ifdef CONFIG_DEBUG_RT_MUTEXES
+	printk(KERN_ERR "*        CONFIG_DEBUG_RT_MUTEXES                                            *\n");
+#endif
+#ifdef CONFIG_IRQSOFF_TRACER
+	printk(KERN_ERR "*        CONFIG_IRQSOFF_TRACER                                              *\n");
+#endif
+#ifdef CONFIG_PREEMPT_TRACER
+	printk(KERN_ERR "*        CONFIG_PREEMPT_TRACER                                              *\n");
+#endif
+#ifdef CONFIG_INTERRUPT_OFF_HIST
+	printk(KERN_ERR "*        CONFIG_INTERRUPT_OFF_HIST                                          *\n");
+#endif
+#ifdef CONFIG_PREEMPT_OFF_HIST
+	printk(KERN_ERR "*        CONFIG_PREEMPT_OFF_HIST                                            *\n");
+#endif
+#ifdef CONFIG_DEBUG_SLAB
+	printk(KERN_ERR "*        CONFIG_DEBUG_SLAB                                                  *\n");
+#endif
+#ifdef CONFIG_DEBUG_PAGEALLOC
+	printk(KERN_ERR "*        CONFIG_DEBUG_PAGEALLOC                                             *\n");
+#endif
+#ifdef CONFIG_LOCKDEP
+	printk(KERN_ERR "*        CONFIG_LOCKDEP                                                     *\n");
+#endif
+	printk(KERN_ERR "*                                                                           *\n");
+#if DEBUG_COUNT == 1
+	printk(KERN_ERR "*  it may increase runtime overhead and latencies.                          *\n");
+#else
+	printk(KERN_ERR "*  they may increase runtime overhead and latencies.                        *\n");
+#endif
+	printk(KERN_ERR "*                                                                           *\n");
+	printk(KERN_ERR "*****************************************************************************\n");
+#endif
 	/*
 	 * Ok, we have completed the initial bootup, and
 	 * we're essentially up and running. Get rid of the
@@ -880,5 +958,7 @@ static int __init kernel_init(void * unused)
 	 */
 
 	init_post();
+	WARN_ON(debug_direct_keyboard);
+
 	return 0;
 }

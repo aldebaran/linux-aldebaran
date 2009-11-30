@@ -43,6 +43,7 @@
 #include <linux/seq_file.h>
 #include <linux/debugfs.h>
 #include <linux/kdebug.h>
+#include <linux/memory.h>
 
 #include <asm-generic/sections.h>
 #include <asm/cacheflush.h>
@@ -72,10 +73,10 @@ static bool kprobe_enabled;
 static DEFINE_MUTEX(kprobe_mutex);	/* Protects kprobe_table */
 static DEFINE_PER_CPU(struct kprobe *, kprobe_instance) = NULL;
 static struct {
-	spinlock_t lock ____cacheline_aligned_in_smp;
+	raw_spinlock_t lock ____cacheline_aligned_in_smp;
 } kretprobe_table_locks[KPROBE_TABLE_SIZE];
 
-static spinlock_t *kretprobe_table_lock_ptr(unsigned long hash)
+static raw_spinlock_t *kretprobe_table_lock_ptr(unsigned long hash)
 {
 	return &(kretprobe_table_locks[hash].lock);
 }
@@ -414,7 +415,7 @@ void __kprobes kretprobe_hash_lock(struct task_struct *tsk,
 			 struct hlist_head **head, unsigned long *flags)
 {
 	unsigned long hash = hash_ptr(tsk, KPROBE_HASH_BITS);
-	spinlock_t *hlist_lock;
+	raw_spinlock_t *hlist_lock;
 
 	*head = &kretprobe_inst_table[hash];
 	hlist_lock = kretprobe_table_lock_ptr(hash);
@@ -424,7 +425,7 @@ void __kprobes kretprobe_hash_lock(struct task_struct *tsk,
 static void __kprobes kretprobe_table_lock(unsigned long hash,
 	unsigned long *flags)
 {
-	spinlock_t *hlist_lock = kretprobe_table_lock_ptr(hash);
+	raw_spinlock_t *hlist_lock = kretprobe_table_lock_ptr(hash);
 	spin_lock_irqsave(hlist_lock, *flags);
 }
 
@@ -432,7 +433,7 @@ void __kprobes kretprobe_hash_unlock(struct task_struct *tsk,
 	unsigned long *flags)
 {
 	unsigned long hash = hash_ptr(tsk, KPROBE_HASH_BITS);
-	spinlock_t *hlist_lock;
+	raw_spinlock_t *hlist_lock;
 
 	hlist_lock = kretprobe_table_lock_ptr(hash);
 	spin_unlock_irqrestore(hlist_lock, *flags);
@@ -440,7 +441,7 @@ void __kprobes kretprobe_hash_unlock(struct task_struct *tsk,
 
 void __kprobes kretprobe_table_unlock(unsigned long hash, unsigned long *flags)
 {
-	spinlock_t *hlist_lock = kretprobe_table_lock_ptr(hash);
+	raw_spinlock_t *hlist_lock = kretprobe_table_lock_ptr(hash);
 	spin_unlock_irqrestore(hlist_lock, *flags);
 }
 
@@ -699,9 +700,10 @@ int __kprobes register_kprobe(struct kprobe *p)
 		goto out;
 	}
 
+	mutex_lock(&text_mutex);
 	ret = arch_prepare_kprobe(p);
 	if (ret)
-		goto out;
+		goto out_unlock_text;
 
 	INIT_HLIST_NODE(&p->hlist);
 	hlist_add_head_rcu(&p->hlist,
@@ -710,6 +712,8 @@ int __kprobes register_kprobe(struct kprobe *p)
 	if (kprobe_enabled)
 		arch_arm_kprobe(p);
 
+out_unlock_text:
+	mutex_unlock(&text_mutex);
 out:
 	mutex_unlock(&kprobe_mutex);
 
@@ -746,8 +750,11 @@ valid_p:
 		 * enabled and not gone - otherwise, the breakpoint would
 		 * already have been removed. We save on flushing icache.
 		 */
-		if (kprobe_enabled && !kprobe_gone(old_p))
+		if (kprobe_enabled && !kprobe_gone(old_p)) {
+			mutex_lock(&text_mutex);
 			arch_disarm_kprobe(p);
+			mutex_unlock(&text_mutex);
+		}
 		hlist_del_rcu(&old_p->hlist);
 	} else {
 		if (p->break_handler && !kprobe_gone(p))
@@ -1278,12 +1285,14 @@ static void __kprobes enable_all_kprobes(void)
 	if (kprobe_enabled)
 		goto already_enabled;
 
+	mutex_lock(&text_mutex);
 	for (i = 0; i < KPROBE_TABLE_SIZE; i++) {
 		head = &kprobe_table[i];
 		hlist_for_each_entry_rcu(p, node, head, hlist)
 			if (!kprobe_gone(p))
 				arch_arm_kprobe(p);
 	}
+	mutex_unlock(&text_mutex);
 
 	kprobe_enabled = true;
 	printk(KERN_INFO "Kprobes globally enabled\n");
@@ -1308,6 +1317,7 @@ static void __kprobes disable_all_kprobes(void)
 
 	kprobe_enabled = false;
 	printk(KERN_INFO "Kprobes globally disabled\n");
+	mutex_lock(&text_mutex);
 	for (i = 0; i < KPROBE_TABLE_SIZE; i++) {
 		head = &kprobe_table[i];
 		hlist_for_each_entry_rcu(p, node, head, hlist) {
@@ -1316,6 +1326,7 @@ static void __kprobes disable_all_kprobes(void)
 		}
 	}
 
+	mutex_unlock(&text_mutex);
 	mutex_unlock(&kprobe_mutex);
 	/* Allow all currently running kprobes to complete */
 	synchronize_sched();

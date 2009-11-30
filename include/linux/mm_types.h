@@ -68,7 +68,11 @@ struct page {
 						 */
 	    };
 #if USE_SPLIT_PTLOCKS
+#ifndef CONFIG_PREEMPT_RT
 	    spinlock_t ptl;
+#else
+	    spinlock_t *ptl;
+#endif
 #endif
 	    struct kmem_cache *slab;	/* SLUB: Pointer to slab */
 	    struct page *first_page;	/* Compound tail pages */
@@ -94,6 +98,14 @@ struct page {
 	void *virtual;			/* Kernel virtual address (NULL if
 					   not kmapped, ie. highmem) */
 #endif /* WANT_PAGE_VIRTUAL */
+
+#ifdef CONFIG_KMEMCHECK
+	/*
+	 * kmemcheck wants to track the status of each byte in a page; this
+	 * is a pointer to such a status block. NULL if not tracked.
+	 */
+	void *shadow;
+#endif
 };
 
 /*
@@ -232,6 +244,9 @@ struct mm_struct {
 
 	/* Architecture-specific MM context */
 	mm_context_t context;
+
+	/* realtime bits */
+	struct list_head	delayed_drop;
 
 	/* Swap token stuff */
 	/*

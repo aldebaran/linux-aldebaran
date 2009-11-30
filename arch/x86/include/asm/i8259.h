@@ -24,7 +24,7 @@ extern unsigned int cached_irq_mask;
 #define SLAVE_ICW4_DEFAULT	0x01
 #define PIC_ICW4_AEOI		2
 
-extern spinlock_t i8259A_lock;
+extern raw_spinlock_t i8259A_lock;
 
 extern void init_8259A(int auto_eoi);
 extern void enable_8259A_irq(unsigned int irq);
@@ -59,5 +59,9 @@ extern struct irq_chip i8259A_chip;
 
 extern void mask_8259A(void);
 extern void unmask_8259A(void);
+
+#ifdef CONFIG_X86_32
+extern void init_ISA_irqs(void);
+#endif
 
 #endif /* _ASM_X86_I8259_H */

@@ -55,6 +55,7 @@ struct consw {
 	void	(*con_invert_region)(struct vc_data *, u16 *, int);
 	u16    *(*con_screen_pos)(struct vc_data *, int);
 	unsigned long (*con_getxy)(struct vc_data *, unsigned long, int *, int *);
+	int	con_preemptible; // can it reschedule from within printk?
 };
 
 extern const struct consw *conswitchp;
@@ -92,6 +93,17 @@ void give_up_console(const struct consw *sw);
 #define CON_BOOT	(8)
 #define CON_ANYTIME	(16) /* Safe to call when cpu is offline */
 #define CON_BRL		(32) /* Used for a braille device */
+#define CON_ATOMIC	(64) /* Safe to call in PREEMPT_RT atomic */
+
+#ifdef CONFIG_PREEMPT_RT
+# define console_atomic_safe(con)		\
+	(((con)->flags & CON_ATOMIC) ||		\
+	 (!in_atomic() && !irqs_disabled()) ||	\
+	 (system_state != SYSTEM_RUNNING) ||	\
+	 oops_in_progress)
+#else
+# define console_atomic_safe(con) (1)
+#endif
 
 struct console {
 	char	name[16];

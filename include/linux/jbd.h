@@ -260,6 +260,15 @@ void buffer_assertion_failure(struct buffer_head *bh);
 #define J_ASSERT_JH(jh, expr)	J_ASSERT(expr)
 #endif
 
+/*
+ * For assertions that are only valid on SMP (e.g. spin_is_locked()):
+ */
+#ifdef CONFIG_SMP
+# define J_ASSERT_JH_SMP(jh, expr)	J_ASSERT_JH(jh, expr)
+#else
+# define J_ASSERT_JH_SMP(jh, assert)	do { } while (0)
+#endif
+
 #if defined(JBD_PARANOID_IOFAIL)
 #define J_EXPECT(expr, why...)		J_ASSERT(expr)
 #define J_EXPECT_BH(bh, expr, why...)	J_ASSERT_BH(bh, expr)
@@ -315,32 +324,32 @@ static inline struct journal_head *bh2jh(struct buffer_head *bh)
 
 static inline void jbd_lock_bh_state(struct buffer_head *bh)
 {
-	bit_spin_lock(BH_State, &bh->b_state);
+	spin_lock(&bh->b_state_lock);
 }
 
 static inline int jbd_trylock_bh_state(struct buffer_head *bh)
 {
-	return bit_spin_trylock(BH_State, &bh->b_state);
+	return spin_trylock(&bh->b_state_lock);
 }
 
 static inline int jbd_is_locked_bh_state(struct buffer_head *bh)
 {
-	return bit_spin_is_locked(BH_State, &bh->b_state);
+	return spin_is_locked(&bh->b_state_lock);
 }
 
 static inline void jbd_unlock_bh_state(struct buffer_head *bh)
 {
-	bit_spin_unlock(BH_State, &bh->b_state);
+	spin_unlock(&bh->b_state_lock);
 }
 
 static inline void jbd_lock_bh_journal_head(struct buffer_head *bh)
 {
-	bit_spin_lock(BH_JournalHead, &bh->b_state);
+	spin_lock_irq(&bh->b_uptodate_lock);
 }
 
 static inline void jbd_unlock_bh_journal_head(struct buffer_head *bh)
 {
-	bit_spin_unlock(BH_JournalHead, &bh->b_state);
+	spin_unlock_irq(&bh->b_uptodate_lock);
 }
 
 struct jbd_revoke_table_s;

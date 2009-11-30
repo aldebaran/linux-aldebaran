@@ -39,6 +39,7 @@
 #include <linux/module.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
+#include <linux/kmemcheck.h>
 #include <linux/mm.h>
 #include <linux/interrupt.h>
 #include <linux/in.h>
@@ -197,6 +198,8 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 	skb->data = data;
 	skb_reset_tail_pointer(skb);
 	skb->end = skb->tail + size;
+	kmemcheck_annotate_bitfield(skb->flags1);
+	kmemcheck_annotate_bitfield(skb->flags2);
 	/* make sure we initialize shinfo sequentially */
 	shinfo = skb_shinfo(skb);
 	atomic_set(&shinfo->dataref, 1);
@@ -211,6 +214,8 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 		struct sk_buff *child = skb + 1;
 		atomic_t *fclone_ref = (atomic_t *) (child + 1);
 
+		kmemcheck_annotate_bitfield(child->flags1);
+		kmemcheck_annotate_bitfield(child->flags2);
 		skb->fclone = SKB_FCLONE_ORIG;
 		atomic_set(fclone_ref, 1);
 
@@ -240,7 +245,7 @@ nodata:
 struct sk_buff *__netdev_alloc_skb(struct net_device *dev,
 		unsigned int length, gfp_t gfp_mask)
 {
-	int node = dev->dev.parent ? dev_to_node(dev->dev.parent) : -1;
+	int node = dev_to_node(&dev->dev);
 	struct sk_buff *skb;
 
 	skb = __alloc_skb(length + NET_SKB_PAD, gfp_mask, 0, node);
@@ -378,7 +383,7 @@ static void skb_release_head_state(struct sk_buff *skb)
 	secpath_put(skb->sp);
 #endif
 	if (skb->destructor) {
-		WARN_ON(in_irq());
+//		WARN_ON(in_irq());
 		skb->destructor(skb);
 	}
 #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
@@ -600,6 +605,9 @@ struct sk_buff *skb_clone(struct sk_buff *skb, gfp_t gfp_mask)
 		n = kmem_cache_alloc(skbuff_head_cache, gfp_mask);
 		if (!n)
 			return NULL;
+
+		kmemcheck_annotate_bitfield(n->flags1);
+		kmemcheck_annotate_bitfield(n->flags2);
 		n->fclone = SKB_FCLONE_UNAVAILABLE;
 	}
 

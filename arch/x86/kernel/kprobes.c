@@ -193,7 +193,7 @@ static int __kprobes can_boost(kprobe_opcode_t *opcodes)
 	kprobe_opcode_t opcode;
 	kprobe_opcode_t *orig_opcodes = opcodes;
 
-	if (search_exception_tables(opcodes))
+	if (search_exception_tables((unsigned long)opcodes))
 		return 0;	/* Page fault may occur on this address. */
 
 retry:
@@ -454,7 +454,7 @@ static void __kprobes setup_singlestep(struct kprobe *p, struct pt_regs *regs,
 		/* Boost up -- we can execute copied instructions directly */
 		reset_current_kprobe();
 		regs->ip = (unsigned long)p->ainsn.insn;
-		preempt_enable_no_resched();
+		preempt_enable();
 		return;
 	}
 #endif
@@ -480,7 +480,7 @@ static int __kprobes reenter_kprobe(struct kprobe *p, struct pt_regs *regs,
 		arch_disarm_kprobe(p);
 		regs->ip = (unsigned long)p->addr;
 		reset_current_kprobe();
-		preempt_enable_no_resched();
+		preempt_enable();
 		break;
 #endif
 	case KPROBE_HIT_ACTIVE:
@@ -576,7 +576,7 @@ static int __kprobes kprobe_handler(struct pt_regs *regs)
 		}
 	} /* else: not a kprobe fault; let the kernel handle it */
 
-	preempt_enable_no_resched();
+	preempt_enable();
 	return 0;
 }
 
@@ -638,13 +638,13 @@ static void __used __kprobes kretprobe_trampoline_holder(void)
 #else
 			"	pushf\n"
 			/*
-			 * Skip cs, ip, orig_ax.
+			 * Skip cs, ip, orig_ax and gs.
 			 * trampoline_handler() will plug in these values
 			 */
-			"	subl $12, %esp\n"
+			"	subl $16, %esp\n"
 			"	pushl %fs\n"
-			"	pushl %ds\n"
 			"	pushl %es\n"
+			"	pushl %ds\n"
 			"	pushl %eax\n"
 			"	pushl %ebp\n"
 			"	pushl %edi\n"
@@ -655,10 +655,10 @@ static void __used __kprobes kretprobe_trampoline_holder(void)
 			"	movl %esp, %eax\n"
 			"	call trampoline_handler\n"
 			/* Move flags to cs */
-			"	movl 52(%esp), %edx\n"
-			"	movl %edx, 48(%esp)\n"
+			"	movl 56(%esp), %edx\n"
+			"	movl %edx, 52(%esp)\n"
 			/* Replace saved flags with true return address. */
-			"	movl %eax, 52(%esp)\n"
+			"	movl %eax, 56(%esp)\n"
 			"	popl %ebx\n"
 			"	popl %ecx\n"
 			"	popl %edx\n"
@@ -666,8 +666,8 @@ static void __used __kprobes kretprobe_trampoline_holder(void)
 			"	popl %edi\n"
 			"	popl %ebp\n"
 			"	popl %eax\n"
-			/* Skip ip, orig_ax, es, ds, fs */
-			"	addl $20, %esp\n"
+			/* Skip ds, es, fs, gs, orig_ax and ip */
+			"	addl $24, %esp\n"
 			"	popf\n"
 #endif
 			"	ret\n");
@@ -691,6 +691,7 @@ static __used __kprobes void *trampoline_handler(struct pt_regs *regs)
 	regs->cs = __KERNEL_CS;
 #else
 	regs->cs = __KERNEL_CS | get_kernel_rpl();
+	regs->gs = 0;
 #endif
 	regs->ip = trampoline_address;
 	regs->orig_ax = ~0UL;
@@ -875,7 +876,7 @@ static int __kprobes post_kprobe_handler(struct pt_regs *regs)
 	}
 	reset_current_kprobe();
 out:
-	preempt_enable_no_resched();
+	preempt_enable();
 
 	/*
 	 * if somebody else is singlestepping across a probe point, flags
@@ -909,7 +910,7 @@ int __kprobes kprobe_fault_handler(struct pt_regs *regs, int trapnr)
 			restore_previous_kprobe(kcb);
 		else
 			reset_current_kprobe();
-		preempt_enable_no_resched();
+		preempt_enable();
 		break;
 	case KPROBE_HIT_ACTIVE:
 	case KPROBE_HIT_SSDONE:
@@ -1050,7 +1051,7 @@ int __kprobes longjmp_break_handler(struct kprobe *p, struct pt_regs *regs)
 		memcpy((kprobe_opcode_t *)(kcb->jprobe_saved_sp),
 		       kcb->jprobes_stack,
 		       MIN_STACK_SIZE(kcb->jprobe_saved_sp));
-		preempt_enable_no_resched();
+		preempt_enable();
 		return 1;
 	}
 	return 0;

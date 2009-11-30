@@ -38,7 +38,7 @@ int smp_call_function_single(int cpuid, void (*func) (void *info), void *info,
 /*
  * main cross-CPU interfaces, handles INIT, TLB flush, STOP, etc.
  * (defined in asm header):
- */ 
+ */
 
 /*
  * stops all CPUs but the current one:
@@ -49,6 +49,16 @@ extern void smp_send_stop(void);
  * sends a 'reschedule' event to another CPU:
  */
 extern void smp_send_reschedule(int cpu);
+
+/*
+ * trigger a reschedule on all other CPUs:
+ */
+extern void smp_send_reschedule_allbutself(void);
+
+/*
+ * trigger a reschedule on all other CPUs:
+ */
+extern void smp_send_reschedule_allbutself(void);
 
 
 /*
@@ -82,7 +92,8 @@ smp_call_function_mask(cpumask_t mask, void(*func)(void *info), void *info,
 	return 0;
 }
 
-void __smp_call_function_single(int cpuid, struct call_single_data *data);
+void __smp_call_function_single(int cpuid, struct call_single_data *data,
+				int wait);
 
 /*
  * Generic and arch helpers
@@ -121,6 +132,8 @@ extern unsigned int setup_max_cpus;
 
 #else /* !SMP */
 
+static inline void smp_send_stop(void) { }
+
 /*
  *	These macros fold the SMP functionality into a single CPU system
  */
@@ -139,6 +152,7 @@ static inline int up_smp_call_function(void (*func)(void *), void *info)
 		0;				\
 	})
 static inline void smp_send_reschedule(int cpu) { }
+static inline void smp_send_reschedule_allbutself(void) { }
 #define num_booting_cpus()			1
 #define smp_prepare_boot_cpu()			do {} while (0)
 #define smp_call_function_mask(mask, func, info, wait) \
@@ -174,7 +188,13 @@ static inline void init_call_single_data(void)
 
 #define get_cpu()		({ preempt_disable(); smp_processor_id(); })
 #define put_cpu()		preempt_enable()
-#define put_cpu_no_resched()	preempt_enable_no_resched()
+#define put_cpu_no_resched()	__preempt_enable_no_resched()
+
+/*
+ * Callback to arch code if there's nosmp or maxcpus=0 on the
+ * boot command line:
+ */
+extern void arch_disable_smp_support(void);
 
 void smp_setup_processor_id(void);
 

@@ -23,6 +23,7 @@
 #include <linux/file.h>
 #include <linux/writeback.h>
 #include <linux/blkdev.h>
+#include <linux/interrupt.h>
 #include <linux/buffer_head.h>	/* for try_to_release_page(),
 					buffer_heads_over_limit */
 #include <linux/mm_inline.h>
@@ -1125,7 +1126,7 @@ static unsigned long shrink_inactive_list(unsigned long max_scan,
 		}
 
 		nr_reclaimed += nr_freed;
-		local_irq_disable();
+		local_irq_disable_nort();
 		if (current_is_kswapd()) {
 			__count_zone_vm_events(PGSCAN_KSWAPD, zone, nr_scan);
 			__count_vm_events(KSWAPD_STEAL, nr_freed);
@@ -1166,9 +1167,14 @@ static unsigned long shrink_inactive_list(unsigned long max_scan,
 			}
 		}
   	} while (nr_scanned < max_scan);
+	/*
+	 * Non-PREEMPT_RT relies on IRQs-off protecting the page_states
+	 * per-CPU data. PREEMPT_RT has that data protected even in
+	 * __mod_page_state(), so no need to keep IRQs disabled.
+	 */
 	spin_unlock(&zone->lru_lock);
 done:
-	local_irq_enable();
+	local_irq_enable_nort();
 	pagevec_release(&pvec);
 	return nr_reclaimed;
 }
@@ -1963,7 +1969,9 @@ static int kswapd(void *p)
 	struct reclaim_state reclaim_state = {
 		.reclaimed_slab = 0,
 	};
-	node_to_cpumask_ptr(cpumask, pgdat->node_id);
+	const struct cpumask *cpumask = cpumask_of_node(pgdat->node_id);
+
+	lockdep_set_current_reclaim_state(GFP_KERNEL);
 
 	if (!cpumask_empty(cpumask))
 		set_cpus_allowed_ptr(tsk, cpumask);
@@ -2198,7 +2206,9 @@ static int __devinit cpu_callback(struct notifier_block *nfb,
 	if (action == CPU_ONLINE || action == CPU_ONLINE_FROZEN) {
 		for_each_node_state(nid, N_HIGH_MEMORY) {
 			pg_data_t *pgdat = NODE_DATA(nid);
-			node_to_cpumask_ptr(mask, pgdat->node_id);
+			const struct cpumask *mask;
+
+			mask = cpumask_of_node(pgdat->node_id);
 
 			if (cpumask_any_and(cpu_online_mask, mask) < nr_cpu_ids)
 				/* One of our CPUs online: restore mask */

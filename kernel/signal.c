@@ -179,13 +179,46 @@ int next_signal(struct sigpending *pending, sigset_t *mask)
 	return sig;
 }
 
+#ifdef __HAVE_ARCH_CMPXCHG
+static inline struct sigqueue *get_task_cache(struct task_struct *t)
+{
+	struct sigqueue *q = t->sigqueue_cache;
+
+	if (cmpxchg(&t->sigqueue_cache, q, NULL) != q)
+		return NULL;
+
+	return q;
+}
+
+static inline int put_task_cache(struct task_struct *t, struct sigqueue *q)
+{
+	if (cmpxchg(&t->sigqueue_cache, NULL, q) == NULL)
+		return 0;
+
+	return 1;
+}
+
+#else
+
+static inline struct sigqueue *get_task_cache(struct task_struct *t)
+{
+	return NULL;
+}
+
+static inline int put_task_cache(struct task_struct *t, struct sigqueue *q)
+{
+	return 1;
+}
+
+#endif
+
 /*
  * allocate a new signal queue record
  * - this may be called without locks if and only if t == current, otherwise an
  *   appopriate lock must be held to stop the target task from exiting
  */
-static struct sigqueue *__sigqueue_alloc(struct task_struct *t, gfp_t flags,
-					 int override_rlimit)
+static struct sigqueue *__sigqueue_do_alloc(struct task_struct *t, gfp_t flags,
+					    int override_rlimit, int fromslab)
 {
 	struct sigqueue *q = NULL;
 	struct user_struct *user;
@@ -200,8 +233,14 @@ static struct sigqueue *__sigqueue_alloc(struct task_struct *t, gfp_t flags,
 	atomic_inc(&user->sigpending);
 	if (override_rlimit ||
 	    atomic_read(&user->sigpending) <=
-			t->signal->rlim[RLIMIT_SIGPENDING].rlim_cur)
-		q = kmem_cache_alloc(sigqueue_cachep, flags);
+	    t->signal->rlim[RLIMIT_SIGPENDING].rlim_cur) {
+
+		if (!fromslab)
+			q = get_task_cache(t);
+		if (!q)
+			q = kmem_cache_alloc(sigqueue_cachep, flags);
+	}
+
 	if (unlikely(q == NULL)) {
 		atomic_dec(&user->sigpending);
 		free_uid(user);
@@ -214,6 +253,12 @@ static struct sigqueue *__sigqueue_alloc(struct task_struct *t, gfp_t flags,
 	return q;
 }
 
+static struct sigqueue *__sigqueue_alloc(struct task_struct *t, gfp_t flags,
+					 int override_rlimit)
+{
+	return __sigqueue_do_alloc(t, flags, override_rlimit, 0);
+}
+
 static void __sigqueue_free(struct sigqueue *q)
 {
 	if (q->flags & SIGQUEUE_PREALLOC)
@@ -221,6 +266,21 @@ static void __sigqueue_free(struct sigqueue *q)
 	atomic_dec(&q->user->sigpending);
 	free_uid(q->user);
 	kmem_cache_free(sigqueue_cachep, q);
+}
+
+static void sigqueue_free_current(struct sigqueue *q)
+{
+	struct user_struct *up;
+
+	if (q->flags & SIGQUEUE_PREALLOC)
+		return;
+
+	up = q->user;
+	if (rt_prio(current->normal_prio) && !put_task_cache(current, q)) {
+		atomic_dec(&up->sigpending);
+		free_uid(up);
+	} else
+		  __sigqueue_free(q);
 }
 
 void flush_sigqueue(struct sigpending *queue)
@@ -233,6 +293,21 @@ void flush_sigqueue(struct sigpending *queue)
 		list_del_init(&q->list);
 		__sigqueue_free(q);
 	}
+}
+
+/*
+ * Called from __exit_signal. Flush tsk->pending and
+ * tsk->sigqueue_cache
+ */
+void flush_task_sigqueue(struct task_struct *tsk)
+{
+	struct sigqueue *q;
+
+	flush_sigqueue(&tsk->pending);
+
+	q = get_task_cache(tsk);
+	if (q)
+		kmem_cache_free(sigqueue_cachep, q);
 }
 
 /*
@@ -378,7 +453,7 @@ static void collect_signal(int sig, struct sigpending *list, siginfo_t *info)
 still_pending:
 		list_del_init(&first->list);
 		copy_siginfo(info, &first->info);
-		__sigqueue_free(first);
+		sigqueue_free_current(first);
 	} else {
 		/* Ok, it wasn't in the queue.  This must be
 		   a fast-pathed signal or we must have been
@@ -422,6 +497,8 @@ static int __dequeue_signal(struct sigpending *pending, sigset_t *mask,
 int dequeue_signal(struct task_struct *tsk, sigset_t *mask, siginfo_t *info)
 {
 	int signr;
+
+	WARN_ON_ONCE(tsk != current);
 
 	/* We only dequeue private signals from ourselves, we don't let
 	 * signalfd steal them
@@ -504,6 +581,9 @@ void signal_wake_up(struct task_struct *t, int resume)
 	unsigned int mask;
 
 	set_tsk_thread_flag(t, TIF_SIGPENDING);
+
+	if (unlikely(t == current))
+		return;
 
 	/*
 	 * For SIGKILL, we want to wake it up in the stopped/traced/killable
@@ -821,7 +901,9 @@ static int send_signal(int sig, struct siginfo *info, struct task_struct *t,
 
 	trace_sched_signal_send(sig, t);
 
+#ifdef CONFIG_SMP
 	assert_spin_locked(&t->sighand->siglock);
+#endif
 	if (!prepare_signal(sig, t))
 		return 0;
 
@@ -1276,7 +1358,8 @@ struct sigqueue *sigqueue_alloc(void)
 {
 	struct sigqueue *q;
 
-	if ((q = __sigqueue_alloc(current, GFP_KERNEL, 0)))
+	/* Preallocated sigqueue objects always from the slabcache ! */
+	if ((q = __sigqueue_do_alloc(current, GFP_KERNEL, 0, 1)))
 		q->flags |= SIGQUEUE_PREALLOC;
 	return(q);
 }
@@ -1575,15 +1658,9 @@ static void ptrace_stop(int exit_code, int clear_code, siginfo_t *info)
 	read_lock(&tasklist_lock);
 	if (may_ptrace_stop()) {
 		do_notify_parent_cldstop(current, CLD_TRAPPED);
-		/*
-		 * Don't want to allow preemption here, because
-		 * sys_ptrace() needs this task to be inactive.
-		 *
-		 * XXX: implement read_unlock_no_resched().
-		 */
-		preempt_disable();
+
+		current->flags &= ~PF_NOSCHED;
 		read_unlock(&tasklist_lock);
-		preempt_enable_no_resched();
 		schedule();
 	} else {
 		/*
@@ -1652,6 +1729,7 @@ finish_stop(int stop_count)
 	}
 
 	do {
+		current->flags &= ~PF_NOSCHED;
 		schedule();
 	} while (try_to_freeze());
 	/*
@@ -2243,24 +2321,17 @@ SYSCALL_DEFINE2(kill, pid_t, pid, int, sig)
 	return kill_something_info(sig, &info, pid);
 }
 
-static int do_tkill(pid_t tgid, pid_t pid, int sig)
+static int
+do_send_specific(pid_t tgid, pid_t pid, int sig, struct siginfo *info)
 {
-	int error;
-	struct siginfo info;
 	struct task_struct *p;
 	unsigned long flags;
-
-	error = -ESRCH;
-	info.si_signo = sig;
-	info.si_errno = 0;
-	info.si_code = SI_TKILL;
-	info.si_pid = task_tgid_vnr(current);
-	info.si_uid = current_uid();
+	int error = -ESRCH;
 
 	rcu_read_lock();
 	p = find_task_by_vpid(pid);
 	if (p && (tgid <= 0 || task_tgid_vnr(p) == tgid)) {
-		error = check_kill_permission(sig, &info, p);
+		error = check_kill_permission(sig, info, p);
 		/*
 		 * The null signal is a permissions and process existence
 		 * probe.  No signal is actually delivered.
@@ -2270,13 +2341,26 @@ static int do_tkill(pid_t tgid, pid_t pid, int sig)
 		 * signal is private anyway.
 		 */
 		if (!error && sig && lock_task_sighand(p, &flags)) {
-			error = specific_send_sig_info(sig, &info, p);
+			error = specific_send_sig_info(sig, info, p);
 			unlock_task_sighand(p, &flags);
 		}
 	}
 	rcu_read_unlock();
 
 	return error;
+}
+
+static int do_tkill(pid_t tgid, pid_t pid, int sig)
+{
+	struct siginfo info;
+
+	info.si_signo = sig;
+	info.si_errno = 0;
+	info.si_code = SI_TKILL;
+	info.si_pid = task_tgid_vnr(current);
+	info.si_uid = current_uid();
+
+	return do_send_specific(tgid, pid, sig, &info);
 }
 
 /**
@@ -2326,6 +2410,32 @@ SYSCALL_DEFINE3(rt_sigqueueinfo, pid_t, pid, int, sig,
 
 	/* POSIX.1b doesn't mention process groups.  */
 	return kill_proc_info(sig, &info, pid);
+}
+
+long do_rt_tgsigqueueinfo(pid_t tgid, pid_t pid, int sig, siginfo_t *info)
+{
+	/* This is only valid for single tasks */
+	if (pid <= 0 || tgid <= 0)
+		return -EINVAL;
+
+	/* Not even root can pretend to send signals from the kernel.
+	   Nor can they impersonate a kill(), which adds source info.  */
+	if (info->si_code >= 0)
+		return -EPERM;
+	info->si_signo = sig;
+
+	return do_send_specific(tgid, pid, sig, info);
+}
+
+SYSCALL_DEFINE4(rt_tgsigqueueinfo, pid_t, tgid, pid_t, pid, int, sig,
+		siginfo_t __user *, uinfo)
+{
+	siginfo_t info;
+
+	if (copy_from_user(&info, uinfo, sizeof(siginfo_t)))
+		return -EFAULT;
+
+	return do_rt_tgsigqueueinfo(tgid, pid, sig, &info);
 }
 
 int do_sigaction(int sig, struct k_sigaction *act, struct k_sigaction *oact)

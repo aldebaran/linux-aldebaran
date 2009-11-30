@@ -98,12 +98,13 @@ extern unsigned int kobjsize(const void *objp);
 #define VM_HUGETLB	0x00400000	/* Huge TLB Page VM */
 #define VM_NONLINEAR	0x00800000	/* Is non-linear (remap_file_pages) */
 #define VM_MAPPED_COPY	0x01000000	/* T if mapped copy of data (nommu mmap) */
-#define VM_INSERTPAGE	0x02000000	/* The vma has had "vm_insert_page()" done on it. Refer note in VM_PFNMAP_AT_MMAP below */
+#define VM_INSERTPAGE	0x02000000	/* The vma has had "vm_insert_page()" done on it */
 #define VM_ALWAYSDUMP	0x04000000	/* Always include in core dumps */
 
 #define VM_CAN_NONLINEAR 0x08000000	/* Has ->fault & does nonlinear pages */
 #define VM_MIXEDMAP	0x10000000	/* Can contain "struct page" and pure PFN pages */
 #define VM_SAO		0x20000000	/* Strong Access Ordering (powerpc) */
+#define VM_PFN_AT_MMAP	0x40000000	/* PFNMAP vma that is fully mapped at mmap time */
 
 #ifndef VM_STACK_DEFAULT_FLAGS		/* arch can override this */
 #define VM_STACK_DEFAULT_FLAGS VM_DATA_DEFAULT_FLAGS
@@ -127,17 +128,6 @@ extern unsigned int kobjsize(const void *objp);
 #define VM_SPECIAL (VM_IO | VM_DONTEXPAND | VM_RESERVED | VM_PFNMAP)
 
 /*
- * pfnmap vmas that are fully mapped at mmap time (not mapped on fault).
- * Used by x86 PAT to identify such PFNMAP mappings and optimize their handling.
- * Note VM_INSERTPAGE flag is overloaded here. i.e,
- * VM_INSERTPAGE && !VM_PFNMAP implies
- *     The vma has had "vm_insert_page()" done on it
- * VM_INSERTPAGE && VM_PFNMAP implies
- *     The vma is PFNMAP with full mapping at mmap time
- */
-#define VM_PFNMAP_AT_MMAP (VM_INSERTPAGE | VM_PFNMAP)
-
-/*
  * mapping from the currently active vm_flags protection bits (the
  * low four bits) to a page protection mask..
  */
@@ -157,7 +147,7 @@ extern pgprot_t protection_map[16];
  */
 static inline int is_linear_pfn_mapping(struct vm_area_struct *vma)
 {
-	return ((vma->vm_flags & VM_PFNMAP_AT_MMAP) == VM_PFNMAP_AT_MMAP);
+	return (vma->vm_flags & VM_PFN_AT_MMAP);
 }
 
 static inline int is_pfn_mapping(struct vm_area_struct *vma)
@@ -614,23 +604,39 @@ static __always_inline void *lowmem_page_address(struct page *page)
 #endif
 
 #if defined(WANT_PAGE_VIRTUAL)
-#define page_address(page) ((page)->virtual)
-#define set_page_address(page, address)			\
-	do {						\
-		(page)->virtual = (address);		\
-	} while(0)
-#define page_address_init()  do { } while(0)
+/*
+ * wrap page->virtual so it is safe to set/read locklessly
+ */
+#define page_address(page) \
+	({ typeof((page)->virtual) v = (page)->virtual; \
+	 smp_read_barrier_depends(); \
+	 v; })
+
+static inline int set_page_address(struct page *page, void *address)
+{
+	if (address)
+		return cmpxchg(&page->virtual, NULL, address) == NULL;
+	else {
+		/*
+		 * cmpxchg is a bit abused because it is not guaranteed
+		 * safe wrt direct assignment on all platforms.
+		 */
+		void *virt = page->virtual;
+		return cmpxchg(&page->vitrual, virt, NULL) == virt;
+	}
+}
+void page_address_init(void);
 #endif
 
 #if defined(HASHED_PAGE_VIRTUAL)
 void *page_address(struct page *page);
-void set_page_address(struct page *page, void *virtual);
+int set_page_address(struct page *page, void *virtual);
 void page_address_init(void);
 #endif
 
 #if !defined(HASHED_PAGE_VIRTUAL) && !defined(WANT_PAGE_VIRTUAL)
 #define page_address(page) lowmem_page_address(page)
-#define set_page_address(page, address)  do { } while(0)
+#define set_page_address(page, address)  (0)
 #define page_address_init()  do { } while(0)
 #endif
 
@@ -771,7 +777,7 @@ int zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
 		unsigned long size);
 unsigned long zap_page_range(struct vm_area_struct *vma, unsigned long address,
 		unsigned long size, struct zap_details *);
-unsigned long unmap_vmas(struct mmu_gather **tlb,
+unsigned long unmap_vmas(struct mmu_gather *tlb,
 		struct vm_area_struct *start_vma, unsigned long start_addr,
 		unsigned long end_addr, unsigned long *nr_accounted,
 		struct zap_details *);
@@ -951,26 +957,84 @@ static inline pmd_t *pmd_alloc(struct mm_struct *mm, pud_t *pud, unsigned long a
  * overflow into the next struct page (as it might with DEBUG_SPINLOCK).
  * When freeing, reset page->mapping so free_pages_check won't complain.
  */
+#ifndef CONFIG_PREEMPT_RT
+
 #define __pte_lockptr(page)	&((page)->ptl)
-#define pte_lock_init(_page)	do {					\
-	spin_lock_init(__pte_lockptr(_page));				\
-} while (0)
+
+static inline struct page *pte_lock_init(struct page *page)
+{
+	spin_lock_init(__pte_lockptr(page));
+	return page;
+}
+
 #define pte_lock_deinit(page)	((page)->mapping = NULL)
+
+#else /* PREEMPT_RT */
+
+/*
+ * On PREEMPT_RT the spinlock_t's are too large to embed in the
+ * page frame, hence it only has a pointer and we need to dynamically
+ * allocate the lock when we allocate PTE-pages.
+ *
+ * This is an overall win, since only a small fraction of the pages
+ * will be PTE pages under normal circumstances.
+ */
+
+#define __pte_lockptr(page)	((page)->ptl)
+
+/*
+ * Heinous hack, relies on the caller doing something like:
+ *
+ *   pte = alloc_pages(PGALLOC_GFP, 0);
+ *   if (pte)
+ *     pgtable_page_ctor(pte);
+ *   return pte;
+ *
+ * This ensures we release the page and return NULL when the
+ * lock allocation fails.
+ */
+static inline struct page *pte_lock_init(struct page *page)
+{
+	page->ptl = kmalloc(sizeof(spinlock_t), GFP_KERNEL);
+	if (page->ptl) {
+		spin_lock_init(__pte_lockptr(page));
+	} else {
+		__free_page(page);
+		page = NULL;
+	}
+	return page;
+}
+
+static inline void pte_lock_deinit(struct page *page)
+{
+	kfree(page->ptl);
+	page->mapping = NULL;
+}
+
+#endif /* PREEMPT_RT */
+
 #define pte_lockptr(mm, pmd)	({(void)(mm); __pte_lockptr(pmd_page(*(pmd)));})
 #else	/* !USE_SPLIT_PTLOCKS */
 /*
  * We use mm->page_table_lock to guard all pagetable pages of the mm.
  */
-#define pte_lock_init(page)	do {} while (0)
+static inline struct page *pte_lock_init(struct page *page) { return page; }
 #define pte_lock_deinit(page)	do {} while (0)
 #define pte_lockptr(mm, pmd)	({(void)(pmd); &(mm)->page_table_lock;})
 #endif /* USE_SPLIT_PTLOCKS */
 
-static inline void pgtable_page_ctor(struct page *page)
+static inline struct page *__pgtable_page_ctor(struct page *page)
 {
-	pte_lock_init(page);
-	inc_zone_page_state(page, NR_PAGETABLE);
+	page = pte_lock_init(page);
+	if (page)
+		inc_zone_page_state(page, NR_PAGETABLE);
+	return page;
 }
+
+#define pgtable_page_ctor(page)				\
+do {							\
+	page = __pgtable_page_ctor(page);		\
+} while (0)
 
 static inline void pgtable_page_dtor(struct page *page)
 {

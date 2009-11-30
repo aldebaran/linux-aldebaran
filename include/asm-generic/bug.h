@@ -3,6 +3,10 @@
 
 #include <linux/compiler.h>
 
+#ifndef __ASSEMBLY__
+extern void __WARN_ON(const char *func, const char *file, const int line);
+#endif /* __ASSEMBLY__ */
+
 #ifdef CONFIG_BUG
 
 #ifdef CONFIG_GENERIC_BUG
@@ -103,10 +107,9 @@ extern void warn_slowpath(const char *file, const int line,
 #endif
 
 #ifndef WARN
-#define WARN(condition, format...) ({					\
-	int __ret_warn_on = !!(condition);				\
-	unlikely(__ret_warn_on);					\
-})
+static inline int __attribute__ ((format(printf, 2, 3)))
+__WARN(int condition, const char *fmt, ...) { return condition; }
+#define WARN(condition, format...) __WARN(!!(condition), format)
 #endif
 
 #endif
@@ -138,6 +141,20 @@ extern void warn_slowpath(const char *file, const int line,
 # define WARN_ON_SMP(x)			WARN_ON(x)
 #else
 # define WARN_ON_SMP(x)			do { } while (0)
+#endif
+
+#ifdef CONFIG_PREEMPT_RT
+# define BUG_ON_RT(c)			BUG_ON(c)
+# define BUG_ON_NONRT(c)		do { } while (0)
+# define WARN_ON_RT(condition)		WARN_ON(condition)
+# define WARN_ON_NONRT(condition)	do { } while (0)
+# define WARN_ON_ONCE_NONRT(condition)	do { } while (0)
+#else
+# define BUG_ON_RT(c)			do { } while (0)
+# define BUG_ON_NONRT(c)		BUG_ON(c)
+# define WARN_ON_RT(condition)		do { } while (0)
+# define WARN_ON_NONRT(condition)	WARN_ON(condition)
+# define WARN_ON_ONCE_NONRT(condition)	WARN_ON_ONCE(condition)
 #endif
 
 #endif

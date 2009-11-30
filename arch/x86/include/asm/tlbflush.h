@@ -7,6 +7,21 @@
 #include <asm/processor.h>
 #include <asm/system.h>
 
+/*
+ * TLB-flush needs to be nonpreemptible on PREEMPT_RT due to the
+ * following complex race scenario:
+ *
+ * if the current task is lazy-TLB and does a TLB flush and
+ * gets preempted after the movl %%r3, %0 but before the
+ * movl %0, %%cr3 then its ->active_mm might change and it will
+ * install the wrong cr3 when it switches back. This is not a
+ * problem for the lazy-TLB task itself, but if the next task it
+ * switches to has an ->mm that is also the lazy-TLB task's
+ * new ->active_mm, then the scheduler will assume that cr3 is
+ * the new one, while we overwrote it with the old one. The result
+ * is the wrong cr3 in the new (non-lazy-TLB) task, which typically
+ * causes an infinite pagefault upon the next userspace access.
+ */
 #ifdef CONFIG_PARAVIRT
 #include <asm/paravirt.h>
 #else
@@ -17,7 +32,9 @@
 
 static inline void __native_flush_tlb(void)
 {
+	preempt_disable();
 	write_cr3(read_cr3());
+	preempt_enable();
 }
 
 static inline void __native_flush_tlb_global(void)
@@ -95,6 +112,13 @@ static inline void __flush_tlb_one(unsigned long addr)
 
 static inline void flush_tlb_mm(struct mm_struct *mm)
 {
+	/*
+	 * This is safe on PREEMPT_RT because if we preempt
+	 * right after the check but before the __flush_tlb(),
+	 * and if ->active_mm changes, then we might miss a
+	 * TLB flush, but that TLB flush happened already when
+	 * ->active_mm was changed:
+	 */
 	if (mm == current->active_mm)
 		__flush_tlb();
 }
@@ -113,7 +137,7 @@ static inline void flush_tlb_range(struct vm_area_struct *vma,
 		__flush_tlb();
 }
 
-static inline void native_flush_tlb_others(const cpumask_t *cpumask,
+static inline void native_flush_tlb_others(const struct cpumask *cpumask,
 					   struct mm_struct *mm,
 					   unsigned long va)
 {
@@ -142,31 +166,28 @@ static inline void flush_tlb_range(struct vm_area_struct *vma,
 	flush_tlb_mm(vma->vm_mm);
 }
 
-void native_flush_tlb_others(const cpumask_t *cpumask, struct mm_struct *mm,
-			     unsigned long va);
+void native_flush_tlb_others(const struct cpumask *cpumask,
+			     struct mm_struct *mm, unsigned long va);
 
 #define TLBSTATE_OK	1
 #define TLBSTATE_LAZY	2
 
-#ifdef CONFIG_X86_32
 struct tlb_state {
 	struct mm_struct *active_mm;
 	int state;
-	char __cacheline_padding[L1_CACHE_BYTES-8];
 };
 DECLARE_PER_CPU(struct tlb_state, cpu_tlbstate);
 
-void reset_lazy_tlbstate(void);
-#else
 static inline void reset_lazy_tlbstate(void)
 {
+	percpu_write(cpu_tlbstate.state, 0);
+	percpu_write(cpu_tlbstate.active_mm, &init_mm);
 }
-#endif
 
 #endif	/* SMP */
 
 #ifndef CONFIG_PARAVIRT
-#define flush_tlb_others(mask, mm, va)	native_flush_tlb_others(&mask, mm, va)
+#define flush_tlb_others(mask, mm, va)	native_flush_tlb_others(mask, mm, va)
 #endif
 
 static inline void flush_tlb_kernel_range(unsigned long start,
@@ -174,5 +195,7 @@ static inline void flush_tlb_kernel_range(unsigned long start,
 {
 	flush_tlb_all();
 }
+
+extern void zap_low_mappings(void);
 
 #endif /* _ASM_X86_TLBFLUSH_H */

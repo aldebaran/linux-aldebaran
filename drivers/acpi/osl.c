@@ -272,13 +272,20 @@ acpi_os_map_memory(acpi_physical_address phys, acpi_size size)
 }
 EXPORT_SYMBOL_GPL(acpi_os_map_memory);
 
-void acpi_os_unmap_memory(void __iomem * virt, acpi_size size)
+void __ref acpi_os_unmap_memory(void __iomem *virt, acpi_size size)
 {
-	if (acpi_gbl_permanent_mmap) {
+	if (acpi_gbl_permanent_mmap)
 		iounmap(virt);
-	}
+	else
+		__acpi_unmap_table(virt, size);
 }
 EXPORT_SYMBOL_GPL(acpi_os_unmap_memory);
+
+void __init early_acpi_os_unmap_memory(void __iomem *virt, acpi_size size)
+{
+	if (!acpi_gbl_permanent_mmap)
+		__acpi_unmap_table(virt, size);
+}
 
 #ifdef ACPI_FUTURE_USAGE
 acpi_status
@@ -792,12 +799,12 @@ void acpi_os_delete_lock(acpi_spinlock handle)
 acpi_status
 acpi_os_create_semaphore(u32 max_units, u32 initial_units, acpi_handle * handle)
 {
-	struct semaphore *sem = NULL;
+	struct compat_semaphore *sem = NULL;
 
-	sem = acpi_os_allocate(sizeof(struct semaphore));
+	sem = acpi_os_allocate(sizeof(struct compat_semaphore));
 	if (!sem)
 		return AE_NO_MEMORY;
-	memset(sem, 0, sizeof(struct semaphore));
+	memset(sem, 0, sizeof(struct compat_semaphore));
 
 	sema_init(sem, initial_units);
 
@@ -818,7 +825,7 @@ acpi_os_create_semaphore(u32 max_units, u32 initial_units, acpi_handle * handle)
 
 acpi_status acpi_os_delete_semaphore(acpi_handle handle)
 {
-	struct semaphore *sem = (struct semaphore *)handle;
+	struct compat_semaphore *sem = (struct compat_semaphore *)handle;
 
 	if (!sem)
 		return AE_BAD_PARAMETER;
@@ -838,7 +845,7 @@ acpi_status acpi_os_delete_semaphore(acpi_handle handle)
 acpi_status acpi_os_wait_semaphore(acpi_handle handle, u32 units, u16 timeout)
 {
 	acpi_status status = AE_OK;
-	struct semaphore *sem = (struct semaphore *)handle;
+	struct compat_semaphore *sem = (struct compat_semaphore *)handle;
 	long jiffies;
 	int ret = 0;
 
@@ -879,7 +886,7 @@ acpi_status acpi_os_wait_semaphore(acpi_handle handle, u32 units, u16 timeout)
  */
 acpi_status acpi_os_signal_semaphore(acpi_handle handle, u32 units)
 {
-	struct semaphore *sem = (struct semaphore *)handle;
+	struct compat_semaphore *sem = (struct compat_semaphore *)handle;
 
 	if (!sem || (units < 1))
 		return AE_BAD_PARAMETER;

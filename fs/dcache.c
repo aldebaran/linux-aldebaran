@@ -726,8 +726,9 @@ void shrink_dcache_for_umount(struct super_block *sb)
 {
 	struct dentry *dentry;
 
-	if (down_read_trylock(&sb->s_umount))
-		BUG();
+// -rt: this might succeed there ...
+//	if (down_read_trylock(&sb->s_umount))
+//		BUG();
 
 	dentry = sb->s_root;
 	sb->s_root = NULL;
@@ -1877,6 +1878,8 @@ out_nolock:
 shouldnt_be_hashed:
 	spin_unlock(&dcache_lock);
 	BUG();
+
+	return NULL;
 }
 
 static int prepend(char **buffer, int *buflen, const char *str, int namelen)

@@ -75,7 +75,9 @@ static void __unhash_process(struct task_struct *p)
 		detach_pid(p, PIDTYPE_SID);
 
 		list_del_rcu(&p->tasks);
+		preempt_disable();
 		__get_cpu_var(process_counts)--;
+		preempt_enable();
 	}
 	list_del_rcu(&p->thread_group);
 	list_del_init(&p->sibling);
@@ -138,7 +140,7 @@ static void __exit_signal(struct task_struct *tsk)
 	 * Do this under ->siglock, we can race with another thread
 	 * doing sigqueue_free() if we have SIGQUEUE_PREALLOC signals.
 	 */
-	flush_sigqueue(&tsk->pending);
+	flush_task_sigqueue(tsk);
 
 	tsk->signal = NULL;
 	tsk->sighand = NULL;
@@ -162,6 +164,9 @@ static void delayed_put_task_struct(struct rcu_head *rhp)
 {
 	struct task_struct *tsk = container_of(rhp, struct task_struct, rcu);
 
+#ifdef CONFIG_PERF_COUNTERS
+	WARN_ON_ONCE(!list_empty(&tsk->perf_counter_ctx.counter_list));
+#endif
 	trace_sched_process_free(tsk);
 	put_task_struct(tsk);
 }
@@ -694,9 +699,11 @@ static void exit_mm(struct task_struct * tsk)
 	task_lock(tsk);
 	tsk->mm = NULL;
 	up_read(&mm->mmap_sem);
+	preempt_disable(); // FIXME
 	enter_lazy_tlb(mm, current);
 	/* We don't want this task to be frozen prematurely */
 	clear_freeze_flag(tsk);
+	preempt_enable();
 	task_unlock(tsk);
 	mm_update_next_owner(mm);
 	mmput(mm);
@@ -945,12 +952,9 @@ static void check_stack_usage(void)
 {
 	static DEFINE_SPINLOCK(low_water_lock);
 	static int lowest_to_date = THREAD_SIZE;
-	unsigned long *n = end_of_stack(current);
 	unsigned long free;
 
-	while (*n == 0)
-		n++;
-	free = (unsigned long)n - (unsigned long)end_of_stack(current);
+	free = stack_not_used(current);
 
 	if (free >= lowest_to_date)
 		return;
@@ -1061,10 +1065,6 @@ NORET_TYPE void do_exit(long code)
 	tsk->mempolicy = NULL;
 #endif
 #ifdef CONFIG_FUTEX
-	/*
-	 * This must happen late, after the PID is not
-	 * hashed anymore:
-	 */
 	if (unlikely(!list_empty(&tsk->pi_state_list)))
 		exit_pi_state_list(tsk);
 	if (unlikely(current->pi_state_cache))
@@ -1087,14 +1087,17 @@ NORET_TYPE void do_exit(long code)
 	if (tsk->splice_pipe)
 		__free_pipe_info(tsk->splice_pipe);
 
-	preempt_disable();
+again:
+	local_irq_disable();
 	/* causes final put_task_struct in finish_task_switch(). */
 	tsk->state = TASK_DEAD;
-	schedule();
-	BUG();
-	/* Avoid "noreturn function does return".  */
-	for (;;)
-		cpu_relax();	/* For when BUG is null */
+	__schedule();
+	printk(KERN_ERR "BUG: dead task %s:%d back from the grave!\n",
+		current->comm, current->pid);
+	printk(KERN_ERR ".... flags: %08x, count: %d, state: %08lx\n",
+		current->flags, atomic_read(&current->usage), current->state);
+	printk(KERN_ERR ".... trying again ...\n");
+	goto again;
 }
 
 EXPORT_SYMBOL_GPL(do_exit);
@@ -1331,6 +1334,12 @@ static int wait_task_zombie(struct task_struct *p, int options,
 	 */
 	read_unlock(&tasklist_lock);
 
+	/*
+	 * Flush inherited counters to the parent - before the parent
+	 * gets woken up by child-exit notifications.
+	 */
+	perf_counter_exit_task(p);
+
 	retval = ru ? getrusage(p, RUSAGE_BOTH, ru) : 0;
 	status = (p->signal->flags & SIGNAL_GROUP_EXIT)
 		? p->signal->group_exit_code : p->exit_code;
@@ -1537,6 +1546,7 @@ static int wait_consider_task(struct task_struct *parent, int ptrace,
 			      int __user *stat_addr, struct rusage __user *ru)
 {
 	int ret = eligible_child(type, pid, options, p);
+			BUG_ON(!atomic_read(&p->usage));
 	if (!ret)
 		return ret;
 

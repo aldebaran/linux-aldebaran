@@ -297,14 +297,14 @@ static void cleanup_user_struct(struct work_struct *w)
 	 */
 	uids_mutex_lock();
 
-	local_irq_save(flags);
+	local_irq_save_nort(flags);
 
 	if (atomic_dec_and_lock(&up->__count, &uidhash_lock)) {
 		uid_hash_remove(up);
 		remove_user = 1;
 		spin_unlock_irqrestore(&uidhash_lock, flags);
 	} else {
-		local_irq_restore(flags);
+		local_irq_restore_nort(flags);
 	}
 
 	if (!remove_user)
@@ -405,11 +405,11 @@ void free_uid(struct user_struct *up)
 	if (!up)
 		return;
 
-	local_irq_save(flags);
+	local_irq_save_nort(flags);
 	if (atomic_dec_and_lock(&up->__count, &uidhash_lock))
 		free_user(up, flags);
 	else
-		local_irq_restore(flags);
+		local_irq_restore_nort(flags);
 }
 
 struct user_struct *alloc_uid(struct user_namespace *ns, uid_t uid)

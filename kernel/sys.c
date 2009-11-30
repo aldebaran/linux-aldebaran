@@ -14,6 +14,7 @@
 #include <linux/prctl.h>
 #include <linux/highuid.h>
 #include <linux/fs.h>
+#include <linux/perf_counter.h>
 #include <linux/resource.h>
 #include <linux/kernel.h>
 #include <linux/kexec.h>
@@ -32,11 +33,13 @@
 #include <linux/getcpu.h>
 #include <linux/task_io_accounting_ops.h>
 #include <linux/seccomp.h>
+#include <linux/hardirq.h>
 #include <linux/cpu.h>
 #include <linux/ptrace.h>
 
 #include <linux/compat.h>
 #include <linux/syscalls.h>
+#include <linux/rt_lock.h>
 #include <linux/kprobes.h>
 #include <linux/user_namespace.h>
 
@@ -278,6 +281,15 @@ out_unlock:
  */
 void emergency_restart(void)
 {
+	/*
+	 * Call the notifier chain if we are not in an
+	 * atomic context:
+	 */
+#ifdef CONFIG_PREEMPT
+	if (!in_atomic() && !irqs_disabled())
+		blocking_notifier_call_chain(&reboot_notifier_list,
+					     SYS_RESTART, NULL);
+#endif
 	machine_emergency_restart();
 }
 EXPORT_SYMBOL_GPL(emergency_restart);
@@ -1799,6 +1811,12 @@ SYSCALL_DEFINE5(prctl, int, option, unsigned long, arg2, unsigned long, arg3,
 			break;
 		case PR_SET_TSC:
 			error = SET_TSC_CTL(arg2);
+			break;
+		case PR_TASK_PERF_COUNTERS_DISABLE:
+			error = perf_counter_task_disable();
+			break;
+		case PR_TASK_PERF_COUNTERS_ENABLE:
+			error = perf_counter_task_enable();
 			break;
 		case PR_GET_TIMERSLACK:
 			error = current->timer_slack_ns;

@@ -50,8 +50,8 @@
 
 #define ACPI_ASM_MACROS
 #define BREAKPOINT3
-#define ACPI_DISABLE_IRQS() local_irq_disable()
-#define ACPI_ENABLE_IRQS()  local_irq_enable()
+#define ACPI_DISABLE_IRQS() local_irq_disable_nort()
+#define ACPI_ENABLE_IRQS()  local_irq_enable_nort()
 #define ACPI_FLUSH_CPU_CACHE()	wbinvd()
 
 int __acpi_acquire_global_lock(unsigned int *lock);
@@ -101,9 +101,6 @@ static inline void disable_acpi(void)
 	acpi_pci_disabled = 1;
 	acpi_noirq = 1;
 }
-
-/* Fixmap pages to reserve for ACPI boot-time tables (see fixmap.h) */
-#define FIX_ACPI_PAGES 4
 
 extern int acpi_gsi_to_irq(u32 gsi, unsigned int *irq);
 
