@@ -47,7 +47,7 @@ static int flash_access = 0;
 #define FPGA_START_ADDRESS    0x100000
 #define FPGA_SYNCHRO_ADDRESS  0x54
 #define FPGA_SYNCHRO_WORD     0x665599AA
-#endif
+#endif /* CONFIG_AL_UNICORN_SYSFS_FLASH */
 
 const int FPGA1[] = {0x03B960,0xFE008d,0xD4C10C};
 const int FPGA2[] = {0x42F524,0xBB42CC,0x868042};
@@ -588,6 +588,90 @@ static struct bin_attribute unicorn_attr_flash_data = {
         .write = flash_data_write,
 };
 
+#ifdef CONFIG_AL_UNICORN_WRITE_BOOTLOADER
+static ssize_t bootloader_data_read(struct file *f, struct kobject *kobj,
+	struct bin_attribute *bin_attr, char *buffer, loff_t offset, size_t count)
+{
+   size_t ret_count=0;
+   struct unicorn_dev *dev = (struct unicorn_dev *)bin_attr->private;
+
+   mutex_lock(&update_lock);
+
+   if(flash_access==0)
+     ret_count = -EPERM;
+   else
+   {
+     if(offset<FPGA_START_ADDRESS)
+     {
+       if(readFlash(dev,buffer,count-1,offset)>=0)
+       {
+         dprintk(1, "unicorn-spi-flash", "bootloader_data_read(): buffer:0x%p off:0x%llx size:0x%x\n",buffer,offset,count);
+         ret_count = count;
+       }
+       else
+       {
+         printk(KERN_ERR "unicorn: Error during reading bootloader off:0x%llx size:0x%x\n",offset,count);
+         ret_count = -EIO;
+       }
+     }
+     else
+     {
+       printk(KERN_ERR "unicorn: Error during reading bootloader out of bound off:0x%llx size:0x%x\n",offset,count);
+       ret_count = -EIO;
+     }
+   }
+
+   mutex_unlock(&update_lock);
+
+   return ret_count;
+}
+
+static ssize_t bootloader_data_write(struct file *f, struct kobject *kobj,
+		struct bin_attribute *bin_attr, char *buffer, loff_t offset, size_t count)
+{
+  size_t ret_count=0;
+  struct unicorn_dev *dev = (struct unicorn_dev *)bin_attr->private;
+
+  mutex_lock(&update_lock);
+
+  if(flash_access==0)
+    ret_count = -EPERM;
+  else
+  {
+    if(offset<FPGA_START_ADDRESS)
+    {
+      if(writeFlash(dev,buffer,count,offset)>=0)
+      {
+        dprintk(1, "unicorn-spi-flash", "bootloader_data_write(): buffer:0x%p off:0x%llx count:0x%x\n",buffer,offset,count);
+        ret_count = count;
+      }
+      else
+      {
+        printk(KERN_ERR "unicorn: Error during writting bootloader off:0x%llx size:0x%x\n",offset,count);
+        ret_count = -EIO;
+      }
+    }
+    else
+    {
+      printk(KERN_ERR "unicorn: Error during writting bootloader out of bound off:0x%llx size:0x%x\n",offset,count);
+      ret_count = -EIO;
+    }
+  }
+
+  mutex_unlock(&update_lock);
+
+  return ret_count;
+}
+
+static struct bin_attribute unicorn_attr_bootloader_data = {
+        .attr = {.name = "bootloader_data", .mode = 0600},
+        .size = 0,
+        .read = bootloader_data_read,
+        .write = bootloader_data_write,
+};
+
+#endif /* CONFIG_AL_UNICORN_WRITE_BOOTLOADER */
+
 static ssize_t flash_synchro_read(struct file *f, struct kobject *kobj, struct bin_attribute *bin_attr,
     char *buffer, loff_t offset, size_t count)
 {
@@ -690,9 +774,18 @@ int unicorn_spi_flash_init(struct class *unicorn_class, struct unicorn_dev *dev)
                    __func__);
   }
 
+#ifdef CONFIG_AL_UNICORN_WRITE_BOOTLOADER
+
+  unicorn_attr_bootloader_data.private=dev;
+  error = sysfs_create_bin_file(&kset->kobj, &unicorn_attr_bootloader_data);
+  if (error)
+  {
+     printk(KERN_ERR "%s: sysfs_create_bin_file unicorn_attr_bootloader_data failed\n",
+                    __func__);
+  }
+#endif /* CONFIG_AL_UNICORN_WRITE_BOOTLOADER */
+
 #endif /* CONFIG_AL_UNICORN_SYSFS_FLASH */
-
-
 
   return error;
 }

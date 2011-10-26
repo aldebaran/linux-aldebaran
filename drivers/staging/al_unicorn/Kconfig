@@ -16,6 +16,13 @@ config AL_UNICORN_SYSFS_FLASH
 	---help---
 	  Without FPGA can be only flash with ioctl call
 
+config AL_UNICORN_WRITE_BOOTLOADER
+	bool "Allow FPGA bootloader reflash with sysfs"
+	depends on AL_UNICORN_SYSFS_FLASH
+	default n
+	---help---
+	  Without FPGA bootloader can not be overwritten
+
 config AL_UNICORN_WIDTH_VIDEO_SUPPORT
 	bool "Add video support to Aldebaran Robotics Unicorn"
 	depends on AL_UNICORN
