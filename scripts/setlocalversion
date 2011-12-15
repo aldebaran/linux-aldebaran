@@ -16,6 +16,8 @@ usage() {
 
 cd "${1:-.}" || usage
 
+exit 
+
 # Check for git and a git repo.
 if head=`git rev-parse --verify --short HEAD 2>/dev/null`; then
 
