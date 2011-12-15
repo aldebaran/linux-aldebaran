@@ -1,0 +1,47 @@
+From 3dbec94bb976bb5e6961911e942be9c50f49fac2 Mon Sep 17 00:00:00 2001
+From: Julien Massot <jmassot@aldebaran-robotics.com>
+Date: Tue, 26 Jul 2011 12:28:41 +0000
+Subject: [PATCH 1/2] compat: use dev->sem instead of dev->mutex
+
+make compat works with 2.6.29
+---
+ include/linux/compat-2.6.34.h |   12 ------------
+ 1 files changed, 0 insertions(+), 12 deletions(-)
+
+diff --git a/include/linux/compat-2.6.34.h b/include/linux/compat-2.6.34.h
+index 9743d6c..0c329d4 100644
+--- a/include/linux/compat-2.6.34.h
++++ b/include/linux/compat-2.6.34.h
+@@ -143,29 +143,17 @@ do {								\
+ 
+ static inline void device_lock(struct device *dev)
+ {
+-#if defined(CONFIG_PREEMPT_RT) || defined(CONFIG_PREEMPT_DESKTOP)
+-        mutex_lock(&dev->mutex);
+-#else
+ 	down(&dev->sem);
+-#endif
+ }
+ 
+ static inline int device_trylock(struct device *dev)
+ {
+-#if defined(CONFIG_PREEMPT_RT) || defined(CONFIG_PREEMPT_DESKTOP)
+-	return mutex_trylock(&dev->mutex);
+-#else
+ 	return down_trylock(&dev->sem);
+-#endif
+ }
+ 
+ static inline void device_unlock(struct device *dev)
+ {
+-#if defined(CONFIG_PREEMPT_RT) || defined(CONFIG_PREEMPT_DESKTOP)
+-        mutex_unlock(&dev->mutex);
+-#else
+ 	up(&dev->sem);
+-#endif
+ }
+ 
+ #if defined(CONFIG_PCMCIA) || defined(CONFIG_PCMCIA_MODULE)
+-- 
+1.7.4.1
+
