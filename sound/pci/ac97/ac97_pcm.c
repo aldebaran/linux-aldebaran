@@ -146,8 +146,8 @@ static unsigned char rate_reg_tables[2][4][9] = {
 static unsigned char rate_cregs[9] = {
 	AC97_PCM_LR_ADC_RATE,	/* 3 */
 	AC97_PCM_LR_ADC_RATE,	/* 4 */
-	0xff,			/* 5 */
-	AC97_PCM_MIC_ADC_RATE,	/* 6 */
+	AC97_PCM_LR_ADC_RATE,	/* 5 */
+	AC97_PCM_LR_ADC_RATE,	/* 6 */
 	0xff,			/* 7 */
 	0xff,			/* 8 */
 	0xff,			/* 9 */
@@ -397,10 +397,12 @@ static unsigned short get_cslots(struct snd_ac97 *ac97)
 {
 	unsigned short slots;
 
+	printk(KERN_ERR "get_cslots: %d\n", (unsigned)slots);
 	if (!ac97_is_audio(ac97))
 		return 0;
 	slots = (1<<AC97_SLOT_PCM_LEFT)|(1<<AC97_SLOT_PCM_RIGHT);
 	slots |= (1<<AC97_SLOT_MIC);
+	slots |= (1<<AC97_SLOT_MODEM_LINE1)|(1<<AC97_SLOT_PCM_CENTER);
 	return slots;
 }
 
@@ -410,6 +412,7 @@ static unsigned int get_rates(struct ac97_pcm *pcm, unsigned int cidx, unsigned 
 	unsigned int rates = ~0;
 	unsigned char reg;
 
+	printk(KERN_INFO "get_rates: %x<-%x\n", cidx, (unsigned)slots);
 	for (i = 3; i < 12; i++) {
 		if (!(slots & (1 << i)))
 			continue;
@@ -454,6 +457,7 @@ int snd_ac97_pcm_assign(struct snd_ac97_bus *bus,
 	unsigned int rates;
 	struct snd_ac97 *codec;
 
+	printk(KERN_ERR "pcm_assign for %d slots\n", (unsigned)pcms_count);
 	rpcms = kcalloc(pcms_count, sizeof(struct ac97_pcm), GFP_KERNEL);
 	if (rpcms == NULL)
 		return -ENOMEM;
@@ -462,6 +466,7 @@ int snd_ac97_pcm_assign(struct snd_ac97_bus *bus,
 	memset(spdif_slots, 0, sizeof(spdif_slots));
 	for (i = 0; i < 4; i++) {
 		codec = bus->codec[i];
+		printk(KERN_INFO "avail_slots for codec %d\n", i);
 		if (!codec)
 			continue;
 		avail_slots[0][i] = get_pslots(codec, &rate_table[0][i], &spdif_slots[i]);
@@ -472,6 +477,7 @@ int snd_ac97_pcm_assign(struct snd_ac97_bus *bus,
 					avail_slots[1][i] &= ~avail_slots[1][j];
 			}
 		}
+		printk(KERN_INFO "avail_slots[1][%d] = %x\n", i, (unsigned)avail_slots[1][i]);
 	}
 	/* first step - exclusive devices */
 	for (i = 0; i < pcms_count; i++) {
@@ -571,6 +577,7 @@ int snd_ac97_pcm_open(struct ac97_pcm *pcm, unsigned int rate,
 	unsigned char reg;
 	int err = 0;
 
+	printk(KERN_INFO "pcm_open for slots %x\n", (unsigned)slots);
 	r = rate > 48000;
 	bus = pcm->bus;
 	if (cfg == AC97_PCM_CFG_SPDIF) {

@@ -2184,10 +2184,12 @@ int snd_ac97_mixer(struct snd_ac97_bus *bus, struct snd_ac97_template *template,
 		snd_ac97_determine_rates(ac97, AC97_PCM_FRONT_DAC_RATE, 0, &ac97->rates[AC97_RATES_FRONT_DAC]);
 		snd_ac97_determine_rates(ac97, AC97_PCM_LR_ADC_RATE, 0, &ac97->rates[AC97_RATES_ADC]);
 	} else {
-		ac97->rates[AC97_RATES_FRONT_DAC] = SNDRV_PCM_RATE_48000;
+		snd_printk(KERN_INFO "DAC supports only 48000 Hz\n");
+
+		ac97->rates[AC97_RATES_FRONT_DAC] = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_CONTINUOUS;
 		if (ac97->flags & AC97_DOUBLE_RATE)
 			ac97->rates[AC97_RATES_FRONT_DAC] |= SNDRV_PCM_RATE_96000;
-		ac97->rates[AC97_RATES_ADC] = SNDRV_PCM_RATE_48000;
+		ac97->rates[AC97_RATES_ADC] = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_CONTINUOUS;
 	}
 	if (ac97->ext_id & AC97_EI_SPDIF) {
 		/* codec specific code (patch) should override these values */
@@ -2196,7 +2198,7 @@ int snd_ac97_mixer(struct snd_ac97_bus *bus, struct snd_ac97_template *template,
 	if (ac97->ext_id & AC97_EI_VRM) {	/* MIC VRA support */
 		snd_ac97_determine_rates(ac97, AC97_PCM_MIC_ADC_RATE, 0, &ac97->rates[AC97_RATES_MIC_ADC]);
 	} else {
-		ac97->rates[AC97_RATES_MIC_ADC] = SNDRV_PCM_RATE_48000;
+		ac97->rates[AC97_RATES_MIC_ADC] = SNDRV_PCM_RATE_48000 | SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_CONTINUOUS;
 	}
 	if (ac97->ext_id & AC97_EI_SDAC) {	/* SDAC support */
 		snd_ac97_determine_rates(ac97, AC97_PCM_SURR_DAC_RATE, AC97_PCM_FRONT_DAC_RATE, &ac97->rates[AC97_RATES_SURR_DAC]);

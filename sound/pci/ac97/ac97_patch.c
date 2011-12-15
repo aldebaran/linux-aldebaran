@@ -1505,10 +1505,21 @@ static int patch_ad1819(struct snd_ac97 * ac97)
 {
 	unsigned short scfg;
 
+	snd_printk(KERN_INFO "AD1819 specific code activated\n");
+
 	// patch for Analog Devices
 	scfg = snd_ac97_read(ac97, AC97_AD_SERIAL_CFG);
 	snd_ac97_write_cache(ac97, AC97_AD_SERIAL_CFG, scfg | 0x7000); /* select all codecs */
 	ac97->res_table = ad1819_restbl;
+
+	// the AD1819(B) supports VRA but doesn't have the extended id register
+	ac97->rates[AC97_RATES_FRONT_DAC] = SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 |
+										SNDRV_PCM_RATE_8000_48000;
+	ac97->rates[AC97_RATES_ADC] = SNDRV_PCM_RATE_CONTINUOUS | SNDRV_PCM_RATE_44100 |
+										SNDRV_PCM_RATE_8000_48000;
+
+	ac97->regs[AC97_EXTENDED_STATUS] |= AC97_EA_VRA | AC97_EA_VRM | AC97_EA_SPSA_3_4;
+	printk(KERN_INFO "regs[AC97_EXTENDED_STATUS] = %x\n", ac97->regs[AC97_EXTENDED_STATUS]);
 	return 0;
 }
 
