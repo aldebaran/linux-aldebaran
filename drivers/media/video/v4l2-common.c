@@ -409,7 +409,13 @@ const char *v4l2_ctrl_get_name(u32 id)
 	case V4L2_CID_HUE_AUTO:			return "Hue, Automatic";
 	case V4L2_CID_WHITE_BALANCE_TEMPERATURE: return "White Balance Temperature";
 	case V4L2_CID_SHARPNESS:		return "Sharpness";
-	case V4L2_CID_BACKLIGHT_COMPENSATION:	return "Backlight Compensation";
+	case V4L2_CID_AUTO_BLACK_LEVEL:	return "Automatic Black Level Calibration";
+	case V4L2_CID_ABLC_TARGET:	return "ABLC Target";
+	case V4L2_CID_ABLC_RANGE:	return "ABLC Stable Range";
+	case V4L2_CID_BLACK_LEVEL_BLUE:	return "Blue Channel Black Level Compensation";
+	case V4L2_CID_BLACK_LEVEL_RED:	return "Red Channel Black Level Compensation";
+	case V4L2_CID_BLACK_LEVEL_GB:	return "Gb Channel Black Level Compensation";
+	case V4L2_CID_BLACK_LEVEL_GR:	return "Gr Channel Black Level Compensation";
 	case V4L2_CID_CHROMA_AGC:		return "Chroma AGC";
 	case V4L2_CID_COLOR_KILLER:		return "Color Killer";
 
