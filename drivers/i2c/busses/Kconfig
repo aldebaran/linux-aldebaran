@@ -721,4 +721,10 @@ config SCx200_ACB
 	  This support is also available as a module.  If so, the module
 	  will be called scx200_acb.
 
+config I2C_SERIAL
+	tristate "I2C bus on serial port"
+	depends on SERIAL_8250
+	help
+	  This driver supports I2C bus on serial port (Aldebaran)
+
 endmenu

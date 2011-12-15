@@ -79,6 +79,7 @@
  */
 
 /* --- Bit algorithm adapters						*/
+#define I2C_HW_B_SER		0x010002 /* Serial line interface */
 #define I2C_HW_B_BT848		0x010005 /* BT848 video boards */
 #define I2C_HW_B_RIVA		0x010010 /* Riva based graphics cards */
 #define I2C_HW_B_ZR36067	0x010019 /* Zoran-36057/36067 based boards */
