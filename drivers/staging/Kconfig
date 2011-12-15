@@ -143,5 +143,7 @@ source "drivers/staging/netwave/Kconfig"
 
 source "drivers/staging/sm7xx/Kconfig"
 
+source "drivers/staging/al_unicorn/Kconfig"
+
 endif # !STAGING_EXCLUDE_BUILD
 endif # STAGING
