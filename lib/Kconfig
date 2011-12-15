@@ -80,6 +80,16 @@ config LIBCRC32C
 	  require M here.  See Castagnoli93.
 	  Module will be libcrc32c.
 
+config CIMARRON
+        tristate "AMD LX graphics abstraction layer (Cimarron)"
+        depends on MGEODE_LX
+        default n
+        help
+          This option is provided for the case where no in-kernel-tree
+          modules require the AMD LX graphics HAL, but a module built
+          ouside of the kernel does.
+
+
 config AUDIT_GENERIC
 	bool
 	depends on AUDIT && !AUDIT_ARCH
@@ -125,7 +135,7 @@ config GENERIC_ALLOCATOR
 #
 config REED_SOLOMON
 	tristate
-	
+
 config REED_SOLOMON_ENC8
 	boolean
 
