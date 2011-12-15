@@ -22,6 +22,7 @@
 #include <linux/kthread.h>
 #include <linux/mutex.h>
 #include <linux/freezer.h>
+#include <linux/delay.h>
 
 #include <asm/uaccess.h>
 #include <asm/byteorder.h>
@@ -1831,6 +1832,14 @@ static int hub_port_reset(struct usb_hub *hub, int port1,
 {
 	int i, status;
 
+	/*
+	** add a little delay which seems to reduce the famous root-hub crash
+	** on nao-geode board.
+	**  10ms should be enough
+	*/
+	mdelay (100);
+
+
 	/* Block EHCI CF initialization during the port reset.
 	 * Some companion controllers don't like it when they mix.
 	 */
@@ -1875,6 +1884,8 @@ static int hub_port_reset(struct usb_hub *hub, int port1,
 			port1);
 		delay = HUB_LONG_RESET_TIME;
 	}
+
+	panic("fatal error while resetting USB port.The system will die...\n");
 
 	dev_err (hub->intfdev,
 		"Cannot enable port %i.  Maybe the USB cable is bad?\n",
