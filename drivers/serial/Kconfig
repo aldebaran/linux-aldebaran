@@ -83,11 +83,15 @@ config SERIAL_8250_GSC
 config SERIAL_8250_PCI
 	tristate "8250/16550 PCI device support" if EMBEDDED
 	depends on SERIAL_8250 && PCI
-	default SERIAL_8250
+	default "n" if AL_FASTSERIAL
+	default SERIAL_8250 if ! AL_FASTSERIAL
 	help
 	  This builds standard PCI serial support. You may be able to
 	  disable this feature if you only need legacy serial support.
 	  Saves about 9K.
+
+comment "8250/16550 PCI device support is disabled"
+	depends on SERIAL_8250 && ! SERIAL_8250_PCI
 
 config SERIAL_8250_PNP
 	tristate "8250/16550 PNP device support" if EMBEDDED
