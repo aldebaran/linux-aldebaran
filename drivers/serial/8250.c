@@ -981,6 +981,7 @@ static void autoconfig_16550a(struct uart_8250_port *up)
 		serial_outp(up, UART_LCR, 0);
 		serial_outp(up, UART_MCR, status1);
 
+#if 0
 		if ((status2 ^ status1) & UART_MCR_LOOP) {
 			unsigned short quot;
 
@@ -1003,6 +1004,7 @@ static void autoconfig_16550a(struct uart_8250_port *up)
 			up->capabilities |= UART_NATSEMI;
 			return;
 		}
+#endif
 	}
 
 	/*
