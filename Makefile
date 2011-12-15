@@ -927,7 +927,7 @@ else
         _localver-auto = $(shell cat .scmversion 2> /dev/null)
 endif
 
-	localver-auto  = $(LOCALVERSION)$(_localver-auto)
+	localver-auto  = $(LOCALVERSION)
 endif
 
 localver-full = $(localver)$(localver-auto)
