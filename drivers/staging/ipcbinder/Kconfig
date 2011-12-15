@@ -1,0 +1,5 @@
+config IPC_BINDER
+	bool "IPC"
+	default Y
+	---help---
+	  Enable support for the IPC SUPPORT
