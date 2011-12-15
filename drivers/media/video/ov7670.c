@@ -258,7 +258,7 @@ static struct regval_list ov7670_default_regs[] = {
 	{ REG_COM8, COM8_FASTAEC | COM8_AECSTEP | COM8_BFILT },
 	{ REG_GAIN, 0 },	{ REG_AECH, 0 },
 	{ REG_COM4, 0x40 }, /* magic reserved bit */
-	{ REG_COM9, 0x18 }, /* 4x gain + magic rsvd bit */
+    { REG_COM9, 0x38 }, /* 4x gain + magic rsvd bit */
 	{ REG_BD50MAX, 0x05 },	{ REG_BD60MAX, 0x07 },
 	{ REG_AEW, 0x95 },	{ REG_AEB, 0x33 },
 	{ REG_VPT, 0xe3 },	{ REG_HAECC1, 0x78 },
@@ -305,9 +305,9 @@ static struct regval_list ov7670_default_regs[] = {
 	{ 0x58, 0x9e },
 
 	{ REG_COM16, COM16_AWBGAIN },	{ REG_EDGE, 0 },
-	{ 0x75, 0x05 },		{ 0x76, 0xe1 },
+    { 0x75, 0x02 },		{ 0x76, 0xe0 },
 	{ 0x4c, 0 },		{ 0x77, 0x01 },
-	{ REG_COM13, 0xc3 },	{ 0x4b, 0x09 },
+    { REG_COM13, 0xc0 },	{ 0x4b, 0x09 },
 	{ 0xc9, 0x60 },		{ REG_COM16, 0x38 },
 	{ 0x56, 0x40 },
 
@@ -350,15 +350,16 @@ static struct regval_list ov7670_default_regs[] = {
 static struct regval_list ov7670_fmt_yuv422[] = {
 	{ REG_COM7, 0x0 },  /* Selects YUV mode */
 	{ REG_RGB444, 0 },	/* No RGB444 please */
-	{ REG_COM1, 0 },
-	{ REG_COM15, COM15_R00FF },
-	{ REG_COM9, 0x18 }, /* 4x gain ceiling; 0x8 is reserved bit */
+    { REG_COM1, COM1_CCIR656 },
+    { REG_COM15, COM15_R01FE },
+    { REG_COM9, 0x38 }, /* 4x gain ceiling; 0x8 is reserved bit */
 	{ 0x4f, 0x80 }, 	/* "matrix coefficient 1" */
 	{ 0x50, 0x80 }, 	/* "matrix coefficient 2" */
 	{ 0x51, 0    },		/* vb */
 	{ 0x52, 0x22 }, 	/* "matrix coefficient 4" */
 	{ 0x53, 0x5e }, 	/* "matrix coefficient 5" */
 	{ 0x54, 0x80 }, 	/* "matrix coefficient 6" */
+	/* { REG_TSLB,  0x04 }, */
 	{ REG_COM13, COM13_GAMMA|COM13_UVSAT },
 	{ 0xff, 0xff },
 };
@@ -366,7 +367,7 @@ static struct regval_list ov7670_fmt_yuv422[] = {
 static struct regval_list ov7670_fmt_rgb565[] = {
 	{ REG_COM7, COM7_RGB },	/* Selects RGB mode */
 	{ REG_RGB444, 0 },	/* No RGB444 please */
-	{ REG_COM1, 0x0 },
+    { REG_COM1, COM1_CCIR656 },
 	{ REG_COM15, COM15_RGB565 },
 	{ REG_COM9, 0x38 }, 	/* 16x gain ceiling; 0x8 is reserved bit */
 	{ 0x4f, 0xb3 }, 	/* "matrix coefficient 1" */
@@ -382,7 +383,7 @@ static struct regval_list ov7670_fmt_rgb565[] = {
 static struct regval_list ov7670_fmt_rgb444[] = {
 	{ REG_COM7, COM7_RGB },	/* Selects RGB mode */
 	{ REG_RGB444, R444_ENABLE },	/* Enable xxxxrrrr ggggbbbb */
-	{ REG_COM1, 0x40 },	/* Magic reserved bit */
+    { REG_COM1, COM1_CCIR656 },
 	{ REG_COM15, COM15_R01FE|COM15_RGB565 }, /* Data range needed? */
 	{ REG_COM9, 0x38 }, 	/* 16x gain ceiling; 0x8 is reserved bit */
 	{ 0x4f, 0xb3 }, 	/* "matrix coefficient 1" */
@@ -397,6 +398,7 @@ static struct regval_list ov7670_fmt_rgb444[] = {
 
 static struct regval_list ov7670_fmt_raw[] = {
 	{ REG_COM7, COM7_BAYER },
+    { REG_COM1, COM1_CCIR656 },
 	{ REG_COM13, 0x08 }, /* No gamma, magic rsvd bit */
 	{ REG_COM16, 0x3d }, /* Edge enhancement, denoise */
 	{ REG_REG76, 0xe1 }, /* Pix correction, magic rsvd */
