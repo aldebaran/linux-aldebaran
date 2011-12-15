@@ -1164,6 +1164,8 @@ static inline void snd_hda_power_sync(struct hda_codec *codec)
 int snd_hda_load_patch(struct hda_bus *bus, size_t size, const void *buf);
 #endif
 
+bool snd_hda_mute_on_close(void);
+
 #ifdef CONFIG_SND_HDA_DSP_LOADER
 static inline int
 snd_hda_codec_load_dsp_prepare(struct hda_codec *codec, unsigned int format,

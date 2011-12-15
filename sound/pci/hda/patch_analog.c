@@ -223,7 +223,7 @@ static int ad198x_build_controls(struct hda_codec *codec)
 		if (err < 0)
 			return err;
 		spec->multiout.share_spdif = 1;
-	} 
+	}
 	if (spec->dig_in_nid) {
 		err = snd_hda_create_spdif_in_ctls(codec, spec->dig_in_nid);
 		if (err < 0)
@@ -282,6 +282,21 @@ static int ad198x_build_controls(struct hda_codec *codec)
 	return 0;
 }
 
+static int ad1989a_build_controls(struct hda_codec *codec)
+{
+	struct ad198x_spec *spec = codec->spec;
+	unsigned int i;
+	int err;
+
+	for (i = 0; i < spec->num_mixers; i++) {
+		err = snd_hda_add_new_ctls(codec, spec->mixers[i]);
+		if (err < 0)
+			return err;
+	}
+
+	return 0;
+}
+
 #ifdef CONFIG_PM
 static int ad198x_check_power_status(struct hda_codec *codec, hda_nid_t nid)
 {
@@ -289,6 +304,17 @@ static int ad198x_check_power_status(struct hda_codec *codec, hda_nid_t nid)
 	return snd_hda_check_amp_list_power(codec, &spec->loopback, nid);
 }
 #endif
+
+static void ad198x_playback_mute_amplifier(struct hda_codec *codec, bool mute)
+{
+	snd_hda_codec_write(codec, 0x1B, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0);
+	snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_MASK, 3);
+	snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DIRECTION, 3);
+	if (mute)
+		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 1);
+        else
+		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 2);
+}
 
 /*
  * Analog playback callbacks
@@ -298,6 +324,9 @@ static int ad198x_playback_pcm_open(struct hda_pcm_stream *hinfo,
 				    struct snd_pcm_substream *substream)
 {
 	struct ad198x_spec *spec = codec->spec;
+	if (snd_hda_mute_on_close())
+		ad198x_playback_mute_amplifier(codec, false);
+
 	return snd_hda_multi_out_analog_open(codec, &spec->multiout, substream,
 					     hinfo);
 }
@@ -318,6 +347,8 @@ static int ad198x_playback_pcm_cleanup(struct hda_pcm_stream *hinfo,
 				       struct snd_pcm_substream *substream)
 {
 	struct ad198x_spec *spec = codec->spec;
+        if (snd_hda_mute_on_close())
+		ad198x_playback_mute_amplifier(codec, true);
 	return snd_hda_multi_out_analog_cleanup(codec, &spec->multiout);
 }
 
@@ -540,6 +571,12 @@ static const struct hda_codec_ops ad198x_patch_ops = {
 	.reboot_notify = ad198x_shutup,
 };
 
+static struct hda_codec_ops ad1989a_patch_ops = {
+	.build_controls = ad1989a_build_controls,
+	.build_pcms = ad198x_build_pcms,
+	.init = ad198x_init,
+	.free = ad198x_free,
+};
 
 /*
  * EAPD control
@@ -784,7 +821,7 @@ static const struct snd_kcontrol_new ad1986a_laptop_mixers[] = {
 	HDA_CODEC_VOLUME("Mic Playback Volume", 0x13, 0x0, HDA_OUTPUT),
 	HDA_CODEC_MUTE("Mic Playback Switch", 0x13, 0x0, HDA_OUTPUT),
 	HDA_CODEC_VOLUME("Mic Boost Volume", 0x0f, 0x0, HDA_OUTPUT),
-	/* 
+	/*
 	   HDA_CODEC_VOLUME("Mono Playback Volume", 0x1e, 0x0, HDA_OUTPUT),
 	   HDA_CODEC_MUTE("Mono Playback Switch", 0x1e, 0x0, HDA_OUTPUT), */
 	HDA_CODEC_VOLUME("Capture Volume", 0x12, 0x0, HDA_OUTPUT),
@@ -1997,20 +2034,6 @@ static const struct snd_kcontrol_new ad1981_hp_mixers[] = {
 	},
 	HDA_CODEC_VOLUME("PCM Playback Volume", 0x11, 0x0, HDA_OUTPUT),
 	HDA_CODEC_MUTE("PCM Playback Switch", 0x11, 0x0, HDA_OUTPUT),
-#if 0
-	/* FIXME: analog mic/line loopback doesn't work with my tests...
-	 *        (although recording is OK)
-	 */
-	HDA_CODEC_VOLUME("Mic Playback Volume", 0x12, 0x0, HDA_OUTPUT),
-	HDA_CODEC_MUTE("Mic Playback Switch", 0x12, 0x0, HDA_OUTPUT),
-	HDA_CODEC_VOLUME("Dock Mic Playback Volume", 0x13, 0x0, HDA_OUTPUT),
-	HDA_CODEC_MUTE("Dock Mic Playback Switch", 0x13, 0x0, HDA_OUTPUT),
-	HDA_CODEC_VOLUME("Internal Mic Playback Volume", 0x1c, 0x0, HDA_OUTPUT),
-	HDA_CODEC_MUTE("Internal Mic Playback Switch", 0x1c, 0x0, HDA_OUTPUT),
-	/* FIXME: does this laptop have analog CD connection? */
-	HDA_CODEC_VOLUME("CD Playback Volume", 0x1d, 0x0, HDA_OUTPUT),
-	HDA_CODEC_MUTE("CD Playback Switch", 0x1d, 0x0, HDA_OUTPUT),
-#endif
 	HDA_CODEC_VOLUME("Mic Boost Volume", 0x08, 0x0, HDA_INPUT),
 	HDA_CODEC_VOLUME("Internal Mic Boost Volume", 0x18, 0x0, HDA_INPUT),
 	HDA_CODEC_VOLUME("Capture Volume", 0x15, 0x0, HDA_OUTPUT),
@@ -2443,6 +2466,10 @@ static const hda_nid_t ad1988_3stack_dac_nids[3] = {
 	0x04, 0x05, 0x0a
 };
 
+static hda_nid_t ad1989a_dac_nids[4] = {
+	0x03, 0x04, 0x05, 0x06
+};
+
 /* for AD1988A revision-2, DAC2-4 are swapped */
 static const hda_nid_t ad1988_6stack_dac_nids_rev2[4] = {
 	0x04, 0x05, 0x0a, 0x06
@@ -2462,6 +2489,14 @@ static const hda_nid_t ad1988_adc_nids[3] = {
 
 static const hda_nid_t ad1988_capsrc_nids[3] = {
 	0x0c, 0x0d, 0x0e
+};
+
+static hda_nid_t ad1989a_adc_nids[] = {
+	0x08, 0x09
+};
+
+static hda_nid_t ad1989a_capsrc_nids[] = {
+	0x0c, 0x0d
 };
 
 #define AD1988_SPDIF_OUT		0x02
@@ -2489,6 +2524,14 @@ static const struct hda_input_mux ad1988_laptop_capture_source = {
 		{ "Mic/Line", 0x1 },	/* port-B */
 		{ "CD", 0x5 },
 		{ "Mix", 0x9 },
+	},
+};
+
+static struct hda_input_mux ad1989a_capture_source = {
+	.num_items = 2,
+	.items = {
+		{ "Left/Right", 0x02 },	/* port-C */
+		{ "Front/Rear", 0x01 }, /* port-B */
 	},
 };
 
@@ -2654,6 +2697,116 @@ static const struct snd_kcontrol_new ad1988_laptop_mixers[] = {
 	{ } /* end */
 };
 
+int ad1989a_output_volume_info(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_info *uinfo)
+{
+	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
+	u16 nid = get_amp_nid(kcontrol);
+	u8 chs = get_amp_channels(kcontrol);
+	int dir = get_amp_direction(kcontrol);
+	unsigned int ofs = get_amp_offset(kcontrol);
+	u32 caps;
+
+	caps = query_amp_caps(codec, nid, dir);
+	/* num steps */
+	caps = (caps & AC_AMPCAP_NUM_STEPS) >> AC_AMPCAP_NUM_STEPS_SHIFT;
+	if (!caps) {
+		printk(KERN_WARNING "hda_codec: "
+					 "num_steps = 0 for NID=0x%x (ctl = %s)\n", nid,
+					 kcontrol->id.name);
+		return -EINVAL;
+	}
+	if (ofs < caps)
+		caps -= ofs;
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = chs == 3 ? 2 : 1;
+	uinfo->value.integer.min = 0;
+	uinfo->value.integer.max = caps;
+
+//  snd_printk(KERN_INFO "ad1989a_output_volume_info : "
+//                 "\tofset=0x%04hx \tmin=0x%04hx \tmax=0x%04hx\n", ofs, 0, caps);
+	return 0;
+}
+
+int ad1989a_output_amp_switch_get(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *ucontrol)
+{
+	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
+	hda_nid_t nid = get_amp_nid(kcontrol);
+	int chs = get_amp_channels(kcontrol);
+	int dir = get_amp_direction(kcontrol);
+	int idx = get_amp_index(kcontrol);
+	long *valp = ucontrol->value.integer.value;
+
+	if (chs & 1)
+		*valp++ = (snd_hda_codec_amp_read(codec, nid, 0, dir, idx) &
+				 HDA_AMP_MUTE) ? 0 : 1;
+	if (chs & 2)
+		*valp = (snd_hda_codec_amp_read(codec, nid, 1, dir, idx) &
+			 HDA_AMP_MUTE) ? 0 : 1;
+	return 0;
+}
+
+int ad1989a_output_amp_switch_put(struct snd_kcontrol *kcontrol,
+				 struct snd_ctl_elem_value *ucontrol)
+{
+	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
+	hda_nid_t nid = get_amp_nid(kcontrol);
+	int chs = get_amp_channels(kcontrol);
+	int dir = get_amp_direction(kcontrol);
+	int idx = get_amp_index(kcontrol);
+	long *valp = ucontrol->value.integer.value;
+	int change = 0;
+
+	snd_hda_power_up(codec);
+
+	if (chs & 1) {
+		change = snd_hda_codec_amp_update(codec, nid, 0, dir, idx,
+							HDA_AMP_MUTE,
+							*valp ? 0 : HDA_AMP_MUTE); // si valp=0 on envoie 0x00 sinon 0x80
+		valp++;
+	}
+	if (chs & 2)
+		change |= snd_hda_codec_amp_update(codec, nid, 1, dir, idx,
+							 HDA_AMP_MUTE,
+							 *valp ? 0 : HDA_AMP_MUTE);
+	snd_hda_power_down(codec);
+
+	return change;
+
+}
+
+static struct snd_kcontrol_new ad1989a_playback_mixers[] = {
+	//equivalent to HDA_CODEC_VOLUME("PCM Playback Volume", 0x03, 0x0, HDA_OUTPUT),
+	//but allows to change the minimum gain value in ad1989a_output_volume_info
+	{
+	 .iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+	 .name = "PCM Playback Volume",
+	 .index = 0,
+	 .subdevice = HDA_SUBDEV_NID_FLAG | (0x03), \
+	 .access = SNDRV_CTL_ELEM_ACCESS_READWRITE |
+				 SNDRV_CTL_ELEM_ACCESS_TLV_READ |
+				 SNDRV_CTL_ELEM_ACCESS_TLV_CALLBACK,
+	 .info = ad1989a_output_volume_info, //snd_hda_mixer_amp_volume_info,
+	 .get = snd_hda_mixer_amp_volume_get,
+	 .put = snd_hda_mixer_amp_volume_put,
+	 .tlv = { .c = snd_hda_mixer_amp_tlv },
+	  //allows to set first gain value to -55.5 dB (min gain is 0)
+	 .private_value = HDA_COMPOSE_AMP_VAL_OFS(0x03, 3, 0x0, HDA_OUTPUT,0x0)
+	},
+	//HDA_CODEC_MUTE("PCM Playback Switch", 0x03, 0x0, HDA_OUTPUT),
+	{ .iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+		.name = "PCM Playback Switch",
+		.index = 0,
+		.subdevice = HDA_SUBDEV_NID_FLAG | (0x11),
+		.info = snd_hda_mixer_amp_switch_info,
+		.get = ad1989a_output_amp_switch_get,
+		.put = ad1989a_output_amp_switch_put,
+		.private_value = HDA_COMPOSE_AMP_VAL(0x11, 3, 0, HDA_OUTPUT)
+	},
+	{ } /* end */
+};
+
 /* capture */
 static const struct snd_kcontrol_new ad1988_capture_mixers[] = {
 	HDA_CODEC_VOLUME("Capture Volume", 0x0c, 0x0, HDA_OUTPUT),
@@ -2674,6 +2827,73 @@ static const struct snd_kcontrol_new ad1988_capture_mixers[] = {
 		.get = ad198x_mux_enum_get,
 		.put = ad198x_mux_enum_put,
 	},
+	{ } /* end */
+};
+
+/* capture */
+int ad1989a_input_volume_info(struct snd_kcontrol *kcontrol,
+					struct snd_ctl_elem_info *uinfo)
+{
+	struct hda_codec *codec = snd_kcontrol_chip(kcontrol);
+	u16 nid = get_amp_nid(kcontrol);
+	u8 chs = get_amp_channels(kcontrol);
+	int dir = get_amp_direction(kcontrol);
+	unsigned int ofs = get_amp_offset(kcontrol);
+	u32 caps;
+
+	caps = query_amp_caps(codec, nid, dir);
+	/* num steps */
+	caps = (caps & AC_AMPCAP_NUM_STEPS) >> AC_AMPCAP_NUM_STEPS_SHIFT;
+	if (!caps) {
+		printk(KERN_WARNING "hda_codec: "
+					 "num_steps = 0 for NID=0x%x (ctl = %s)\n", nid,
+					 kcontrol->id.name);
+		return -EINVAL;
+	}
+	if (ofs < caps)
+		caps -= ofs;
+	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+	uinfo->count = chs == 3 ? 2 : 1;
+	uinfo->value.integer.min = 0; //0x0028;
+	uinfo->value.integer.max = caps;
+	return 0;
+}
+static struct snd_kcontrol_new ad1989a_capture_mixers[] = {
+	//equivalent to  HDA_CODEC_VOLUME("Left/Right mics Capture Volume", 0x0c, 0x0, HDA_OUTPUT),
+	//but allows to change the minimum gain value in ad1989a_input_volume_info
+	{
+	 .iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+	 .name = "Left/Right mics Capture Volume",
+	 .index = 0,
+	 .subdevice = HDA_SUBDEV_NID_FLAG | (0x0c), \
+	 .access = SNDRV_CTL_ELEM_ACCESS_READWRITE |
+				 SNDRV_CTL_ELEM_ACCESS_TLV_READ |
+				 SNDRV_CTL_ELEM_ACCESS_TLV_CALLBACK,
+	 .info = ad1989a_input_volume_info,
+	 .get = snd_hda_mixer_amp_volume_get,
+	 .put = snd_hda_mixer_amp_volume_put,
+	 .tlv = { .c = snd_hda_mixer_amp_tlv },
+		// allows to set first gain value to -22.5 dB (min gain is 0)
+	 .private_value = HDA_COMPOSE_AMP_VAL_OFS(0x0c, 3, 0x0, HDA_OUTPUT,0x0020)
+	},
+	HDA_CODEC_MUTE("Left/Right mics Capture Switch", 0x0c, 0x0, HDA_OUTPUT),
+	//HDA_CODEC_VOLUME("Front/Rear mics Capture Volume", 0x0d, 0x1, HDA_OUTPUT),
+	{
+	 .iface = SNDRV_CTL_ELEM_IFACE_MIXER,
+	 .name = "Front/Rear mics Capture Volume",
+	 .index = 0,
+	 .subdevice = HDA_SUBDEV_NID_FLAG | (0x0d), \
+	 .access = SNDRV_CTL_ELEM_ACCESS_READWRITE |
+				 SNDRV_CTL_ELEM_ACCESS_TLV_READ |
+				 SNDRV_CTL_ELEM_ACCESS_TLV_CALLBACK,
+	 .info = ad1989a_input_volume_info,
+	 .get = snd_hda_mixer_amp_volume_get,
+	 .put = snd_hda_mixer_amp_volume_put,
+	 .tlv = { .c = snd_hda_mixer_amp_tlv },
+		// allows to set first gain value to -22.5 dB (min gain is 0)
+	 .private_value = HDA_COMPOSE_AMP_VAL_OFS(0x0d, 3, 0x0, HDA_OUTPUT,0x0020)
+	},
+	HDA_CODEC_MUTE("Front/Rear mics Capture Switch", 0x0d, 0x0, HDA_OUTPUT),
 	{ } /* end */
 };
 
@@ -2883,6 +3103,23 @@ static const struct hda_verb ad1988_capture_init_verbs[] = {
 	{ }
 };
 
+static const struct hda_verb ad1989a_capture_init_verbs[] = {
+	/* mute analog mix */
+	{0x20, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_MUTE(0)},
+	{0x20, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_MUTE(1)},
+	{0x20, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_MUTE(2)},
+	{0x20, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_MUTE(3)},
+	{0x20, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_MUTE(4)},
+	{0x20, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_MUTE(5)},
+	{0x20, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_MUTE(6)},
+	{0x20, AC_VERB_SET_AMP_GAIN_MUTE, AMP_IN_MUTE(7)},
+	/* select ADCs */
+	{0x0c, AC_VERB_SET_CONNECT_SEL, 0x2}, // connect port C to ADC0
+	{0x0d, AC_VERB_SET_CONNECT_SEL, 0x1}, // connect port B to ADC1
+
+	{ }
+};
+
 static const struct hda_verb ad1988_spdif_init_verbs[] = {
 	/* SPDIF out sel */
 	{0x02, AC_VERB_SET_CONNECT_SEL, 0x0}, /* PCM */
@@ -3076,7 +3313,7 @@ static void ad1988_laptop_unsol_event(struct hda_codec *codec, unsigned int res)
 		snd_hda_sequence_write(codec, ad1988_laptop_hp_on);
 	else
 		snd_hda_sequence_write(codec, ad1988_laptop_hp_off);
-} 
+}
 
 #ifdef CONFIG_PM
 static const struct hda_amp_list ad1988_loopbacks[] = {
@@ -3262,6 +3499,74 @@ static int ad1988_parse_auto_config(struct hda_codec *codec)
 	return err;
 }
 
+/* init callback for ad1989a model  */
+static int ad1989a_auto_init(struct hda_codec *codec)
+{
+	ad198x_init(codec);
+	// mute port B,C,D,E,F,G output amp
+	snd_hda_codec_write(codec, 0x12, 0, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE); // mute port D output
+	snd_hda_codec_write(codec, 0x14, 0, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE); // mute port B output
+	snd_hda_codec_write(codec, 0x15, 0, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE); // mute port C output
+	snd_hda_codec_write(codec, 0x16, 0, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE); // mute port F output
+	snd_hda_codec_write(codec, 0x17, 0, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE); // mute port E output
+	snd_hda_codec_write(codec, 0x24, 0, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE); // mute port G output
+	// unmute port A output amp"
+	snd_hda_codec_write(codec, 0x11, 0, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_UNMUTE); // unmute port A output
+	snd_hda_codec_write(codec, 0x22, 0, AC_VERB_SET_AMP_GAIN_MUTE, 0x7000); // Clear Port-A Mixer Mute Index 0
+	snd_hda_codec_write(codec, 0x37, 0, AC_VERB_SET_CONNECT_SEL, 0x00); // connect DAC0 to port A
+
+	//connect microphones to ADC
+	// mics front and rear are connected to port B
+	// mics left and right are connected to port C
+	snd_hda_codec_write(codec, 0x0D, 0, AC_VERB_SET_CONNECT_SEL, 0x01); //connect port B to ADC1
+	snd_hda_codec_write(codec, 0x0C, 0, AC_VERB_SET_CONNECT_SEL, 0x02); //connect port C to ADC0
+
+	// mute microphone boost amp (no need)"
+	snd_hda_codec_write(codec, 0x39, 0, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE); //  boost amp connected to port B
+	snd_hda_codec_write(codec, 0x3A, 0, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE); //the boost amp connected to port C
+
+	// unmute adc amp out"
+	snd_hda_codec_write(codec, 0x0D, 0, AC_VERB_SET_AMP_GAIN_MUTE, 0xb030); // set gain of input of ADC1
+	snd_hda_codec_write(codec, 0x0C, 0, AC_VERB_SET_AMP_GAIN_MUTE, 0xb030); // set gain of input of ADC0
+
+	//configure ABC ports and put BIAS to 50 %"
+	snd_hda_codec_write(codec, 0x11, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0x41); // configure port A as output and set bias A to 50%
+	snd_hda_codec_write(codec, 0x14, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0x20); // configure port B as input and set bias to high-Z
+	snd_hda_codec_write(codec, 0x15, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0x21); // configure port C as input and set bias to 50%
+	snd_hda_codec_write(codec, 0x17, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0x01); // put bias on BIAS_E
+
+	// disable loopback between input and output"
+	snd_hda_codec_write(codec, 0x21, 0, AC_VERB_SET_AMP_GAIN_MUTE, AMP_OUT_MUTE);
+
+	// set stereo input"
+	// adc 0
+	snd_hda_codec_write(codec, 0x08, 0, AC_VERB_SET_STREAM_FORMAT, 0x0011); // Stream Format 48khz 16bit Stereo
+	snd_hda_codec_write(codec, 0x08, 0, AC_VERB_SET_CHANNEL_STREAMID, 0x10); // Channel Stream ID (10)
+	// adc 1
+	snd_hda_codec_write(codec, 0x09, 0, AC_VERB_SET_STREAM_FORMAT, 0x0011); // Stream Format 48khz 16bit Stereo
+	snd_hda_codec_write(codec, 0x09, 0, AC_VERB_SET_CHANNEL_STREAMID, 0x20); // Channel Stream ID (20)
+
+	//set stereo output"
+	// dac 0
+	snd_hda_codec_write(codec, 0x03, 0, AC_VERB_SET_STREAM_FORMAT, 0x0011); // Stream Format 48khz 16bit Stereo
+	snd_hda_codec_write(codec, 0x03, 0, AC_VERB_SET_CHANNEL_STREAMID, 0x30); // Channel Stream ID (30)
+	// dac 1
+	snd_hda_codec_write(codec, 0x04, 0, AC_VERB_SET_STREAM_FORMAT, 0x0011); // Stream Format 48khz 16bit Stereo
+	snd_hda_codec_write(codec, 0x04, 0, AC_VERB_SET_CHANNEL_STREAMID, 0x40); // Channel Stream ID (40)
+	//dac 3
+	snd_hda_codec_write(codec, 0x06, 0, AC_VERB_SET_STREAM_FORMAT, 0x0011); // Stream Format 48khz 16bit Stereo
+	snd_hda_codec_write(codec, 0x06, 0, AC_VERB_SET_CHANNEL_STREAMID, 0x50); // Channel Stream ID (50)
+
+
+	// enable amplifier - activate GPIO 0 and 1"
+	snd_hda_codec_write(codec, 0x1B, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0);
+	snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_MASK, 3);
+	snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DIRECTION, 3);
+	snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 2);
+
+	return 0;
+}
+
 /*
  */
 
@@ -3425,6 +3730,58 @@ static int patch_ad1988(struct hda_codec *codec)
 #define patch_ad1988	ad1988_parse_auto_config
 #endif /* ENABLE_AD_STATIC_QUIRKS */
 
+static int patch_ad1989a_naoV4(struct hda_codec *codec)
+{
+	struct ad198x_spec *spec;
+
+	spec = kzalloc(sizeof(*spec), GFP_KERNEL);
+	if (spec == NULL)
+		return -ENOMEM;
+
+	codec->spec = spec;
+
+	spec->multiout.max_channels = 2;
+	spec->multiout.num_dacs = 1;
+	spec->multiout.dac_nids = ad1989a_dac_nids;
+	spec->input_mux = &ad1989a_capture_source;
+	spec->num_mixers = 1;
+	spec->mixers[0] = ad1989a_playback_mixers;
+	codec->inv_eapd = 1; /* inverted EAPD */
+
+	spec->num_adc_nids = ARRAY_SIZE(ad1989a_adc_nids);
+	spec->adc_nids = ad1989a_adc_nids;
+	spec->capsrc_nids = ad1989a_capsrc_nids;
+	spec->mixers[spec->num_mixers++] = ad1989a_capture_mixers;
+	spec->init_verbs[spec->num_init_verbs++] = ad1989a_capture_init_verbs;
+
+
+	codec->patch_ops = ad1989a_patch_ops;
+	codec->patch_ops.init = ad1989a_auto_init;
+
+	//set gains of dac0 (loudspeakers)
+	snd_hda_override_amp_caps(codec, 0x03, HDA_OUTPUT,
+					(0x25 << AC_AMPCAP_OFFSET_SHIFT) | // 0dB equal to max value
+					(0x25 << AC_AMPCAP_NUM_STEPS_SHIFT) | // max value
+					(0x05 << AC_AMPCAP_STEP_SIZE_SHIFT) |
+					(1 << AC_AMPCAP_MUTE_SHIFT));
+	//set gains of adc0 (left/right mics)
+	snd_hda_override_amp_caps(codec, 0x0C, HDA_OUTPUT,
+					(0x30 << AC_AMPCAP_OFFSET_SHIFT) |
+					(0x30 << AC_AMPCAP_NUM_STEPS_SHIFT) |
+					(0x05 << AC_AMPCAP_STEP_SIZE_SHIFT) |
+					(1 << AC_AMPCAP_MUTE_SHIFT));
+	//set gains of adc1 (front/rear mics)
+	snd_hda_override_amp_caps(codec, 0x0D, HDA_OUTPUT,
+					(0x30 << AC_AMPCAP_OFFSET_SHIFT) |
+					(0x30 << AC_AMPCAP_NUM_STEPS_SHIFT) |
+					(0x05 << AC_AMPCAP_STEP_SIZE_SHIFT) |
+					(1 << AC_AMPCAP_MUTE_SHIFT));
+	//spec->vmaster_nid = 0x04;
+
+	codec->no_trigger_sense = 1;
+
+	return 0;
+}
 
 /*
  * AD1884 / AD1984
@@ -5292,7 +5649,7 @@ static const struct hda_codec_preset snd_hda_preset_analog[] = {
 	{ .id = 0x11d41988, .name = "AD1988", .patch = patch_ad1988 },
 	{ .id = 0x11d4198b, .name = "AD1988B", .patch = patch_ad1988 },
 	{ .id = 0x11d4882a, .name = "AD1882A", .patch = patch_ad1882 },
-	{ .id = 0x11d4989a, .name = "AD1989A", .patch = patch_ad1988 },
+	{ .id = 0x11d4989a, .name = "AD1989A", .patch = patch_ad1989a_naoV4 },
 	{ .id = 0x11d4989b, .name = "AD1989B", .patch = patch_ad1988 },
 	{} /* terminator */
 };
