@@ -56,7 +56,7 @@ static struct snd_pcm_hardware snd_cs5535audio_playback =
 	.channels_min =		2,
 	.channels_max =		2,
 	.buffer_bytes_max =	(128*1024),
-	.period_bytes_min =	64,
+	.period_bytes_min =	16,
 	.period_bytes_max =	(64*1024 - 16),
 	.periods_min =		1,
 	.periods_max =		CS5535AUDIO_MAX_DESCRIPTORS,
@@ -78,15 +78,15 @@ static struct snd_pcm_hardware snd_cs5535audio_capture =
 				SNDRV_PCM_RATE_CONTINUOUS |
 				SNDRV_PCM_RATE_8000_48000
 				),
-	.rate_min =		4000,
+	.rate_min =		48000,
 	.rate_max =		48000,
-	.channels_min =		2,
-	.channels_max =		2,
+	.channels_min =		4,
+	.channels_max =		4,
 	.buffer_bytes_max =	(128*1024),
-	.period_bytes_min =	64,
+	.period_bytes_min =	16384,
 	.period_bytes_max =	(64*1024 - 16),
 	.periods_min =		1,
-	.periods_max =		CS5535AUDIO_MAX_DESCRIPTORS,
+	.periods_max =		CS5535AUDIO_MAX_DESCRIPTORS / 3,
 	.fifo_size =		0,
 };
 
@@ -120,14 +120,34 @@ static int cs5535audio_build_dma_packets(struct cs5535audio *cs5535au,
 					 struct cs5535audio_dma *dma,
 					 struct snd_pcm_substream *substream,
 					 unsigned int periods,
-					 unsigned int period_bytes)
+					 unsigned int period_bytes,
+					 unsigned int dma_channels,
+					 unsigned short dma_stereo)
 {
-	unsigned int i;
-	u32 addr, desc_addr, jmpprd_addr;
+	unsigned int i, j, descr, stereo, period_bytes_channel;
+	u32 addr, desc_addr, jmpprd_addr[4];
 	struct cs5535audio_dma_desc *lastdesc;
+	char *dma_area;
 
-	if (periods > CS5535AUDIO_MAX_DESCRIPTORS)
+	if (periods > CS5535AUDIO_MAX_DESCRIPTORS / 3)
 		return -ENOMEM;
+
+#if 0
+	printk(KERN_INFO "cs5535audio_build_dma_packets: %u periods, %u period_bytes\n",
+		periods, period_bytes);
+	printk(KERN_INFO "cs5535audio_build_dma_packets: addr = %x (%u)\n",
+		(u32)substream->runtime->dma_addr, (u32)substream->runtime->dma_bytes);
+	printk(KERN_INFO "cs5535audio_build_dma_packets: runtime channels = %u\n",
+		substream->runtime->channels);
+	printk(KERN_INFO "cs5535audio_build_dma_packets: runtime frame bits = %u\n",
+		substream->runtime->frame_bits);
+	printk(KERN_INFO "cs5535audio_build_dma_packets: runtime sample bits = %u\n",
+		substream->runtime->sample_bits);
+	printk(KERN_INFO "cs5535audio_build_dma_packets: runtime format = %u\n",
+		(unsigned)substream->runtime->format);
+	printk(KERN_INFO "cs5535audio_build_dma_packets: dma channels = %u\n",
+		dma_channels);
+#endif
 
 	if (dma->desc_buf.area == NULL) {
 		if (snd_dma_alloc_pages(SNDRV_DMA_TYPE_DEV,
@@ -141,26 +161,47 @@ static int cs5535audio_build_dma_packets(struct cs5535audio *cs5535au,
 	if (dma->periods == periods && dma->period_bytes == period_bytes)
 		return 0;
 
+	dma->dma_stereo = dma_stereo;
 	/* the u32 cast is okay because in snd*create we successfully told
-   	   pci alloc that we're only 32 bit capable so the uppper will be 0 */
+	pci alloc that we're only 32 bit capable so the uppper will be 0 */
 	addr = (u32) substream->runtime->dma_addr;
 	desc_addr = (u32) dma->desc_buf.addr;
-	for (i = 0; i < periods; i++) {
-		struct cs5535audio_dma_desc *desc =
-			&((struct cs5535audio_dma_desc *) dma->desc_buf.area)[i];
-		desc->addr = cpu_to_le32(addr);
-		desc->size = cpu_to_le32(period_bytes);
-		desc->ctlreserved = cpu_to_le32(PRD_EOP);
+	descr = 0;
+	dma_area = substream->runtime->dma_area;
+	for (j = 0; j < dma_channels; j++) {
+		stereo = dma_stereo & 1;
+		dma_stereo >>= 1;
+		dma->dma_start[j] = dma_area;
+		jmpprd_addr[j] = cpu_to_le32(desc_addr);
+		if (dma_channels > 1)
+			period_bytes_channel = stereo ? (period_bytes / 2) : (period_bytes / 4);
+		else
+			period_bytes_channel = period_bytes;
+#if 0
+		printk(KERN_INFO "cs5535audio_build_dma_packets: dma channel %u (stereo: %u) at %x, size %u\n",
+			j, stereo, jmpprd_addr[j], period_bytes_channel);
+#endif
+		for (i = 0; i < periods; i++) {
+			struct cs5535audio_dma_desc *desc =
+				&((struct cs5535audio_dma_desc *) dma->desc_buf.area)[descr++];
+			desc->addr = cpu_to_le32(addr);
+			desc->size = cpu_to_le32(period_bytes_channel);
+			desc->ctlreserved = cpu_to_le32(PRD_EOP);
+#if 0
+			printk(KERN_INFO "cs5535audio_build_dma_packets: building descriptor %d at %x -> %x (%x)\n",
+				descr-1, desc_addr, addr, (unsigned)dma_area);
+#endif
+			desc_addr += sizeof(struct cs5535audio_dma_desc);
+			addr += period_bytes_channel;
+			dma_area += period_bytes_channel;
+		}
+		/* we reserved one dummy descriptor at the end to do the PRD jump */
+		lastdesc = &((struct cs5535audio_dma_desc *) dma->desc_buf.area)[descr++];
+		lastdesc->addr = jmpprd_addr[j];
+		lastdesc->size = 0;
+		lastdesc->ctlreserved = cpu_to_le32(PRD_JMP);
 		desc_addr += sizeof(struct cs5535audio_dma_desc);
-		addr += period_bytes;
 	}
-	/* we reserved one dummy descriptor at the end to do the PRD jump */
-	lastdesc = &((struct cs5535audio_dma_desc *) dma->desc_buf.area)[periods];
-	lastdesc->addr = cpu_to_le32((u32) dma->desc_buf.addr);
-	lastdesc->size = 0;
-	lastdesc->ctlreserved = cpu_to_le32(PRD_JMP);
-	jmpprd_addr = cpu_to_le32(lastdesc->addr +
-				  (sizeof(struct cs5535audio_dma_desc)*periods));
 
 	dma->substream = substream;
 	dma->period_bytes = period_bytes;
@@ -188,9 +229,9 @@ static void cs5535audio_playback_pause_dma(struct cs5535audio *cs5535au)
 }
 
 static void cs5535audio_playback_setup_prd(struct cs5535audio *cs5535au,
-					   u32 prd_addr)
+					   u32 *prd_addr)
 {
-	cs_writel(cs5535au, ACC_BM0_PRD, prd_addr);
+	cs_writel(cs5535au, ACC_BM0_PRD, prd_addr[0]);
 }
 
 static u32 cs5535audio_playback_read_prd(struct cs5535audio *cs5535au)
@@ -206,22 +247,30 @@ static u32 cs5535audio_playback_read_dma_pntr(struct cs5535audio *cs5535au)
 static void cs5535audio_capture_enable_dma(struct cs5535audio *cs5535au)
 {
 	cs_writeb(cs5535au, ACC_BM1_CMD, BM_CTL_EN);
+	cs_writeb(cs5535au, ACC_BM3_CMD, BM_CTL_EN);
+	cs_writeb(cs5535au, ACC_BM5_CMD, BM_CTL_EN);
 }
 
 static void cs5535audio_capture_disable_dma(struct cs5535audio *cs5535au)
 {
 	cs_writeb(cs5535au, ACC_BM1_CMD, 0);
+	cs_writeb(cs5535au, ACC_BM3_CMD, 0);
+	cs_writeb(cs5535au, ACC_BM5_CMD, 0);
 }
 
 static void cs5535audio_capture_pause_dma(struct cs5535audio *cs5535au)
 {
 	cs_writeb(cs5535au, ACC_BM1_CMD, BM_CTL_PAUSE);
+	cs_writeb(cs5535au, ACC_BM3_CMD, BM_CTL_PAUSE);
+	cs_writeb(cs5535au, ACC_BM5_CMD, BM_CTL_PAUSE);
 }
 
 static void cs5535audio_capture_setup_prd(struct cs5535audio *cs5535au,
-					  u32 prd_addr)
+					  u32 *prd_addr)
 {
-	cs_writel(cs5535au, ACC_BM1_PRD, prd_addr);
+	cs_writel(cs5535au, ACC_BM1_PRD, prd_addr[0]);
+	cs_writel(cs5535au, ACC_BM3_PRD, prd_addr[1]);
+	cs_writel(cs5535au, ACC_BM5_PRD, prd_addr[2]);
 }
 
 static u32 cs5535audio_capture_read_prd(struct cs5535audio *cs5535au)
@@ -231,7 +280,8 @@ static u32 cs5535audio_capture_read_prd(struct cs5535audio *cs5535au)
 
 static u32 cs5535audio_capture_read_dma_pntr(struct cs5535audio *cs5535au)
 {
-	return cs_readl(cs5535au, ACC_BM1_PNTR);
+	u32 pntr = cs_readl(cs5535au, ACC_BM1_PNTR);
+	return pntr;
 }
 
 static void cs5535audio_clear_dma_packets(struct cs5535audio *cs5535au,
@@ -259,10 +309,29 @@ static int snd_cs5535audio_hw_params(struct snd_pcm_substream *substream,
 
 	err = cs5535audio_build_dma_packets(cs5535au, dma, substream,
 					    params_periods(hw_params),
-					    params_period_bytes(hw_params));
+					    params_period_bytes(hw_params), 1, 1);
 	if (!err)
 		dma->pcm_open_flag = 1;
+	return err;
+}
 
+static int snd_cs5535audio_hw_params_muldma(struct snd_pcm_substream *substream,
+				     struct snd_pcm_hw_params *hw_params)
+{
+	struct cs5535audio *cs5535au = snd_pcm_substream_chip(substream);
+	struct cs5535audio_dma *dma = substream->runtime->private_data;
+	int err;
+
+	err = snd_pcm_lib_malloc_pages(substream,
+					params_buffer_bytes(hw_params)*4);
+	if (err < 0)
+		return err;
+	dma->buf_addr = substream->runtime->dma_addr;
+	dma->buf_bytes = params_buffer_bytes(hw_params) * 4;
+
+	err = cs5535audio_build_dma_packets(cs5535au, dma, substream,
+					    params_periods(hw_params),
+					    params_period_bytes(hw_params), 3, 1);
 	return err;
 }
 
@@ -280,6 +349,15 @@ static int snd_cs5535audio_hw_free(struct snd_pcm_substream *substream)
 					AC97_PCM_LR_ADC_RATE, 0);
 		dma->pcm_open_flag = 0;
 	}
+	cs5535audio_clear_dma_packets(cs5535au, dma, substream);
+	return snd_pcm_lib_free_pages(substream);
+}
+
+static int snd_cs5535audio_hw_free_muldma(struct snd_pcm_substream *substream)
+{
+	struct cs5535audio *cs5535au = snd_pcm_substream_chip(substream);
+	struct cs5535audio_dma *dma = substream->runtime->private_data;
+
 	cs5535audio_clear_dma_packets(cs5535au, dma, substream);
 	return snd_pcm_lib_free_pages(substream);
 }
@@ -326,7 +404,7 @@ static int snd_cs5535audio_trigger(struct snd_pcm_substream *substream, int cmd)
 	return err;
 }
 
-static snd_pcm_uframes_t snd_cs5535audio_pcm_pointer(struct snd_pcm_substream
+static snd_pcm_uframes_t snd_cs5535audio_playback_pcm_pointer(struct snd_pcm_substream
 							*substream)
 {
 	struct cs5535audio *cs5535au = snd_pcm_substream_chip(substream);
@@ -349,12 +427,47 @@ static snd_pcm_uframes_t snd_cs5535audio_pcm_pointer(struct snd_pcm_substream
 	return bytes_to_frames(substream->runtime, curdma);
 }
 
+
+static snd_pcm_uframes_t snd_cs5535audio_capture_pcm_pointer(struct snd_pcm_substream
+							*substream)
+{
+	struct cs5535audio *cs5535au = snd_pcm_substream_chip(substream);
+	u32 curdma;
+	struct cs5535audio_dma *dma;
+
+	dma = substream->runtime->private_data;
+	curdma = dma->ops->read_dma_pntr(cs5535au);
+	if (curdma < dma->buf_addr) {
+		snd_printk(KERN_ERR "curdma=%x < %x bufaddr.\n",
+					curdma, dma->buf_addr);
+		return 0;
+	}
+#if 0
+	printk(KERN_INFO "snd_cs5535audio_pcm_pointer: %x (%u)\n", curdma, curdma - dma->buf_addr);
+#endif
+	curdma -= dma->buf_addr;
+	if (curdma >= dma->buf_bytes) {
+		snd_printk(KERN_ERR "diff=%x >= %x buf_bytes.\n",
+					curdma, dma->buf_bytes);
+		return 0;
+	}
+#if 0
+	printk(KERN_INFO "snd_cs5535audio_pcm_pointer: bytes_to_frames: %u (x2 = %u)\n",
+		(unsigned)bytes_to_frames(substream->runtime, curdma),
+		(unsigned)bytes_to_frames(substream->runtime, curdma) * 2);
+#endif
+	return bytes_to_frames(substream->runtime, curdma) * 2;
+}
+
 static int snd_cs5535audio_capture_open(struct snd_pcm_substream *substream)
 {
 	int err;
 	struct cs5535audio *cs5535au = snd_pcm_substream_chip(substream);
 	struct snd_pcm_runtime *runtime = substream->runtime;
 
+#if 0
+	printk(KERN_INFO "snd_cs5535audio_capture_open\n");
+#endif
 	runtime->hw = snd_cs5535audio_capture;
 	runtime->hw.rates = cs5535au->ac97->rates[AC97_RATES_ADC];
 	snd_pcm_limit_hw_rates(runtime);
@@ -381,6 +494,59 @@ static int snd_cs5535audio_capture_prepare(struct snd_pcm_substream *substream)
 				 substream->runtime->rate);
 }
 
+static int snd_cs5535audio_capture_copy(struct snd_pcm_substream *substream,
+					int channel, snd_pcm_uframes_t hwoff,
+					void __user *ubuf, snd_pcm_uframes_t frames)
+{
+	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct cs5535audio_dma *dma = (struct cs5535audio_dma *)runtime->private_data;
+	char *buffer = ((struct cs5535audio *)substream->pcm->card->private_data)->
+			channel_rebuild_buffer;
+	char *hwbuf;
+	int i, j, frame_offset, frame_size;
+
+        //CG: dont know what to do? do this really fail? lol
+/* 	snd_assert(runtime->dma_area, return -EFAULT); */
+/* 	snd_assert(channel == -1, return -EFAULT); */
+
+#if 0
+	printk(KERN_INFO "snd_cs5535audio_capture_copy: channel %d, frames %u, hwoff: %u\n",
+		channel, (unsigned)frames, (unsigned)hwoff);
+	printk(KERN_INFO "snd_cs5535audio_capture_copy: frame size is %u, will copy %u bytes\n",
+		(unsigned)frames_to_bytes(runtime, 1), (unsigned)frames_to_bytes(runtime, frames));
+#endif
+
+	if (frames * 8 > 64*1024 - 16) {
+		printk(KERN_ERR "channel_rebuild_buffer overrun (%u > %u)\n",
+			(unsigned)(frames * 8), (unsigned)(64*1024 - 16));
+		return -EFAULT;
+	}
+
+	memset(buffer, 0, frames_to_bytes(runtime, frames));
+	frame_offset = 0;
+	frame_size = 4;
+	for (j = 0; j < 3; j++) {
+		if (dma->dma_stereo >> j)
+			frame_size = 4;
+		else
+			frame_size = 2;
+		hwbuf = (char*)(dma->dma_start[j] + hwoff * frame_size);
+#if 0
+		printk(KERN_INFO "snd_cs5535audio_capture_copy: copying dma channel %d (%d:%d) from %x\n",
+			j, frame_size, frame_offset, (unsigned)hwbuf);
+#endif
+		for (i = 0; i < frames; i++) {
+			memcpy(buffer + frame_offset + i*8, hwbuf + i*frame_size, frame_size);
+		}
+		frame_offset += frame_size;
+	}
+
+	if (copy_to_user(ubuf, buffer, frames_to_bytes(runtime, frames)))
+		return -EFAULT;
+
+	return 0;
+}
+
 static struct snd_pcm_ops snd_cs5535audio_playback_ops = {
 	.open =		snd_cs5535audio_playback_open,
 	.close =	snd_cs5535audio_playback_close,
@@ -389,18 +555,19 @@ static struct snd_pcm_ops snd_cs5535audio_playback_ops = {
 	.hw_free =	snd_cs5535audio_hw_free,
 	.prepare =	snd_cs5535audio_playback_prepare,
 	.trigger =	snd_cs5535audio_trigger,
-	.pointer =	snd_cs5535audio_pcm_pointer,
+	.pointer =	snd_cs5535audio_playback_pcm_pointer,
 };
 
 static struct snd_pcm_ops snd_cs5535audio_capture_ops = {
 	.open =		snd_cs5535audio_capture_open,
 	.close =	snd_cs5535audio_capture_close,
 	.ioctl =	snd_pcm_lib_ioctl,
-	.hw_params =	snd_cs5535audio_hw_params,
-	.hw_free =	snd_cs5535audio_hw_free,
+	.hw_params =	snd_cs5535audio_hw_params_muldma,
+	.hw_free =	snd_cs5535audio_hw_free_muldma,
 	.prepare =	snd_cs5535audio_capture_prepare,
 	.trigger =	snd_cs5535audio_trigger,
-	.pointer =	snd_cs5535audio_pcm_pointer,
+	.pointer =	snd_cs5535audio_capture_pcm_pointer,
+	.copy    =  snd_cs5535audio_capture_copy,
 };
 
 static struct cs5535audio_dma_ops snd_cs5535audio_playback_dma_ops = {

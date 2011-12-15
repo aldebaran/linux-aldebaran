@@ -33,6 +33,7 @@
 #include <sound/pcm.h>
 #include <sound/rawmidi.h>
 #include <sound/ac97_codec.h>
+#include "../ac97/ac97_id.h"
 #include <sound/initval.h>
 #include <sound/asoundef.h>
 #include "cs5535audio.h"
@@ -43,16 +44,29 @@ static char *ac97_quirk;
 module_param(ac97_quirk, charp, 0444);
 MODULE_PARM_DESC(ac97_quirk, "AC'97 board specific workarounds.");
 
+#if 0
 static struct ac97_quirk ac97_quirks[] __devinitdata = {
 #if 0 /* Not yet confirmed if all 5536 boards are HP only */
 	{
-		.subvendor = PCI_VENDOR_ID_AMD, 
-		.subdevice = PCI_DEVICE_ID_AMD_CS5536_AUDIO, 
-		.name = "AMD RDK",     
+		.subvendor = PCI_VENDOR_ID_AMD,
+		.subdevice = PCI_DEVICE_ID_AMD_CS5536_AUDIO,
+		.name = "AMD RDK",
 		.type = AC97_TUNE_HP_ONLY
 	},
 #endif
 	{}
+};
+#endif
+
+static struct ac97_quirk ac97_quirks[] __devinitdata = {
+	{
+		.subvendor = PCI_VENDOR_ID_AMD,	/* AMD */
+		.subdevice = PCI_DEVICE_ID_AMD_CS5536_AUDIO,		/* CS5536 */
+		.codec_id = AC97_ID_AD1819,
+		.name = "AMD CS5536",
+		.type = AC97_TUNE_HP_ONLY
+	},
+	{ } /* terminator */
 };
 
 static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;
@@ -99,14 +113,14 @@ static unsigned short snd_cs5535audio_codec_read(struct cs5535audio *cs5535au,
 	regdata |= CMD_NEW;
 
 	cs_writel(cs5535au, ACC_CODEC_CNTL, regdata);
-	wait_till_cmd_acked(cs5535au, 50);
+	wait_till_cmd_acked(cs5535au, 2500);
 
-	timeout = 50;
+	timeout = 2500;
 	do {
 		val = cs_readl(cs5535au, ACC_CODEC_STATUS);
 		if ((val & STS_NEW) && reg == (val >> 24))
 			break;
-		udelay(1);
+		udelay(10);
 	} while (--timeout);
 	if (!timeout)
 		snd_printk(KERN_ERR "Failure reading codec reg 0x%x,"
@@ -127,7 +141,7 @@ static void snd_cs5535audio_codec_write(struct cs5535audio *cs5535au,
 	regdata &= ACC_CODEC_CNTL_WR_CMD;
 
 	cs_writel(cs5535au, ACC_CODEC_CNTL, regdata);
-	wait_till_cmd_acked(cs5535au, 50);
+	wait_till_cmd_acked(cs5535au, 250);
 }
 
 static void snd_cs5535audio_ac97_codec_write(struct snd_ac97 *ac97,
@@ -217,6 +231,7 @@ static irqreturn_t snd_cs5535audio_interrupt(int irq, void *dev_id)
 	u16 acc_irq_stat;
 	unsigned char count;
 	struct cs5535audio *cs5535au = dev_id;
+	u8 bm_stat;
 
 	if (cs5535au == NULL)
 		return IRQ_NONE;
@@ -225,7 +240,7 @@ static irqreturn_t snd_cs5535audio_interrupt(int irq, void *dev_id)
 
 	if (!acc_irq_stat)
 		return IRQ_NONE;
-	for (count = 0; count < 4; count++) {
+	for (count = 0; count < 10; count++) {
 		if (acc_irq_stat & (1 << count)) {
 			switch (count) {
 			case IRQ_STS:
@@ -238,7 +253,28 @@ static irqreturn_t snd_cs5535audio_interrupt(int irq, void *dev_id)
 				process_bm0_irq(cs5535au);
 				break;
 			case BM1_IRQ_STS:
+				//printk(KERN_INFO "BM1_IRQ_STS\n");
 				process_bm1_irq(cs5535au);
+				break;
+			case BM2_IRQ_STS:
+				bm_stat = cs_readb(cs5535au, ACC_BM2_STATUS);
+				break;
+			case BM3_IRQ_STS:
+				//printk(KERN_INFO "BM3_IRQ_STS\n");
+				bm_stat = cs_readb(cs5535au, ACC_BM3_STATUS);
+				break;
+			case BM4_IRQ_STS:
+				bm_stat = cs_readb(cs5535au, ACC_BM4_STATUS);
+				break;
+			case BM5_IRQ_STS:
+				//printk(KERN_INFO "BM5_IRQ_STS\n");
+				bm_stat = cs_readb(cs5535au, ACC_BM5_STATUS);
+				break;
+			case BM6_IRQ_STS:
+				bm_stat = cs_readb(cs5535au, ACC_BM6_STATUS);
+				break;
+			case BM7_IRQ_STS:
+				bm_stat = cs_readb(cs5535au, ACC_BM7_STATUS);
 				break;
 			default:
 				snd_printk(KERN_ERR "Unexpected irq src: "
@@ -260,6 +296,7 @@ static int snd_cs5535audio_free(struct cs5535audio *cs5535au)
 
 	pci_release_regions(cs5535au->pci);
 	pci_disable_device(cs5535au->pci);
+	kfree(cs5535au->channel_rebuild_buffer);
 	kfree(cs5535au);
 	return 0;
 }
@@ -302,6 +339,13 @@ static int __devinit snd_cs5535audio_create(struct snd_card *card,
 	cs5535au->card = card;
 	cs5535au->pci = pci;
 	cs5535au->irq = -1;
+
+	cs5535au->channel_rebuild_buffer = kmalloc(64*1024 - 16, GFP_KERNEL);
+	if (cs5535au == NULL) {
+		err = -ENOMEM;
+		kfree(cs5535au);
+		goto pcifail;
+	}
 
 	if ((err = pci_request_regions(pci, "CS5535 Audio")) < 0) {
 		kfree(cs5535au);

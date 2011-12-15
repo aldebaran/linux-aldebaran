@@ -14,7 +14,7 @@
 #define ACC_CODEC_STATUS		0x08
 #define ACC_CODEC_CNTL			0x0C
 #define ACC_IRQ_STATUS			0x12
-#define ACC_BM0_CMD			0x20
+#define ACC_MM0_CMD			0x20
 #define ACC_BM1_CMD			0x28
 #define ACC_BM0_PRD			0x24
 #define ACC_BM1_PRD			0x2C
@@ -51,6 +51,36 @@
 #define PRD_EOP				0x4000
 #define PRD_EOT				0x8000
 
+
+
+//CG: added from previous kernel
+#define ACC_BM2_STATUS			0x31
+#define ACC_BM3_STATUS			0x39
+#define ACC_BM4_STATUS			0x41
+#define ACC_BM5_STATUS			0x49
+#define ACC_BM6_STATUS			0x51
+#define ACC_BM7_STATUS			0x59
+#define BM2_IRQ_STS 			4
+#define BM3_IRQ_STS 			5
+#define BM4_IRQ_STS 			6
+#define BM5_IRQ_STS		 	7
+#define BM6_IRQ_STS 			8
+#define BM7_IRQ_STS 			9
+#define ACC_BM0_CMD			0x20
+#define ACC_BM2_CMD			0x30
+#define ACC_BM3_CMD			0x38
+#define ACC_BM4_CMD			0x40
+#define ACC_BM5_CMD			0x48
+#define ACC_BM6_CMD			0x50
+#define ACC_BM7_CMD			0x58
+#define ACC_BM2_PRD			0x34
+#define ACC_BM3_PRD			0x3C
+#define ACC_BM4_PRD			0x44
+#define ACC_BM5_PRD			0x4C
+#define ACC_BM6_PRD			0x54
+#define ACC_BM7_PRD			0x5C
+
+
 enum { CS5535AUDIO_DMA_PLAYBACK, CS5535AUDIO_DMA_CAPTURE, NUM_CS5535AUDIO_DMAS };
 
 struct cs5535audio;
@@ -60,7 +90,7 @@ struct cs5535audio_dma_ops {
 	void (*enable_dma)(struct cs5535audio *cs5535au);
 	void (*disable_dma)(struct cs5535audio *cs5535au);
 	void (*pause_dma)(struct cs5535audio *cs5535au);
-	void (*setup_prd)(struct cs5535audio *cs5535au, u32 prd_addr);
+	void (*setup_prd)(struct cs5535audio *cs5535au, u32 *prd_addr);
 	u32 (*read_prd)(struct cs5535audio *cs5535au);
 	u32 (*read_dma_pntr)(struct cs5535audio *cs5535au);
 };
@@ -79,6 +109,8 @@ struct cs5535audio_dma {
 	unsigned int period_bytes, periods;
 	u32 saved_prd;
 	int pcm_open_flag;
+	char *dma_start[4]; /* The ugliest hack in the world by mmomtchev */
+	u16 dma_stereo;
 };
 
 struct cs5535audio {
@@ -92,6 +124,7 @@ struct cs5535audio {
 	struct snd_pcm_substream *playback_substream;
 	struct snd_pcm_substream *capture_substream;
 	struct cs5535audio_dma dmas[NUM_CS5535AUDIO_DMAS];
+	char *channel_rebuild_buffer;
 };
 
 #ifdef CONFIG_PM

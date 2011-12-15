@@ -40,10 +40,10 @@ static void snd_cs5535audio_stop_hardware(struct cs5535audio *cs5535au)
 	we do it just after rather than at the same 
 	time. excluding codec specific build_ops->suspend
 	ac97 powerdown hits:
-	0x8000 EAPD 
-	0x4000 Headphone amplifier 
-	0x0300 ADC & DAC 
-	0x0400 Analog Mixer powerdown (Vref on) 
+	0x8000 EAPD
+	0x4000 Headphone amplifier
+	0x0300 ADC & DAC
+	0x0400 Analog Mixer powerdown (Vref on)
 	I am not sure if this is the best that we can do.
 	The remainder to be investigated are:
 	- analog mixer (vref off) 0x0800
@@ -67,6 +67,8 @@ int snd_cs5535audio_suspend(struct pci_dev *pci, pm_message_t state)
 	snd_ac97_suspend(cs5535au->ac97);
 	for (i = 0; i < NUM_CS5535AUDIO_DMAS; i++) {
 		struct cs5535audio_dma *dma = &cs5535au->dmas[i];
+                //CG : not sure about the merge keeping the previous if
+		//if (dma && dma->substream)
 		if (dma && dma->substream)
 			dma->saved_prd = dma->ops->read_prd(cs5535au);
 	}
@@ -124,7 +126,7 @@ int snd_cs5535audio_resume(struct pci_dev *pci)
 		struct cs5535audio_dma *dma = &cs5535au->dmas[i];
 		if (dma && dma->substream) {
 			dma->substream->ops->prepare(dma->substream);
-			dma->ops->setup_prd(cs5535au, dma->saved_prd);
+			dma->ops->setup_prd(cs5535au, &dma->saved_prd);
 		}
 	}
 
