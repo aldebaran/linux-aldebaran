@@ -97,6 +97,7 @@
 #define I2C_HW_SMBUS_OV511	0x04000e /* OV511(+) USB 1.1 webcam ICs */
 #define I2C_HW_SMBUS_OV518	0x04000f /* OV518(+) USB 1.1 webcam ICs */
 #define I2C_HW_SMBUS_CAFE	0x040012 /* Marvell 88ALP01 "CAFE" cam  */
+#define I2C_HW_SMBUS_SCX200	0x04000b
 
 /* --- Miscellaneous adapters */
 #define I2C_HW_SAA7146		0x060000 /* SAA7146 video decoder bus */

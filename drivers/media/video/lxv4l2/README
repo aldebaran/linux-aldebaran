@@ -1,0 +1,166 @@
+﻿AMD Geode(TM) LX Processor and AMD Geode(TM) CS5535 Companion Device
+V4L2 Video Capture/Overlay Driver - Release Notes
+Version: 03.02.0100, General Release
+Release Date: November 9, 2005
+
+-----------------------------------------------------------------------------
+PRODUCT INFORMATION
+-----------------------------------------------------------------------------
+- This kernel driver is the video capture/overlay driver for the
+  AMD Geode(TM) LX processor, implementing much of the video4linux and
+  video4linux2 standard API design.
+
+- This driver has been tested with Linux Kernel 2.6.11.
+
+For documentation regarding the Video for Linux 2 standard see:
+http://linuxtv.org/v4lwiki/index.php/Main_Page
+
+For bugs, patches, and info requests, please subscribe to:
+info-linux@geode.amd.com
+
+To subscribe, send a blank message to:  info-linux-subscribe@geode.amd.com
+
+
+Features
+--------
+Video Input Port (VIP capture) and Overlay display driver for Video for 
+Linux Two (V4L2) API specification
+
+Dependencies
+------------
+- Linux Kernel 2.6.11
+
+- (recommended) Linux 2.6.11 Kernel Patch for Geode LX/GX processors
+	Patches_Linux2.6.11_Common_02.02.0102.patch
+
+Functional Changes
+------------------
+
+Defects Corrected
+-----------------
+Issue: #4114 V4L2 Scaling does not function properly
+Description:
+Setting any video overlay which would be a scale to the standards resolution fails.
+Video overlay displays garbled data.
+Resolution:
+Make ovly bfr S_FMT consistent with apparent program design.
+The definition and usage of the S_FMT function is not consistent in its use.
+This change makes the operation agree with most user programs.
+
+Known Errata
+------------
+PBZ#5923 z4l message after overnight xv video testing
+PBZ#5954 Moving overlay off screen causes video corruption
+PBZ#5955 Bad frame rate at lowest screen size
+PBZ#5956 Negative Result VIP Scaling doesn’t work for NTSC
+
+--------------------------------------------------------------------------------
+VALIDATION ENVIRONMENT
+--------------------------------------------------------------------------------
+Validated on AMD Geode(TM) Norwich Development Board - Rev 2 Rework H and
+Rev 3 Rework E with:
+	
+Processor:		AMD Geode LX processor, silicon rev. C1 @ 433 MHz
+Chipset:		AMD Geode CS5536 companion device, silicon rev. B1
+PCI Bus Speed:		66 MHz
+Memory:			256 MB PC3200 RAM
+CRT:			NEC MultiSync FP2141SB
+Flat Panel:		Samsung LTM213U3-L07 1600x1200 2-channel LVDS,
+Keyboard/Mouse:		PS/2 on Moray 1.1
+	
+BIOS:			GeodeROM 1.06.06
+Operating System:	Gentoo 2005.0
+Kernel:			v2.6.11
+Kernel Patch:		LX Kernel Patch v02.02.0100
+Graphics Driver:	LX Xorg Graphics driver v03.00.0100
+Audio Driver:		5536 ALSA Audio driver v01.00.0500
+AES Driver: 		LX AES driver v02.01.0100
+AccessBus Driver: 	LX ACB Driver v01.00.0401
+Video4Linux2 Driver: 	LX Video4Linux2 driver v03.02.0100
+Other Software:		N/A
+
+-------------------------------------------------------------------------------
+INSTALLATION INSTRUCTIONS
+-------------------------------------------------------------------------------
+Required binary packages:
+    none
+
+To build 2.6.11 lxv4l2:
+***********************
+It is simplest to do this on the target system, if a developement
+enviroment is available.  When cross compiling from a 32-bit x86
+host, do not run step 4, but manually copy the .ko file to the
+target the appropriate /lib/modules/ subdirectory on the target.
+
+After unpacking the tarball which contain the files listed above
+  in a plain directory, run:
+  1. autoconf  (builds .configure)
+  2. ./configure --with-kernel-path= "your path to the kernel sources"
+  3. make EXTRA_CFLAGS=" -DLINUX_2_6=1"
+  4. make EXTRA_CFLAGS=" -DLINUX_2_6=1" install
+
+Note: the driver module lxv4l2.o must be copied to the target system and
+  installed with insmod.  The load can be automatic if the driver is
+  copied to /lib/modules/<kernel_version>/drivers/video/media and the
+  file /etc/modules.conf is updated to contain the line
+  alias char-major-81-0 lxv4l2
+  If the driver is installed in /lib/modules, depmod -a should be run
+  prior to booting the system.
+
+
+-----------------------------------------------------------------------------
+REVISION HISTORY (Previous Release)
+-----------------------------------------------------------------------------
+Version: 3.01.0400
+Release Date: May 26, 2005
+
+
+Functional Changes
+------------------
+- First release
+
+Defects Corrected
+-----------------
+- First release
+
+Known Errata
+------------
+Issue: #4114 V4L2 Scaling does not function properly
+Description:
+Setting any video overlay which would be a scale to the standards resolution fails.
+Video overlay displays garbled data.
+Resolution:
+Driver issue to be fixed with the next release.
+
+
+================================================================================
+Copyright
+---------
+Copyright 2005 Advanced Micro Devices, Inc. All rights reserved.
+The contents of this document are provided in connection with Advanced Micro
+Devices, Inc. ("AMD") products. AMD makes no representations or warranties
+with respect to the accuracy or completeness of the contents of this
+publication and reserves the right to make changes to specifications and
+product descriptions at any time without notice. No license, whether express,
+implied, arising by estoppel or otherwise, to any intellectual property rights
+is granted by this publication. Except as set forth in AMD's Standard Terms
+and Conditions of Sale, AMD assumes no liability whatsoever, and disclaims any
+express or implied warranty, relating to its products including, but not
+limited to, the implied warranty of merchantability, fitness for a particular
+purpose, or infringement of any intellectual property right. AMD's products
+are not designed, intended, authorized or warranted for use as components in
+systems intended for surgical implant into the body, or in other applications
+intended to support or sustain life, or in any other application in which the
+failure of AMD's product could create a situation where personal injury,
+death, or severe property or environmental damage may occur. AMD reserves the 
+right to discontinue or make changes to its products at any time without notice.
+
+
+Trademarks
+----------
+AMD, the AMD Arrow logo, and combinations thereof, and Geode are trademarks 
+of Advanced Micro Devices, Inc.
+
+Other product names used in this publication are for identification purposes
+only and may be trademarks of their respective companies.
+================================================================================

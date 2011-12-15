@@ -800,6 +800,13 @@ config VIDEO_OMAP2
 	---help---
 	  This is a v4l2 driver for the TI OMAP2 camera capture interface
 
+config VIDEO_LX_OV7670
+        tristate "Geode LX VIP with OV767x CMOS Camera support"
+        depends on PCI && I2C && VIDEO_V4L2 && !VIDEO_OV7670
+        ---help---
+          This is a video4linux2 driver for the VIP port on AMD Geode LX
+          processors. This driver supports only OV767x CMOS cameras.
+
 #
 # USB Multimedia device configuration
 #
