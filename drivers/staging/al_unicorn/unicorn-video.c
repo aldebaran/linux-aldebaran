@@ -188,8 +188,6 @@ int unicorn_video_dma_flipflop_buf(struct unicorn_dev *dev,
 
 int unicorn_video_change_fps(struct unicorn_dev *dev, struct unicorn_fh *fh)
 {
-  volatile unsigned long addr=0, addr1=0;
-  int size = 0;
   int channel = fh->channel;
 
   spin_lock(&dev->slock);

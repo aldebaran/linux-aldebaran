@@ -1876,8 +1876,7 @@ static int mt9m114_g_backlight_compensation(struct v4l2_subdev *sd, __s32 *value
 
 static int mt9m114_s_auto_exposure(struct v4l2_subdev *sd, int value)
 {
-  int ret;
-
+  int ret = 0;
   if(value==0x01)
   {
     ret = mt9m114_write(sd, REG_UVC_MANUAL_EXPOSURE, 1, 0x00);
@@ -1890,7 +1889,7 @@ static int mt9m114_s_auto_exposure(struct v4l2_subdev *sd, int value)
   }
 
   mt9m114_refresh(sd);
-  return 0;
+  return ret;
 }
 
 static int mt9m114_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
