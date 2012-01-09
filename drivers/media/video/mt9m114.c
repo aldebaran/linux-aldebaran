@@ -65,6 +65,9 @@ MODULE_PARM_DESC(debug, "Debug level (0-1)");
 /* Registers */
 
 #define REG_CHIP_ID                               0x0000
+#define REG_MON_MAJOR_VERSION                     0x8000
+#define REG_MON_MINOR_VERION                      0x8002
+#define REG_MON_RELEASE_VERSION                   0x8004
 #define REG_RESET_AND_MISC_CONTROL                0x001A
 #define REG_PAD_SLEW_CONTROL                      0x001E
 #define REG_COMMAND_REGISTER                      0x0080
@@ -1408,13 +1411,24 @@ static int mt9m114_init(struct v4l2_subdev *sd,u32 val)
 
 static int mt9m114_detect(struct v4l2_subdev *sd)
 {
-  u32 v;
+  u32 chip_id;
+  u32 mon_major_version;
+  u32 mon_minor_version;
+  u32 mon_release_version;
   int ret;
 
-  ret = mt9m114_read(sd, REG_CHIP_ID, 2, &v);
+  ret = mt9m114_read(sd, REG_CHIP_ID, 2, &chip_id);
+  ret = mt9m114_read(sd, REG_MON_MAJOR_VERSION, 2, &mon_major_version);
+  ret = mt9m114_read(sd, REG_MON_MINOR_VERION, 2, &mon_minor_version);
+  ret = mt9m114_read(sd, REG_MON_RELEASE_VERSION, 2, &mon_release_version);
+
   if (ret < 0)
     return ret;
-  if (v != 0x2481) /* default chipid*/
+
+  if(chip_id!=0)
+    dprintk(0,"MT9M114","MT9M114 found : chip_id:%x major:%x minor:%x release:%x", chip_id,mon_major_version,mon_minor_version,mon_release_version);
+
+  if (chip_id != 0x2481) /* default chipid*/
     return -ENODEV;
 
   // mt9m114 found, init it
