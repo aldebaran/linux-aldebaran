@@ -1005,20 +1005,19 @@ static int mt9m114_patch2_black_lvl_correction_fix(struct v4l2_subdev *sd)
 
   if(poll_command_register_bit(sd,HOST_COMMAND_APPLY_PATCH))
   {
-    dprintk(1,"MT9M114","poll apply patch timeout\n");
+    dprintk(0,"MT9M114","poll apply patch timeout\n");
   }
 
   mt9m114_read(sd, REG_COMMAND_REGISTER, 2, &v);
   if ( !(v & HOST_COMMAND_OK))
   {
-    dprintk(1,"MT9M114","fail to apply patch command\n");
-    return -1;
+    dprintk(0,"MT9M114","Warning : apply patch 2 Black level correction fix Host_command not OK\n");
   }
 
   mt9m114_read(sd, REG_PATCHLDR_APPLY_STATUS, 1, &v);
   if (v)
   {
-    dprintk(1,"MT9M114","MT9M114 : patch apply status non-zero\n");
+    dprintk(0,"MT9M114","MT9M114 : patch apply 2 Black level correction fix status non-zero  - value:%x\n",v);
     return -1;
   }
 
@@ -1146,22 +1145,22 @@ static int mt9m114_patch3_adaptive_sensitivity(struct v4l2_subdev *sd)
 
   if(poll_command_register_bit(sd,HOST_COMMAND_APPLY_PATCH))
   {
-    dprintk(1,"MT9M114","MT9M114 : poll apply patch timeout\n");
+    dprintk(0,"MT9M114","MT9M114 : poll apply patch timeout\n");
   }
 
   mt9m114_read(sd, REG_COMMAND_REGISTER, 2, &v);
   if ( !(v & HOST_COMMAND_OK))
   {
-    dprintk(1,"MT9M114","MT9M114 : fail to apply patch 3");
-    return -1;
+    dprintk(0,"MT9M114","Warning : apply patch 3 Adaptive Sensitivity Host_command not OK\n");
   }
 
   mt9m114_read(sd, REG_PATCHLDR_APPLY_STATUS, 1, &v);
   if (v)
   {
-    dprintk(1,"MT9M114","MT9M114 : patch apply status non-zero\n");
+    dprintk(0,"MT9M114","MT9M114 : patch apply 3 Adaptive Sensitivity status non-zero - value:%x\n",v);
     return -1;
   }
+
   return 0;
 }
 
