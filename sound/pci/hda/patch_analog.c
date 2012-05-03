@@ -191,7 +191,7 @@ static int ad198x_build_controls(struct hda_codec *codec)
 		if (err < 0)
 			return err;
 		spec->multiout.share_spdif = 1;
-	} 
+	}
 	if (spec->dig_in_nid) {
 		err = snd_hda_create_spdif_in_ctls(codec, spec->dig_in_nid);
 		if (err < 0)
@@ -665,7 +665,7 @@ static struct snd_kcontrol_new ad1986a_laptop_mixers[] = {
 	HDA_CODEC_VOLUME("Mic Playback Volume", 0x13, 0x0, HDA_OUTPUT),
 	HDA_CODEC_MUTE("Mic Playback Switch", 0x13, 0x0, HDA_OUTPUT),
 	HDA_CODEC_VOLUME("Mic Boost", 0x0f, 0x0, HDA_OUTPUT),
-	/* 
+	/*
 	   HDA_CODEC_VOLUME("Mono Playback Volume", 0x1e, 0x0, HDA_OUTPUT),
 	   HDA_CODEC_MUTE("Mono Playback Switch", 0x1e, 0x0, HDA_OUTPUT), */
 	HDA_CODEC_VOLUME("Capture Volume", 0x12, 0x0, HDA_OUTPUT),
@@ -2260,17 +2260,8 @@ int ad1989a_output_amp_switch_put(struct snd_kcontrol *kcontrol,
 	int unmuteLeftChannel = valp[0];
 	int unmuteRightChannel = valp[1];
 
-	// mute the amplifier the first time we mute the codec output channels
-	if (unmute==0 && unmuteLeftChannel==0 && unmuteRightChannel==1)
-	{
-		// disable audio amplifier - activate GPIO 0 and desactivate GPIO1"
-		snd_hda_codec_write(codec, 0x1B, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0);
-		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_MASK, 3);
-		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DIRECTION, 3);
-		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 1);
-	}
-
 	snd_hda_power_up(codec);
+
 	if (chs & 1) {
 		change = snd_hda_codec_amp_update(codec, nid, 0, dir, idx,
 							HDA_AMP_MUTE,
@@ -2282,7 +2273,15 @@ int ad1989a_output_amp_switch_put(struct snd_kcontrol *kcontrol,
 							 HDA_AMP_MUTE,
 							 *valp ? 0 : HDA_AMP_MUTE);
 
-	snd_hda_power_down(codec);
+	// mute the amplifier the first time we mute the codec output channels
+	if (unmute==0 && unmuteLeftChannel==0 && unmuteRightChannel==1)
+	{
+		// disable audio amplifier - activate GPIO 0 and desactivate GPIO1"
+		snd_hda_codec_write(codec, 0x1B, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0);
+		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_MASK, 3);
+		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DIRECTION, 3);
+		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 1);
+	}
 
 	// unmute amplifier after the unmute of both codec output channels
 	if (unmute==1 && unmuteLeftChannel==1 && unmuteRightChannel==1)
@@ -2293,6 +2292,8 @@ int ad1989a_output_amp_switch_put(struct snd_kcontrol *kcontrol,
 		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DIRECTION, 3);
 		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 2);
 	}
+
+	snd_hda_power_down(codec);
 
 	return change;
 
@@ -2832,7 +2833,7 @@ static void ad1988_laptop_unsol_event(struct hda_codec *codec, unsigned int res)
 		snd_hda_sequence_write(codec, ad1988_laptop_hp_on);
 	else
 		snd_hda_sequence_write(codec, ad1988_laptop_hp_off);
-} 
+}
 
 #ifdef CONFIG_SND_HDA_POWER_SAVE
 static struct hda_amp_list ad1988_loopbacks[] = {
