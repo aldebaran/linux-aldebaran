@@ -163,7 +163,6 @@ static void ath9k_deinit_device(struct ath9k_htc_priv *priv)
 	struct ieee80211_hw *hw = priv->hw;
 
 	wiphy_rfkill_stop_polling(hw->wiphy);
-	ath9k_deinit_leds(priv);
 	ieee80211_unregister_hw(hw);
 	ath9k_rx_cleanup(priv);
 	ath9k_tx_cleanup(priv);
@@ -821,13 +820,6 @@ static int ath9k_init_device(struct ath9k_htc_priv *priv,
 	if (error != 0)
 		goto err_rx;
 
-#ifdef CONFIG_MAC80211_LEDS
-	/* must be initialized before ieee80211_register_hw */
-	priv->led_cdev.default_trigger = ieee80211_create_tpt_led_trigger(priv->hw,
-		IEEE80211_TPT_LEDTRIG_FL_RADIO, ath9k_htc_tpt_blink,
-		ARRAY_SIZE(ath9k_htc_tpt_blink));
-#endif
-
 	/* Register with mac80211 */
 	error = ieee80211_register_hw(hw);
 	if (error)
@@ -861,7 +853,6 @@ static int ath9k_init_device(struct ath9k_htc_priv *priv,
 	ath9k_hw_name(priv->ah, hw_name, sizeof(hw_name));
 	wiphy_info(hw->wiphy, "%s\n", hw_name);
 
-	ath9k_init_leds(priv);
 	ath9k_start_rfkill_poll(priv);
 
 	return 0;

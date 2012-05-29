@@ -213,7 +213,8 @@ void ath9k_htc_init_btcoex(struct ath9k_htc_priv *priv, char *product)
 /* LED */
 /*******/
 
-#ifdef CONFIG_MAC80211_LEDS
+//hmm not the cleanest way but, we don't care about the LEDS
+#ifdef CONFIG_MAC80211_LEDS_WHICH_WORKS
 void ath9k_led_work(struct work_struct *work)
 {
 	struct ath9k_htc_priv *priv = container_of(work,
