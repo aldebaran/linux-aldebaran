@@ -1002,6 +1002,7 @@ static int mt9m114_patch2_black_lvl_correction_fix(struct v4l2_subdev *sd)
   mt9m114_write(sd, REG_PATCHLDR_PATCH_ID, 2, 0x0202);
   mt9m114_write(sd, REG_PATCHLDR_FIRMWARE_ID, 4, 0x41030202);
 
+  dprintk(0,"MT9M114","MT9M114 : applying patch 2, Black level correction fix...\n");
   mt9m114_write(sd, REG_COMMAND_REGISTER, 2, HOST_COMMAND_OK);
   v = HOST_COMMAND_OK | HOST_COMMAND_APPLY_PATCH;
   mt9m114_write(sd, REG_COMMAND_REGISTER, 2, v);
@@ -1015,6 +1016,7 @@ static int mt9m114_patch2_black_lvl_correction_fix(struct v4l2_subdev *sd)
   if ( !(v & HOST_COMMAND_OK))
   {
     dprintk(0,"MT9M114","Warning : apply patch 2 Black level correction fix Host_command not OK\n");
+    return -1;
   }
 
   mt9m114_read(sd, REG_PATCHLDR_APPLY_STATUS, 1, &v);
@@ -1143,6 +1145,7 @@ static int mt9m114_patch3_adaptive_sensitivity(struct v4l2_subdev *sd)
   mt9m114_write(sd, REG_PATCHLDR_PATCH_ID, 2, 0x0302);
   mt9m114_write(sd, REG_PATCHLDR_FIRMWARE_ID, 4, 0x41030202);
 
+  dprintk(0,"MT9M114","MT9M114 : applying patch 3, Adaptive Sensitivity...\n");
   v = HOST_COMMAND_APPLY_PATCH | HOST_COMMAND_OK;
   mt9m114_write(sd, REG_COMMAND_REGISTER, 2, v);
 
@@ -1155,6 +1158,7 @@ static int mt9m114_patch3_adaptive_sensitivity(struct v4l2_subdev *sd)
   if ( !(v & HOST_COMMAND_OK))
   {
     dprintk(0,"MT9M114","Warning : apply patch 3 Adaptive Sensitivity Host_command not OK\n");
+    return -1;
   }
 
   mt9m114_read(sd, REG_PATCHLDR_APPLY_STATUS, 1, &v);
@@ -1394,14 +1398,14 @@ static int mt9m114_init(struct v4l2_subdev *sd,u32 val)
   ret += mt9m114_sensor_optimization(sd);
   ret += mt9m114_errata_1(sd);
   ret += mt9m114_errata_2(sd);
-  ret += mt9m114_patch2_black_lvl_correction_fix(sd);
-  ret += mt9m114_patch3_adaptive_sensitivity(sd);
   ret += mt9m114_write_array(sd, pga_regs);
   ret += mt9m114_write_array(sd, ccm_awb_regs);
   ret += mt9m114_CPIPE_preference(sd);
   ret += mt9m114_features(sd);
   ret += mt9m114_write_array(sd, uvc_ctrl_regs);
   ret += mt9m114_change_config(sd);
+  ret += mt9m114_patch2_black_lvl_correction_fix(sd);
+  ret += mt9m114_patch3_adaptive_sensitivity(sd);
   if (ret != 0)
   {
     dprintk(1,"MT9M114","MT9M114 : init fail\n");
