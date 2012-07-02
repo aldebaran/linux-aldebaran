@@ -1967,7 +1967,10 @@ static int mt9m114_s_white_balance(struct v4l2_subdev *sd, int value)
 static int mt9m114_g_white_balance(struct v4l2_subdev *sd, __s32 *value)
 {
   u32 v = 0;
-  int ret = mt9m114_read(sd, REG_UVC_WHITE_BALANCE_TEMPERATURE, 2, &v);
+  int ret = 0;
+
+  mt9m114_refresh(sd);
+  ret = mt9m114_read(sd, REG_UVC_WHITE_BALANCE_TEMPERATURE, 2, &v);
 
   *value = (v/45)-180;
   return ret;
