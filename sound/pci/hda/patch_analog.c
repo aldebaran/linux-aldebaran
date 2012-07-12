@@ -2256,9 +2256,9 @@ int ad1989a_output_amp_switch_put(struct snd_kcontrol *kcontrol,
 	long *valp = ucontrol->value.integer.value;
 	int change = 0;
 
-	int unmute = *valp;
-	int unmuteLeftChannel = valp[0];
-	int unmuteRightChannel = valp[1];
+	//int unmute = *valp;
+	//int unmuteLeftChannel = valp[0];
+	//int unmuteRightChannel = valp[1];
 
 	snd_hda_power_up(codec);
 
@@ -2274,24 +2274,26 @@ int ad1989a_output_amp_switch_put(struct snd_kcontrol *kcontrol,
 							 *valp ? 0 : HDA_AMP_MUTE);
 
 	// mute the amplifier the first time we mute the codec output channels
-	if (unmute==0 && unmuteLeftChannel==0 && unmuteRightChannel==1)
-	{
-		// disable audio amplifier - activate GPIO 0 and desactivate GPIO1"
-		snd_hda_codec_write(codec, 0x1B, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0);
-		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_MASK, 3);
-		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DIRECTION, 3);
-		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 1);
-	}
+//	if (unmute==0 && unmuteLeftChannel==0 && unmuteRightChannel==1)
+//	{
+//		printk(KERN_WARNING "mute amplifier\n");
+//		// disable audio amplifier - activate GPIO 0 and desactivate GPIO1"
+//		snd_hda_codec_write(codec, 0x1B, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0);
+//		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_MASK, 3);
+//		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DIRECTION, 3);
+//		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 1);
+//	}
 
-	// unmute amplifier after the unmute of both codec output channels
-	if (unmute==1 && unmuteLeftChannel==1 && unmuteRightChannel==1)
-	{
-		// enable audio amplifier - desactivate GPIO 0 and activate GPIO1"
-		snd_hda_codec_write(codec, 0x1B, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0);
-		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_MASK, 3);
-		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DIRECTION, 3);
-		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 2);
-	}
+//	// unmute amplifier after the unmute of both codec output channels
+//	if (unmute==1 && unmuteLeftChannel==1 && unmuteRightChannel==1)
+//	{
+//		printk(KERN_WARNING "unmute amplifier\n");
+//		// enable audio amplifier - desactivate GPIO 0 and activate GPIO1"
+//		snd_hda_codec_write(codec, 0x1B, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0);
+//		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_MASK, 3);
+//		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DIRECTION, 3);
+//		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 2);
+//	}
 
 	snd_hda_power_down(codec);
 
