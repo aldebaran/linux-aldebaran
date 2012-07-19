@@ -124,9 +124,6 @@ MODULE_PARM_DESC(debug, "Debug level (0-1)");
 #define REG_CAM_OUTPUT_OFFSET                     0xC870
 #define REG_CAM_PORT_OUTPUT_CONTROL               0xC984
 #define REG_CAM_OUPUT_FORMAT_YUV                  0xC86E
-#define REG_CAM_AET_AEMODE                        0xC878
-#define REG_CAM_AET_MAX_FRAME_RATE                0xC88C
-#define REG_CAM_AET_MIN_FRAME_RATE                0xC88E
 #define REG_CAM_STAT_AWB_CLIP_WINDOW_XSTART       0xC914
 #define REG_CAM_STAT_AWB_CLIP_WINDOW_YSTART       0xC916
 #define REG_CAM_STAT_AWB_CLIP_WINDOW_XEND         0xC918
@@ -145,12 +142,17 @@ MODULE_PARM_DESC(debug, "Debug level (0-1)");
 #define REG_AUTO_BINNING_MODE                     0xE801
 #define REG_CAM_SENSOR_CFG_MAX_ANALOG_GAIN        0xC81C
 #define REG_CROP_CROPMODE                         0xC85C
-#define REG_CAM_AET_TARGET_AVERAGE_LUMA_DARK      0xC87B
 #define REG_CAM_AET_AEMODE                        0xC878
-#define REG_CAM_AET_TARGET_GAIN                   0xC890
-#define REG_CAM_AET_AE_MAX_VIRT_AGAIN             0xC886
-#define REG_CAM_AET_BLACK_CLIPPING_TARGET         0xC87C
 #define REG_CAM_AET_TARGET_AVG_LUMA               0xC87A
+#define REG_CAM_AET_TARGET_AVERAGE_LUMA_DARK      0xC87B
+#define REG_CAM_AET_BLACK_CLIPPING_TARGET         0xC87C
+#define REG_CAM_AET_AE_MAX_VIRT_AGAIN             0xC886
+#define REG_CAM_AET_MAX_FRAME_RATE                0xC88C
+#define REG_CAM_AET_MIN_FRAME_RATE                0xC88E
+#define REG_CAM_AET_TARGET_GAIN                   0xC890
+#define REG_AE_ALGORITHM                          0xA404
+#define REG_AE_TRACK_MODE                         0xA802
+#define REG_AE_TRACK_AE_TRACKING_DAMPENING_SPEED  0xA80A
 
 #define REG_CAM_LL_START_BRIGHTNESS               0xC926
 #define REG_CAM_LL_STOP_BRIGHTNESS                0xC928
@@ -189,8 +191,6 @@ MODULE_PARM_DESC(debug, "Debug level (0-1)");
 #define REG_CAM_LL_CLUSTER_DC_GATE_PERCENTAGE     0xC950
 #define REG_CAM_LL_SUMMING_SENSITIVITY_FACTOR     0xC951
 #define REG_CCM_DELTA_GAIN                        0xB42A
-#define REG_AE_TRACK_AE_TRACKING_DAMPENING_SPEED  0xA80A
-#define REG_AE_TRACK_MODE                         0xA802
 
 
 #define REG_CAM_HUE_ANGLE                         0xC873
@@ -1914,6 +1914,27 @@ static int mt9m114_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
 }
 
 
+static int mt9m114_s_auto_exposure_algorithm(struct v4l2_subdev *sd, int value)
+{ 
+  int ret = 0;
+  if(value >= 0x0 && value <= 0x3)
+  {
+    ret = mt9m114_write(sd, REG_AE_ALGORITHM, 1, value);
+  }
+  else
+    return -EINVAL;
+
+  mt9m114_refresh(sd);
+  return ret;
+}
+
+static int mt9m114_g_auto_exposure_algorithm(struct v4l2_subdev *sd, __s32 *value)
+{
+  int ret = mt9m114_read(sd, REG_AE_ALGORITHM, 1, value);
+  value = value & 0x3;
+  return ret;
+}
+
 static int mt9m114_s_gain(struct v4l2_subdev *sd, int value)
 {
   int ret = mt9m114_write(sd, REG_UVC_GAIN, 2, value);
@@ -2028,6 +2049,8 @@ static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     return v4l2_ctrl_query_fill(qc, -7, 7, 1, 0);
   case V4L2_CID_EXPOSURE_AUTO:
     return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
+  case V4L2_CID_EXPOSURE_ALGORITHM:
+    return v4l2_ctrl_query_fill(qc, 0, 3, 1, 1);
   case V4L2_CID_AUTO_WHITE_BALANCE:
     return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
   case V4L2_CID_GAIN:
@@ -2061,6 +2084,8 @@ static int mt9m114_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
     return mt9m114_g_sharpness(sd, &ctrl->value);
   case V4L2_CID_EXPOSURE_AUTO:
     return mt9m114_g_auto_exposure(sd, &ctrl->value);
+  case V4L2_CID_EXPOSURE_ALGORITHM:
+    return mt9m114_g_auto_exposure_algorithm(sd, &ctrl->value);
   case V4L2_CID_AUTO_WHITE_BALANCE:
     return mt9m114_g_auto_white_balance(sd, &ctrl->value);
   case V4L2_CID_GAIN:
@@ -2096,6 +2121,8 @@ static int mt9m114_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
     return mt9m114_s_sharpness(sd, ctrl->value);
   case V4L2_CID_EXPOSURE_AUTO:
     return mt9m114_s_auto_exposure(sd, ctrl->value);
+  case V4L2_CID_EXPOSURE_ALGORITHM:
+    return mt9m114_g_auto_exposure_algorithm(sd, &ctrl->value);
   case V4L2_CID_AUTO_WHITE_BALANCE:
     return mt9m114_s_auto_white_balance(sd, ctrl->value);
   case V4L2_CID_GAIN:
