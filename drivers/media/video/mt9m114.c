@@ -1915,7 +1915,7 @@ static int mt9m114_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
 
 
 static int mt9m114_s_auto_exposure_algorithm(struct v4l2_subdev *sd, int value)
-{ 
+{
   int ret = 0;
   if(value >= 0x0 && value <= 0x3)
   {
@@ -1931,7 +1931,7 @@ static int mt9m114_s_auto_exposure_algorithm(struct v4l2_subdev *sd, int value)
 static int mt9m114_g_auto_exposure_algorithm(struct v4l2_subdev *sd, __s32 *value)
 {
   int ret = mt9m114_read(sd, REG_AE_ALGORITHM, 1, value);
-  value = value & 0x3;
+  *value = *value & 0x3;
   return ret;
 }
 
@@ -2233,4 +2233,3 @@ static struct v4l2_i2c_driver_data v4l2_i2c_data = {
   .remove = mt9m114_remove,
   .id_table = mt9m114_id,
 };
-
