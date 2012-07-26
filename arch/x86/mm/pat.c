@@ -784,13 +784,12 @@ static int reserve_pfn_range(u64 paddr, unsigned long size, pgprot_t *vma_prot,
 
 		flags = lookup_memtype(paddr);
 		if (want_flags != flags) {
-			printk(KERN_WARNING
-			"%s:%d map pfn RAM range req %s for %Lx-%Lx, got %s\n",
+			/*printk(KERN_WARNING "%s:%d map pfn RAM range req %s for %Lx-%Lx, got %s\n",
 				current->comm, current->pid,
 				cattr_name(want_flags),
 				(unsigned long long)paddr,
 				(unsigned long long)(paddr + size),
-				cattr_name(flags));
+				cattr_name(flags));i*/
 			*vma_prot = __pgprot((pgprot_val(*vma_prot) &
 					      (~_PAGE_CACHE_MASK)) |
 					     flags);
