@@ -30,9 +30,9 @@ module_param(debug, bool, 0644);
 MODULE_PARM_DESC(debug, "Debug level (0-1)");
 
 #define dprintk(level, name,  fmt, arg...)\
-    do { if (debug >= level)\
-  printk(KERN_DEBUG "%s/0: " fmt, name, ## arg);\
-    } while (0)
+  do { if (debug >= level)\
+    printk(KERN_DEBUG "%s/0: " fmt, name, ## arg);\
+  } while (0)
 
 /*
  * Basic window sizes.  These probably belong somewhere more globally
@@ -494,7 +494,7 @@ static struct regval_list mt9m114_960p30_regs[] = {
   {REG_CAM_SENSOR_CFG_FINE_CORRECTION, 2, 96},
   {REG_CAM_SENSOR_CFG_CPIPE_LAST_ROW, 2, 963},
   {REG_CAM_SENSOR_CFG_REG_0_DATA, 2, 0x0020},
- // {REG_CAM_SENSOR_CONTROL_READ_MODE, 1, 0x0000},
+  // {REG_CAM_SENSOR_CONTROL_READ_MODE, 1, 0x0000},
   {REG_CAM_CROP_WINDOW_XOFFSET, 2, 0x0000},
   {REG_CAM_CROP_WINDOW_YOFFSET, 2, 0x0000},
   {REG_CAM_CROP_WINDOW_WIDTH, 2, 1280},
@@ -532,7 +532,7 @@ static struct regval_list mt9m114_720p36_regs[] = {
   {REG_CAM_SENSOR_CFG_FINE_CORRECTION, 2, 96},
   {REG_CAM_SENSOR_CFG_CPIPE_LAST_ROW, 2, 723},
   {REG_CAM_SENSOR_CFG_REG_0_DATA, 2, 0x0020},
- // {REG_CAM_SENSOR_CONTROL_READ_MODE, 1, 0x0000},
+  // {REG_CAM_SENSOR_CONTROL_READ_MODE, 1, 0x0000},
   {REG_CAM_CROP_WINDOW_XOFFSET, 2, 0x0000},
   {REG_CAM_CROP_WINDOW_YOFFSET, 2, 0x0000},
   {REG_CAM_CROP_WINDOW_WIDTH, 2, 1280},
@@ -589,7 +589,7 @@ static struct regval_list mt9m114_vga_30_to_75_binned_regs[] = {
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YSTART, 2, 0x0000},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_XEND, 2, 127},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YEND, 2, 95},
- // {REG_AUTO_BINNING_MODE,1, 0x00},
+  // {REG_AUTO_BINNING_MODE,1, 0x00},
   { 0xffff, 0xffff ,0xffff }
 };
 #endif
@@ -609,7 +609,7 @@ static struct regval_list mt9m114_vga_30_scaling_regs[] = {
   {REG_CAM_SENSOR_CFG_FINE_CORRECTION, 2, 96},
   {REG_CAM_SENSOR_CFG_CPIPE_LAST_ROW, 2, 963},
   {REG_CAM_SENSOR_CFG_REG_0_DATA, 2, 0x0020},
- // {REG_CAM_SENSOR_CONTROL_READ_MODE, 1, 0x0000},
+  // {REG_CAM_SENSOR_CONTROL_READ_MODE, 1, 0x0000},
   {REG_CAM_CROP_WINDOW_XOFFSET, 2, 0x0000},
   {REG_CAM_CROP_WINDOW_YOFFSET, 2, 0x0000},
   {REG_CAM_CROP_WINDOW_WIDTH, 2, 1280},
@@ -628,7 +628,7 @@ static struct regval_list mt9m114_vga_30_scaling_regs[] = {
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YSTART, 2, 0x0000},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_XEND, 2, 127},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YEND, 2, 95},
- // {REG_AUTO_BINNING_MODE,1, 0x00},
+  // {REG_AUTO_BINNING_MODE,1, 0x00},
   { 0xffff, 0xffff ,0xffff }
 };
 
@@ -648,7 +648,7 @@ static struct regval_list mt9m114_qvga_30_to_120_binned_regs[] = {
   {REG_CAM_SENSOR_CFG_FINE_CORRECTION, 2, 224},
   {REG_CAM_SENSOR_CFG_CPIPE_LAST_ROW, 2, 244},
   {REG_CAM_SENSOR_CFG_REG_0_DATA, 2, 0x0020},
- // {REG_CAM_SENSOR_CONTROL_READ_MODE, 1, 0x0000},
+  // {REG_CAM_SENSOR_CONTROL_READ_MODE, 1, 0x0000},
   {REG_CAM_CROP_WINDOW_XOFFSET, 2, 0x0000},
   {REG_CAM_CROP_WINDOW_YOFFSET, 2, 0x0000},
   {REG_CAM_CROP_WINDOW_WIDTH, 2, 320},
@@ -667,7 +667,7 @@ static struct regval_list mt9m114_qvga_30_to_120_binned_regs[] = {
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YSTART, 2, 0x0000},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_XEND, 2, 63},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YEND, 2, 47},
-//  {REG_AUTO_BINNING_MODE,1, 0x00},
+  //  {REG_AUTO_BINNING_MODE,1, 0x00},
 
   { 0xffff, 0xffff ,0xffff }
 };
@@ -707,7 +707,7 @@ static struct regval_list mt9m114_qvga_30_scaling_regs[] = {
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YSTART, 2, 0x0000},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_XEND, 2, 63},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YEND, 2, 47},
-//  {REG_AUTO_BINNING_MODE,1, 0x00},
+  //  {REG_AUTO_BINNING_MODE,1, 0x00},
 
   { 0xffff, 0xffff ,0xffff }
 };
@@ -747,7 +747,7 @@ static struct regval_list mt9m114_160x120_30_to_120_binned_regs[] = {
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YSTART, 2, 0x0000},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_XEND, 2, 31},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YEND, 2, 23},
-//  {REG_AUTO_BINNING_MODE,1, 0x00},
+  //  {REG_AUTO_BINNING_MODE,1, 0x00},
 
   { 0xffff, 0xffff ,0xffff }
 };
@@ -787,7 +787,7 @@ static struct regval_list mt9m114_160x120_30_scaling_regs[] = {
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YSTART, 2, 0x0000},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_XEND, 2, 31},
   {REG_CAM_STAT_AE_INITIAL_WINDOW_YEND, 2, 23},
-//  {REG_AUTO_BINNING_MODE,1, 0x00},
+  //  {REG_AUTO_BINNING_MODE,1, 0x00},
 
   { 0xffff, 0xffff ,0xffff }
 };
@@ -814,9 +814,9 @@ static struct regval_list mt9m114_fmt_yuv422[] = {
  */
 
 static int mt9m114_read(struct v4l2_subdev *sd,
-                        u16 reg,
-                        u16 size,
-                        u32 *value)
+    u16 reg,
+    u16 size,
+    u32 *value)
 {
   u8 cmd[10];
 
@@ -832,7 +832,7 @@ static int mt9m114_read(struct v4l2_subdev *sd,
   else if( size == 4 )
   {
     *value = (((u32)cmd[0])<<24) + (((u32)cmd[1])<<16) +
-             (((u32)cmd[2])<<8)  + (((u32)cmd[3])<<0);
+      (((u32)cmd[2])<<8)  + (((u32)cmd[3])<<0);
   }
   else if( size == 1 )
   {
@@ -846,9 +846,9 @@ static int mt9m114_read(struct v4l2_subdev *sd,
 #define MAX_MASTER_WRITE 48
 
 static int mt9m114_burst_write(struct v4l2_subdev *sd,
-                               u16 reg,
-                               u16 * array,
-                               u16 size)
+    u16 reg,
+    u16 * array,
+    u16 size)
 {
   int i=0;
   int index=0, abs_index=0;
@@ -882,38 +882,38 @@ static int mt9m114_burst_write(struct v4l2_subdev *sd,
 }
 
 static int mt9m114_write(struct v4l2_subdev *sd,
-                         u16 reg,
-                         u16 size,
-                         u32 value)
+    u16 reg,
+    u16 size,
+    u32 value)
 {
 
   int ret=0;
-   u8 cmd[10];
-   int index=0;
-   struct i2c_client *client = v4l2_get_subdevdata(sd);
+  u8 cmd[10];
+  int index=0;
+  struct i2c_client *client = v4l2_get_subdevdata(sd);
 
-   cmd[index++] = reg/256;
-   cmd[index++] = reg%256;
+  cmd[index++] = reg/256;
+  cmd[index++] = reg%256;
 
-   if( size == 2)
-   {
-     cmd[index++] = value/256;
-     cmd[index++] = value%256;
-   }
-   else if( size == 4)
-   {
-     cmd[index++] = value>>24 & 0xff;
-     cmd[index++] = value>>16 & 0xff;
-     cmd[index++] = value>>8   & 0xff;
-     cmd[index++] = value>>0   & 0xff;
-   }
-   else if( size == 1)
-   {
-     cmd[index++] = value;
-   }
-   i2c_master_send(client, cmd, index);
+  if( size == 2)
+  {
+    cmd[index++] = value/256;
+    cmd[index++] = value%256;
+  }
+  else if( size == 4)
+  {
+    cmd[index++] = value>>24 & 0xff;
+    cmd[index++] = value>>16 & 0xff;
+    cmd[index++] = value>>8   & 0xff;
+    cmd[index++] = value>>0   & 0xff;
+  }
+  else if( size == 1)
+  {
+    cmd[index++] = value;
+  }
+  i2c_master_send(client, cmd, index);
 
-   return ret;
+  return ret;
 }
 
 
@@ -1473,16 +1473,16 @@ static struct mt9m114_win_size {
   int ll_corection;
   int   binned;
   struct regval_list *regs; /* Regs to tweak */
-/* h/vref stuff */
+  /* h/vref stuff */
 } mt9m114_win_sizes[] = {
 
   /* 960p@28fps */
   {
-     .width		    = WXGA_WIDTH,
-     .height		    = FULL_HEIGHT,
-     .ll_corection          = 0,
-     .binned                = 0,
-     .regs 		    = mt9m114_960p30_regs,
+    .width		    = WXGA_WIDTH,
+    .height		    = FULL_HEIGHT,
+    .ll_corection          = 0,
+    .binned                = 0,
+    .regs 		    = mt9m114_960p30_regs,
   },
   /* 720p@36fps */
   {
@@ -1588,7 +1588,7 @@ static int mt9m114_try_fmt_internal(struct v4l2_subdev *sd,
    * we support, but not below the smallest.
    */
   for (wsize = mt9m114_win_sizes; wsize < mt9m114_win_sizes + N_WIN_SIZES;
-       wsize++)
+      wsize++)
     if (pix->width >= wsize->width && pix->height >= wsize->height)
       break;
   if (wsize >= mt9m114_win_sizes + N_WIN_SIZES)
@@ -1626,7 +1626,7 @@ static int mt9m114_s_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
   if (ret)
     return ret;
 
- // mt9m114_write_array(sd, mtfmt->regs);
+  // mt9m114_write_array(sd, mtfmt->regs);
   ret = 0;
   if (wsize->regs)
     ret = mt9m114_write_array(sd, wsize->regs);
@@ -1641,9 +1641,9 @@ static int mt9m114_s_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 
   mt9m114_read(sd, REG_CAM_SENSOR_CONTROL_READ_MODE, 2, &v);
   if (wsize->binned)
-      v = v | CAM_SENSOR_CONTROL_BINNING_EN;
+    v = v | CAM_SENSOR_CONTROL_BINNING_EN;
   else
-      v = v & (~CAM_SENSOR_CONTROL_BINNING_EN);
+    v = v & (~CAM_SENSOR_CONTROL_BINNING_EN);
   mt9m114_write(sd, REG_CAM_SENSOR_CONTROL_READ_MODE, 2, v);
   mt9m114_change_config(sd);
 
@@ -1917,12 +1917,15 @@ static int mt9m114_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
 static int mt9m114_s_auto_exposure_algorithm(struct v4l2_subdev *sd, int value)
 {
   int ret = 0;
+    
   if(value >= 0x0 && value <= 0x3)
   {
     ret = mt9m114_write(sd, REG_AE_ALGORITHM, 1, value);
   }
   else
+  {
     return -EINVAL;
+  }
 
   mt9m114_refresh(sd);
   return ret;
@@ -1930,8 +1933,9 @@ static int mt9m114_s_auto_exposure_algorithm(struct v4l2_subdev *sd, int value)
 
 static int mt9m114_g_auto_exposure_algorithm(struct v4l2_subdev *sd, __s32 *value)
 {
-  int ret = mt9m114_read(sd, REG_AE_ALGORITHM, 1, value);
-  *value = *value & 0x3;
+  u32 v = 0;
+  int ret = mt9m114_read(sd, REG_AE_ALGORITHM, 1, &v);
+  *value = v & 0x3;
   return ret;
 }
 
@@ -1948,6 +1952,9 @@ static int mt9m114_g_gain(struct v4l2_subdev *sd, __s32 *value)
   int ret = mt9m114_read(sd, REG_UVC_GAIN, 2, &v);
 
   *value = v;
+
+  dprintk(1,"MT9M114","MT9M114 : mt9m114_g_exposure_algo %x\n",v);
+
   return ret;
 }
 
@@ -2000,139 +2007,141 @@ static int mt9m114_g_white_balance(struct v4l2_subdev *sd, __s32 *value)
 
 static int mt9m114_cropcap(struct v4l2_subdev *sd, struct v4l2_cropcap *a)
 {
-      /*  a->bounds.left          = 0;
-        a->bounds.top           = 0;
-        a->bounds.width         =
-                mt9m114_resolutions[ARRAY_SIZE(mt9m114_resolutions)-1].width;
-        a->bounds.height        =
-                mt9m114_resolutions[ARRAY_SIZE(mt9m114_resolutions)-1].height;
-        a->defrect              = a->bounds;
-        a->type                 = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-        a->pixelaspect.numerator        = 1;
-        a->pixelaspect.denominator      = 1;*/
+  /*  a->bounds.left          = 0;
+      a->bounds.top           = 0;
+      a->bounds.width         =
+      mt9m114_resolutions[ARRAY_SIZE(mt9m114_resolutions)-1].width;
+      a->bounds.height        =
+      mt9m114_resolutions[ARRAY_SIZE(mt9m114_resolutions)-1].height;
+      a->defrect              = a->bounds;
+      a->type                 = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+      a->pixelaspect.numerator        = 1;
+      a->pixelaspect.denominator      = 1;*/
 
-        return 0;
+  return 0;
 }
 
 static int mt9m114_g_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
 {
-     /*   a->c.left               = 0;
-        a->c.top                = 0;
-        a->c.width              =
-                mt9m114_resolutions[ARRAY_SIZE(mt9m114_resolutions)-1].width;
-        a->c.height             =
-                mt9m114_resolutions[ARRAY_SIZE(mt9m114_resolutions)-1].height;
-        a->type                 = V4L2_BUF_TYPE_VIDEO_CAPTURE;*/
+  /*   a->c.left               = 0;
+       a->c.top                = 0;
+       a->c.width              =
+       mt9m114_resolutions[ARRAY_SIZE(mt9m114_resolutions)-1].width;
+       a->c.height             =
+       mt9m114_resolutions[ARRAY_SIZE(mt9m114_resolutions)-1].height;
+       a->type                 = V4L2_BUF_TYPE_VIDEO_CAPTURE;*/
 
-        return 0;
+  return 0;
 }
 
 static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     struct v4l2_queryctrl *qc)
 {
-  dprintk(1,"MT9M114","MT9M114 : mt9m114_queryctrl %x\n", qc->id);
+  dprintk(1,"MT9M114","MT9M114 : mt9m114_queryctrl id: 0x%x\n", qc->id);
 
   /* Fill in min, max, step and default value for these controls. */
   switch (qc->id) {
-  case V4L2_CID_BRIGHTNESS:
-    return v4l2_ctrl_query_fill(qc, 0, 255, 1, 55);
-  case V4L2_CID_CONTRAST:
-    return v4l2_ctrl_query_fill(qc, 0, 127, 1, 32);
-  case V4L2_CID_SATURATION:
-    return v4l2_ctrl_query_fill(qc, 0, 255, 1, 128);
-  case V4L2_CID_HUE:
-    return v4l2_ctrl_query_fill(qc, -180, 180, 1, 0);
-  case V4L2_CID_VFLIP:
-  case V4L2_CID_HFLIP:
-    return v4l2_ctrl_query_fill(qc, 0, 1, 1, 0);
-  case V4L2_CID_SHARPNESS:
-    return v4l2_ctrl_query_fill(qc, -7, 7, 1, 0);
-  case V4L2_CID_EXPOSURE_AUTO:
-    return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
-  case V4L2_CID_EXPOSURE_ALGORITHM:
-    return v4l2_ctrl_query_fill(qc, 0, 3, 1, 1);
-  case V4L2_CID_AUTO_WHITE_BALANCE:
-    return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
-  case V4L2_CID_GAIN:
-    return v4l2_ctrl_query_fill(qc, 0, 255, 1, 32);
-  case V4L2_CID_EXPOSURE:
-    return v4l2_ctrl_query_fill(qc, 0, 512, 1, 0);
-  case V4L2_CID_DO_WHITE_BALANCE:
-    return v4l2_ctrl_query_fill(qc, -180, 180, 1, -166);
-  case V4L2_CID_BACKLIGHT_COMPENSATION:
-    return v4l2_ctrl_query_fill(qc, 0, 4, 1, 1);
+    case V4L2_CID_BRIGHTNESS:
+      return v4l2_ctrl_query_fill(qc, 0, 255, 1, 55);
+    case V4L2_CID_CONTRAST:
+      return v4l2_ctrl_query_fill(qc, 0, 127, 1, 32);
+    case V4L2_CID_SATURATION:
+      return v4l2_ctrl_query_fill(qc, 0, 255, 1, 128);
+    case V4L2_CID_HUE:
+      return v4l2_ctrl_query_fill(qc, -180, 180, 1, 0);
+    case V4L2_CID_VFLIP:
+    case V4L2_CID_HFLIP:
+      return v4l2_ctrl_query_fill(qc, 0, 1, 1, 0);
+    case V4L2_CID_SHARPNESS:
+      return v4l2_ctrl_query_fill(qc, -7, 7, 1, 0);
+    case V4L2_CID_EXPOSURE_AUTO:
+      return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
+    case V4L2_CID_EXPOSURE_ALGORITHM:
+      return v4l2_ctrl_query_fill(qc, 0, 3, 1, 1);
+    case V4L2_CID_AUTO_WHITE_BALANCE:
+      return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
+    case V4L2_CID_GAIN:
+      return v4l2_ctrl_query_fill(qc, 0, 255, 1, 32);
+    case V4L2_CID_EXPOSURE:
+      return v4l2_ctrl_query_fill(qc, 0, 512, 1, 0);
+    case V4L2_CID_DO_WHITE_BALANCE:
+      return v4l2_ctrl_query_fill(qc, -180, 180, 1, -166);
+    case V4L2_CID_BACKLIGHT_COMPENSATION:
+      return v4l2_ctrl_query_fill(qc, 0, 4, 1, 1);
   }
   return -EINVAL;
 }
 
 static int mt9m114_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
+  dprintk(1,"MT9M114","MT9M114 : mt9m114_g_ctrl id: 0x%x\n", ctrl->id);
+
   switch (ctrl->id) {
-  case V4L2_CID_BRIGHTNESS:
-    return mt9m114_g_brightness(sd, &ctrl->value);
-  case V4L2_CID_CONTRAST:
-    return mt9m114_g_contrast(sd, &ctrl->value);
-  case V4L2_CID_SATURATION:
-    return mt9m114_g_sat(sd, &ctrl->value);
-  case V4L2_CID_HUE:
-    return mt9m114_g_hue(sd, &ctrl->value);
-  case V4L2_CID_VFLIP:
-    return mt9m114_g_vflip(sd, &ctrl->value);
-  case V4L2_CID_HFLIP:
-    return mt9m114_g_hflip(sd, &ctrl->value);
-  case V4L2_CID_SHARPNESS:
-    return mt9m114_g_sharpness(sd, &ctrl->value);
-  case V4L2_CID_EXPOSURE_AUTO:
-    return mt9m114_g_auto_exposure(sd, &ctrl->value);
-  case V4L2_CID_EXPOSURE_ALGORITHM:
-    return mt9m114_g_auto_exposure_algorithm(sd, &ctrl->value);
-  case V4L2_CID_AUTO_WHITE_BALANCE:
-    return mt9m114_g_auto_white_balance(sd, &ctrl->value);
-  case V4L2_CID_GAIN:
-    return mt9m114_g_gain(sd, &ctrl->value);
-  case V4L2_CID_EXPOSURE:
-    return mt9m114_g_exposure(sd, &ctrl->value);
-  case V4L2_CID_DO_WHITE_BALANCE:
-    return mt9m114_g_white_balance(sd, &ctrl->value);
-  case V4L2_CID_BACKLIGHT_COMPENSATION:
-    return mt9m114_g_backlight_compensation(sd, &ctrl->value);
+    case V4L2_CID_BRIGHTNESS:
+      return mt9m114_g_brightness(sd, &ctrl->value);
+    case V4L2_CID_CONTRAST:
+      return mt9m114_g_contrast(sd, &ctrl->value);
+    case V4L2_CID_SATURATION:
+      return mt9m114_g_sat(sd, &ctrl->value);
+    case V4L2_CID_HUE:
+      return mt9m114_g_hue(sd, &ctrl->value);
+    case V4L2_CID_VFLIP:
+      return mt9m114_g_vflip(sd, &ctrl->value);
+    case V4L2_CID_HFLIP:
+      return mt9m114_g_hflip(sd, &ctrl->value);
+    case V4L2_CID_SHARPNESS:
+      return mt9m114_g_sharpness(sd, &ctrl->value);
+    case V4L2_CID_EXPOSURE_AUTO:
+      return mt9m114_g_auto_exposure(sd, &ctrl->value);
+    case V4L2_CID_EXPOSURE_ALGORITHM:
+      return mt9m114_g_auto_exposure_algorithm(sd, &ctrl->value);
+    case V4L2_CID_AUTO_WHITE_BALANCE:
+      return mt9m114_g_auto_white_balance(sd, &ctrl->value);
+    case V4L2_CID_GAIN:
+      return mt9m114_g_gain(sd, &ctrl->value);
+    case V4L2_CID_EXPOSURE:
+      return mt9m114_g_exposure(sd, &ctrl->value);
+    case V4L2_CID_DO_WHITE_BALANCE:
+      return mt9m114_g_white_balance(sd, &ctrl->value);
+    case V4L2_CID_BACKLIGHT_COMPENSATION:
+      return mt9m114_g_backlight_compensation(sd, &ctrl->value);
   }
   return -EINVAL;
 }
 
 static int mt9m114_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
-  dprintk(1,"MT9M114","MT9M114 : id: 0x%x mt9m114_s_ctrl 0x%x\n", ctrl->id, ctrl->value);
+  dprintk(1,"MT9M114","MT9M114 : mt9m114_s_ctrl id: 0x%x value: 0x%x\n", ctrl->id, ctrl->value);
 
   switch (ctrl->id) {
-  case V4L2_CID_BRIGHTNESS:
-    return mt9m114_s_brightness(sd, ctrl->value);
-  case V4L2_CID_CONTRAST:
-    return mt9m114_s_contrast(sd, ctrl->value);
-  case V4L2_CID_SATURATION:
-    return mt9m114_s_sat(sd, ctrl->value);
-  case V4L2_CID_HUE:
-    return mt9m114_s_hue(sd, ctrl->value);
-  case V4L2_CID_VFLIP:
-    return mt9m114_s_vflip(sd, ctrl->value);
-  case V4L2_CID_HFLIP:
-    return mt9m114_s_hflip(sd, ctrl->value);
-  case V4L2_CID_SHARPNESS:
-    return mt9m114_s_sharpness(sd, ctrl->value);
-  case V4L2_CID_EXPOSURE_AUTO:
-    return mt9m114_s_auto_exposure(sd, ctrl->value);
-  case V4L2_CID_EXPOSURE_ALGORITHM:
-    return mt9m114_g_auto_exposure_algorithm(sd, &ctrl->value);
-  case V4L2_CID_AUTO_WHITE_BALANCE:
-    return mt9m114_s_auto_white_balance(sd, ctrl->value);
-  case V4L2_CID_GAIN:
-    return mt9m114_s_gain(sd, ctrl->value);
-  case V4L2_CID_EXPOSURE:
-    return mt9m114_s_exposure(sd, ctrl->value);
-  case V4L2_CID_DO_WHITE_BALANCE:
-    return mt9m114_s_white_balance(sd, ctrl->value);
-  case V4L2_CID_BACKLIGHT_COMPENSATION:
-    return mt9m114_s_backlight_compensation(sd, ctrl->value);
+    case V4L2_CID_BRIGHTNESS:
+      return mt9m114_s_brightness(sd, ctrl->value);
+    case V4L2_CID_CONTRAST:
+      return mt9m114_s_contrast(sd, ctrl->value);
+    case V4L2_CID_SATURATION:
+      return mt9m114_s_sat(sd, ctrl->value);
+    case V4L2_CID_HUE:
+      return mt9m114_s_hue(sd, ctrl->value);
+    case V4L2_CID_VFLIP:
+      return mt9m114_s_vflip(sd, ctrl->value);
+    case V4L2_CID_HFLIP:
+      return mt9m114_s_hflip(sd, ctrl->value);
+    case V4L2_CID_SHARPNESS:
+      return mt9m114_s_sharpness(sd, ctrl->value);
+    case V4L2_CID_EXPOSURE_AUTO:
+      return mt9m114_s_auto_exposure(sd, ctrl->value);
+    case V4L2_CID_EXPOSURE_ALGORITHM:
+      return mt9m114_s_auto_exposure_algorithm(sd, ctrl->value);
+    case V4L2_CID_AUTO_WHITE_BALANCE:
+      return mt9m114_s_auto_white_balance(sd, ctrl->value);
+    case V4L2_CID_GAIN:
+      return mt9m114_s_gain(sd, ctrl->value);
+    case V4L2_CID_EXPOSURE:
+      return mt9m114_s_exposure(sd, ctrl->value);
+    case V4L2_CID_DO_WHITE_BALANCE:
+      return mt9m114_s_white_balance(sd, ctrl->value);
+    case V4L2_CID_BACKLIGHT_COMPENSATION:
+      return mt9m114_s_backlight_compensation(sd, ctrl->value);
   }
   return -EINVAL;
 }
@@ -2146,6 +2155,24 @@ static int mt9m114_g_chip_ident(struct v4l2_subdev *sd,
 }
 
 
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+static int mt9m114_g_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
+{
+  dprintk(1,"MT9M114","MT9M114 : mt9m114_g_register addr: 0x%x\n", reg->reg);
+  return mt9m114_read(sd, reg->reg, reg->size, &(reg->val));
+}
+
+static int mt9m114_s_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
+{
+  int ret = 0;
+  
+  dprintk(1,"MT9M114","MT9M114 : mt9m114_s_register addr: 0x%x, val: 0x%x\n", reg->reg, reg->val);
+  ret = mt9m114_write(sd, reg->reg, reg->size, reg->val);
+  
+  mt9m114_refresh(sd);
+  return ret;
+}
+#endif
 
 /* ----------------------------------------------------------------------- */
 
@@ -2180,7 +2207,7 @@ static const struct v4l2_subdev_ops mt9m114_ops = {
 /* ----------------------------------------------------------------------- */
 
 static int mt9m114_probe(struct i2c_client *client,
-      const struct i2c_device_id *id)
+    const struct i2c_device_id *id)
 {
   struct v4l2_subdev *sd;
   struct mt9m114_info *info;
@@ -2196,8 +2223,8 @@ static int mt9m114_probe(struct i2c_client *client,
   ret = mt9m114_detect(sd);
   if (ret) {
     v4l_dbg(1, debug, client,
-      "chip found @ 0x%x (%s) is not an mt9m114 chip.\n",
-      client->addr , client->adapter->name);
+        "chip found @ 0x%x (%s) is not an mt9m114 chip.\n",
+        client->addr , client->adapter->name);
     kfree(info);
     return ret;
   }

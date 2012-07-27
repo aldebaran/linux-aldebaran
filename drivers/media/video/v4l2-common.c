@@ -472,6 +472,7 @@ const char *v4l2_ctrl_get_name(u32 id)
 	/* CAMERA controls */
 	case V4L2_CID_CAMERA_CLASS:		return "Camera Controls";
 	case V4L2_CID_EXPOSURE_AUTO:		return "Auto Exposure";
+  case V4L2_CID_EXPOSURE_ALGORITHM:  return "Auto Exposure Algorithm";
 	case V4L2_CID_EXPOSURE_ABSOLUTE:	return "Exposure Time, Absolute";
 	case V4L2_CID_EXPOSURE_AUTO_PRIORITY:	return "Exposure, Dynamic Framerate";
 	case V4L2_CID_PAN_RELATIVE:		return "Pan, Relative";
@@ -523,7 +524,7 @@ int v4l2_ctrl_query_fill(struct v4l2_queryctrl *qctrl, s32 min, s32 max, s32 ste
 
 	qctrl->flags = 0;
 	if (name == NULL)
-		return -EINVAL;
+    return -EINVAL;
 
 	switch (qctrl->id) {
 	case V4L2_CID_AUDIO_MUTE:
