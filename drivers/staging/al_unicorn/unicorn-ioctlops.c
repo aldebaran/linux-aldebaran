@@ -514,6 +514,38 @@ int vidioc_s_std(struct file *file, void *fh, v4l2_std_id *std)
   return 0;
 }
 
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+static int vidioc_g_register(struct file *file, void *priv, struct v4l2_dbg_register *reg)
+{
+  struct unicorn_fh *fh = priv;
+  struct unicorn_dev *dev = (fh)->dev;
+  int err;
+
+  if (fh) {
+    err = v4l2_prio_check(&dev->prio, &fh->prio);
+    if (0 != err)
+      return err;
+  }
+  
+  return v4l2_subdev_call(dev->sensor[fh->input], core, g_register, reg);
+}
+
+static int vidioc_s_register(struct file *file, void *priv, struct v4l2_dbg_register *reg)
+{
+  struct unicorn_fh *fh = priv;
+  struct unicorn_dev *dev = (fh)->dev;
+  int err;
+
+  if (fh) {
+    err = v4l2_prio_check(&dev->prio, &fh->prio);
+    if (0 != err)
+      return err;
+  }
+
+  return v4l2_subdev_call(dev->sensor[fh->input], core, s_register, reg);
+}
+#endif
+
 const struct v4l2_ioctl_ops video_ioctl_ops = {
   .vidioc_querycap = vidioc_querycap, /* done */
   .vidioc_enum_fmt_vid_cap = vidioc_enum_fmt_vid_cap,  /* done */
@@ -542,5 +574,9 @@ const struct v4l2_ioctl_ops video_ioctl_ops = {
   .vidioc_g_parm = vidioc_g_parm,
   .vidioc_g_std = vidioc_g_std,
   .vidioc_s_std = vidioc_s_std,
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+  .vidioc_g_register = vidioc_g_register,
+  .vidioc_s_register = vidioc_s_register,
+#endif
 };
 #endif

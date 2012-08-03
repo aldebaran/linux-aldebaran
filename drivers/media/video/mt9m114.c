@@ -21,7 +21,7 @@
 #include <media/v4l2-i2c-drv.h>
 
 
-MODULE_AUTHOR("Joseph Pinkasfeld <joseph.pinkasfeld@gmail.com>;Ludovic SMAL <lsmal@aldebaran-robotics.com>");
+MODULE_AUTHOR("Joseph Pinkasfeld <joseph.pinkasfeld@gmail.com>;Ludovic SMAL <lsmal@aldebaran-robotics.com>, Corentin Le Molgat <clemolgat@aldebaran-robotics.com>");
 MODULE_DESCRIPTION("A low-level driver for Aptina MT9M114 sensors");
 MODULE_LICENSE("GPL");
 
@@ -1736,7 +1736,7 @@ static int mt9m114_g_hue(struct v4l2_subdev *sd, __s32 *value)
 
   *value = v/10;
 
-  dprintk(1,"MT9M114","MT9M114 : mt9m114_g_hue %x\n",v);
+  dprintk(1,"MT9M114","MT9M114 : mt9m114_g_hue 0x%x\n",v);
   return ret;
 }
 
@@ -1920,7 +1920,7 @@ static int mt9m114_s_auto_exposure_algorithm(struct v4l2_subdev *sd, int value)
     
   if(value >= 0x0 && value <= 0x3)
   {
-    ret = mt9m114_write(sd, REG_AE_ALGORITHM, 1, value);
+    ret = mt9m114_write(sd, REG_AE_ALGORITHM+1, 1, value);
   }
   else
   {
@@ -1934,8 +1934,9 @@ static int mt9m114_s_auto_exposure_algorithm(struct v4l2_subdev *sd, int value)
 static int mt9m114_g_auto_exposure_algorithm(struct v4l2_subdev *sd, __s32 *value)
 {
   u32 v = 0;
-  int ret = mt9m114_read(sd, REG_AE_ALGORITHM, 1, &v);
+  int ret = mt9m114_read(sd, REG_AE_ALGORITHM+1, 1, &v);
   *value = v & 0x3;
+  
   return ret;
 }
 
@@ -1943,6 +1944,7 @@ static int mt9m114_s_gain(struct v4l2_subdev *sd, int value)
 {
   int ret = mt9m114_write(sd, REG_UVC_GAIN, 2, value);
   mt9m114_refresh(sd);
+
   return ret;
 }
 
@@ -1952,8 +1954,6 @@ static int mt9m114_g_gain(struct v4l2_subdev *sd, __s32 *value)
   int ret = mt9m114_read(sd, REG_UVC_GAIN, 2, &v);
 
   *value = v;
-
-  dprintk(1,"MT9M114","MT9M114 : mt9m114_g_exposure_algo %x\n",v);
 
   return ret;
 }
@@ -1973,8 +1973,7 @@ static int mt9m114_g_exposure(struct v4l2_subdev *sd, __s32 *value)
 
   *value = v>>2;
 
-
-  dprintk(1,"MT9M114","MT9M114 : mt9m114_g_exposure %x\n",v);
+  dprintk(1,"MT9M114","MT9M114 : mt9m114_g_exposure_time 0x%x\n",v);
 
   return ret;
 }
@@ -2158,17 +2157,31 @@ static int mt9m114_g_chip_ident(struct v4l2_subdev *sd,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 static int mt9m114_g_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
 {
-  dprintk(1,"MT9M114","MT9M114 : mt9m114_g_register addr: 0x%x\n", reg->reg);
-  return mt9m114_read(sd, reg->reg, reg->size, &(reg->val));
+  int ret = 0;
+
+  u16 addr = reg->reg & 0xffff;
+  u16 size = 1;
+  u32 val = 0;
+  
+  ret = mt9m114_read(sd, addr, size, &val);
+  reg->val = val;
+  
+  dprintk(1,"MT9M114","MT9M114: mt9m114_g_register addr: 0x%x, size: %d, value: 0x%x\n", addr, size, val);
+
+  return ret;
 }
 
 static int mt9m114_s_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
 {
   int ret = 0;
   
-  dprintk(1,"MT9M114","MT9M114 : mt9m114_s_register addr: 0x%x, val: 0x%x\n", reg->reg, reg->val);
-  ret = mt9m114_write(sd, reg->reg, reg->size, reg->val);
+  u16 addr = reg->reg & 0xffff;
+  u16 size = 1;
+  u32 val = reg->val & 0xff;
   
+  dprintk(1,"MT9M114","MT9M114: mt9m114_s_register addr: 0x%x, size: %d, val: 0x%x\n", addr, size, val);
+  
+  ret = mt9m114_write(sd, addr, size, val); 
   mt9m114_refresh(sd);
   return ret;
 }
