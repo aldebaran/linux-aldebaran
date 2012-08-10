@@ -96,7 +96,7 @@ static int ov5640_find_framesize(u32 width, u32 height)
 
 struct ov5640 {
 	struct v4l2_subdev subdev;
-	struct v4l2_mbus_framefmt format;
+	struct v4l2_format format;
 
 #if 0 // TODO: handle platform data
 	const struct ov5640_platform_data *pdata;
@@ -470,7 +470,7 @@ static int ov5640_config_timing(struct v4l2_subdev *sd)
 	struct ov5640 *ov5640 = to_ov5640(sd);
 	int ret, i;
 
-	i = ov5640_find_framesize(ov5640->format.width, ov5640->format.height);
+	i = ov5640_find_framesize(ov5640->format.fmt.pix.width, ov5640->format.fmt.pix.height);
 
 	ret = ov5640_reg_write(client,
 			0x3800,
@@ -607,21 +607,47 @@ static int ov5640_config_timing(struct v4l2_subdev *sd)
 	return ret;
 }
 
-# if 0 // TODO remake ov5640_g_fmt
-static struct v4l2_mbus_framefmt *
-__ov5640_get_pad_format(struct ov5640 *ov5640, struct v4l2_subdev_fh *fh,
-			 unsigned int pad, enum v4l2_subdev_format_whence which)
+static int ov5640_try_fmt_internal(struct v4l2_subdev *sd,
+    struct v4l2_format *fmt)
 {
-	switch (which) {
-	case V4L2_SUBDEV_FORMAT_TRY:
-		return v4l2_subdev_get_try_format(fh, pad);
-	case V4L2_SUBDEV_FORMAT_ACTIVE:
-		return &ov5640->format;
-	default:
-		return NULL;
-	}
+  struct v4l2_pix_format *pix = &fmt->fmt.pix;
+  const struct v4l2_frmsize_discrete *wsize;
+
+  if( pix->pixelformat != V4L2_PIX_FMT_UYVY)
+  {
+	  if( pix->pixelformat != V4L2_PIX_FMT_YUYV)
+	  {
+		  /* if not supported format choose a default one */
+		  pix->pixelformat = V4L2_PIX_FMT_YUYV;
+	  }
+  }
+
+  pix->field = V4L2_FIELD_NONE;
+  /*
+   * Round requested image size down to the nearest
+   * we support, but not below the smallest.
+   */
+  for (wsize = ov5640_frmsizes; wsize < ov5640_frmsizes + OV5640_SIZE_LAST;
+      wsize++)
+  {
+    if (pix->width >= wsize->width && pix->height >= wsize->height)
+      break;
+  }
+  if (wsize >= ov5640_frmsizes + OV5640_SIZE_LAST)
+  {
+    wsize--;   /* Take the smallest one */
+  }
+
+  /*
+   * Note the size we'll actually handle.
+   */
+  pix->width = wsize->width;
+  pix->height = wsize->height;
+  pix->bytesperline = pix->width*2;
+  pix->sizeimage = pix->height*pix->bytesperline;
+  return 0;
 }
-#endif
+
 /* -----------------------------------------------------------------------------
  * V4L2 subdev internal operations
  */
@@ -710,48 +736,52 @@ static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 static int ov5640_g_fmt(struct v4l2_subdev *sd,
 			struct v4l2_format *format)
 {
-#if 0 // TODO rewrite ov5640_g_fmt
 	struct ov5640 *ov5640 = to_ov5640(sd);
 
-	format->format = *__ov5640_get_pad_format(ov5640, fh, format->pad,
-						   format->which);
-#endif
+	memcpy(format,&ov5640->format,sizeof(struct v4l2_format));
+
 	return 0;
 }
 
-static int ov5640_s_fmt(struct v4l2_subdev *sd,
-			struct v4l2_format *format)
+static int ov5640_try_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 {
-#if 0 // TODO rewrite ov5640_s_fmt
+  return ov5640_try_fmt_internal(sd, fmt);
+}
+
+static int ov5640_s_fmt(struct v4l2_subdev *sd,
+			struct v4l2_format *fmt)
+{
 	struct ov5640 *ov5640 = to_ov5640(sd);
-	struct v4l2_mbus_framefmt *__format;
 
-	__format = __ov5640_get_pad_format(ov5640, fh, format->pad,
-					    format->which);
+	ov5640_try_fmt_internal(sd, fmt);
 
-	*__format = format->format;
+	memcpy(&ov5640->format,fmt,sizeof(struct v4l2_format));
 
+#if 0 // clk management
 	ov5640->pixel_rate->cur.val64 = ov5640_get_pclk(sd) / 16;
 #endif
+
 	return 0;
+
 }
 
 static int ov5640_enum_fmt(struct v4l2_subdev *subdev,
 							struct v4l2_fmtdesc *fmt)
 {
-#if 0 // TODO rewrite ov5640_enum_fmt
-	if (code->index >= 2)
+	if (fmt->index >= 2)
 		return -EINVAL;
 
-	switch (code->index) {
+	fmt->flags = 0;
+	switch (fmt->index) {
 	case 0:
-		code->code = V4L2_MBUS_FMT_UYVY8_1X16;
+		fmt->pixelformat = V4L2_PIX_FMT_UYVY;
+		strcpy(fmt->description, "UYVY 4:2:2 ");
 		break;
 	case 1:
-		code->code = V4L2_MBUS_FMT_YUYV8_1X16;
+		fmt->pixelformat = V4L2_PIX_FMT_YUYV;
+		strcpy(fmt->description, "YUYV 4:2:2");
 		break;
 	}
-#endif
 	return 0;
 }
 
@@ -778,11 +808,13 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret = 0;
 
+	dev_err(&client->dev, "ov5640_s_stream");
+
 	if (enable) {
 		u8 fmtreg = 0, fmtmuxreg = 0;
 		int i;
 
-		switch ((u32)ov5640->format.code) {
+		switch ((u32)ov5640->format.fmt.pix.pixelformat) {
 		case V4L2_PIX_FMT_UYVY:
 			fmtreg = 0x32;
 			fmtmuxreg = 0;
@@ -809,7 +841,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		if (ret)
 			return ret;
 
-		i = ov5640_find_framesize(ov5640->format.width, ov5640->format.height);
+		i = ov5640_find_framesize(ov5640->format.fmt.pix.width, ov5640->format.fmt.pix.height);
 		if ((i == OV5640_SIZE_QVGA) ||
 		    (i == OV5640_SIZE_VGA) ||
 		    (i == OV5640_SIZE_720P)) {
@@ -858,6 +890,10 @@ static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
 };
 
 static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
+	.enum_fmt = ov5640_enum_fmt,
+	.try_fmt = ov5640_try_fmt,
+    .s_fmt = ov5640_s_fmt,
+    .g_fmt = ov5640_g_fmt,
 	.s_stream	= ov5640_s_stream,
 };
 
@@ -1130,11 +1166,11 @@ static int ov5640_probe(struct i2c_client *client,
 		return ret;
 	}
 
-	ov5640->format.code = V4L2_PIX_FMT_UYVY;
-	ov5640->format.width = ov5640_frmsizes[OV5640_SIZE_VGA].width;
-	ov5640->format.height = ov5640_frmsizes[OV5640_SIZE_VGA].height;
-	ov5640->format.field = V4L2_FIELD_NONE;
-	ov5640->format.colorspace = V4L2_COLORSPACE_JPEG;
+	ov5640->format.fmt.pix.pixelformat = V4L2_PIX_FMT_UYVY;
+	ov5640->format.fmt.pix.width = ov5640_frmsizes[OV5640_SIZE_VGA].width;
+	ov5640->format.fmt.pix.height = ov5640_frmsizes[OV5640_SIZE_VGA].height;
+	ov5640->format.fmt.pix.field = V4L2_FIELD_NONE;
+	ov5640->format.fmt.pix.colorspace = V4L2_COLORSPACE_JPEG;
 
 	ov5640->clk_cfg.sc_pll_prediv = 3;
 	ov5640->clk_cfg.sc_pll_rdiv = 1;
