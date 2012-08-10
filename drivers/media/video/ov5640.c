@@ -652,9 +652,9 @@ static int ov5640_try_fmt_internal(struct v4l2_subdev *sd,
  * V4L2 subdev internal operations
  */
 
+#if 0 //TODO handle power off/power on of chip
 static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 {
-#if 0 //TODO handle power off/power on of chip
 	struct ov5640 *ov5640 = to_ov5640(sd);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct device *dev = &client->dev;
@@ -728,79 +728,9 @@ static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 		if (ov5640->pdata->post_poweroff)
 			ov5640->pdata->post_poweroff(sd);
 	}
+	return 0;
+}
 #endif
-	return 0;
-}
-
-
-static int ov5640_g_fmt(struct v4l2_subdev *sd,
-			struct v4l2_format *format)
-{
-	struct ov5640 *ov5640 = to_ov5640(sd);
-
-	memcpy(format,&ov5640->format,sizeof(struct v4l2_format));
-
-	return 0;
-}
-
-static int ov5640_try_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
-{
-  return ov5640_try_fmt_internal(sd, fmt);
-}
-
-static int ov5640_s_fmt(struct v4l2_subdev *sd,
-			struct v4l2_format *fmt)
-{
-	struct ov5640 *ov5640 = to_ov5640(sd);
-
-	ov5640_try_fmt_internal(sd, fmt);
-
-	memcpy(&ov5640->format,fmt,sizeof(struct v4l2_format));
-
-#if 0 // clk management
-	ov5640->pixel_rate->cur.val64 = ov5640_get_pclk(sd) / 16;
-#endif
-
-	return 0;
-
-}
-
-static int ov5640_enum_fmt(struct v4l2_subdev *subdev,
-							struct v4l2_fmtdesc *fmt)
-{
-	if (fmt->index >= 2)
-		return -EINVAL;
-
-	fmt->flags = 0;
-	switch (fmt->index) {
-	case 0:
-		fmt->pixelformat = V4L2_PIX_FMT_UYVY;
-		strcpy(fmt->description, "UYVY 4:2:2 ");
-		break;
-	case 1:
-		fmt->pixelformat = V4L2_PIX_FMT_YUYV;
-		strcpy(fmt->description, "YUYV 4:2:2");
-		break;
-	}
-	return 0;
-}
-
-static int ov5640_enum_framesizes(struct v4l2_subdev *subdev,
-									struct v4l2_fmtdesc *fmt)
-{
-#if 0 // TODO rewrite ov5640_enum_framesizes
-	if ((fse->index >= OV5640_SIZE_LAST) ||
-	    (fse->code != V4L2_MBUS_FMT_UYVY8_1X16 &&
-	     fse->code != V4L2_MBUS_FMT_YUYV8_1X16))
-		return -EINVAL;
-
-	fse->min_width = ov5640_frmsizes[fse->index].width;
-	fse->max_width = fse->min_width;
-	fse->min_height = ov5640_frmsizes[fse->index].height;
-	fse->max_height = fse->min_height;
-#endif
-	return 0;
-}
 
 static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 {
@@ -876,6 +806,77 @@ out:
 	return ret;
 }
 
+static int ov5640_g_fmt(struct v4l2_subdev *sd,
+			struct v4l2_format *format)
+{
+	struct ov5640 *ov5640 = to_ov5640(sd);
+
+	memcpy(format,&ov5640->format,sizeof(struct v4l2_format));
+
+	return 0;
+}
+
+static int ov5640_try_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
+{
+  return ov5640_try_fmt_internal(sd, fmt);
+}
+
+static int ov5640_s_fmt(struct v4l2_subdev *sd,
+			struct v4l2_format *fmt)
+{
+	struct ov5640 *ov5640 = to_ov5640(sd);
+
+	ov5640_try_fmt_internal(sd, fmt);
+
+	memcpy(&ov5640->format,fmt,sizeof(struct v4l2_format));
+
+#if 0 // clk management
+	ov5640->pixel_rate->cur.val64 = ov5640_get_pclk(sd) / 16;
+#endif
+
+	ov5640_s_stream(sd,1);
+
+	return 0;
+
+}
+
+static int ov5640_enum_fmt(struct v4l2_subdev *subdev,
+							struct v4l2_fmtdesc *fmt)
+{
+	if (fmt->index >= 2)
+		return -EINVAL;
+
+	fmt->flags = 0;
+	switch (fmt->index) {
+	case 0:
+		fmt->pixelformat = V4L2_PIX_FMT_UYVY;
+		strcpy(fmt->description, "UYVY 4:2:2 ");
+		break;
+	case 1:
+		fmt->pixelformat = V4L2_PIX_FMT_YUYV;
+		strcpy(fmt->description, "YUYV 4:2:2");
+		break;
+	}
+	return 0;
+}
+
+static int ov5640_enum_framesizes(struct v4l2_subdev *subdev,
+									struct v4l2_fmtdesc *fmt)
+{
+#if 0 // TODO rewrite ov5640_enum_framesizes
+	if ((fse->index >= OV5640_SIZE_LAST) ||
+	    (fse->code != V4L2_MBUS_FMT_UYVY8_1X16 &&
+	     fse->code != V4L2_MBUS_FMT_YUYV8_1X16))
+		return -EINVAL;
+
+	fse->min_width = ov5640_frmsizes[fse->index].width;
+	fse->max_width = fse->min_width;
+	fse->min_height = ov5640_frmsizes[fse->index].height;
+	fse->max_height = fse->min_height;
+#endif
+	return 0;
+}
+
 static int ov5640_g_chip_ident(struct v4l2_subdev *sd,
     struct v4l2_dbg_chip_ident *chip)
 {
@@ -884,9 +885,86 @@ static int ov5640_g_chip_ident(struct v4l2_subdev *sd,
   return v4l2_chip_ident_i2c_client(client, chip, V4L2_IDENT_OV5640, 0);
 }
 
+static int ov5640_init(struct v4l2_subdev *subdev, u32 val)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(subdev);
+
+	int ret = 0;
+	u8 revision = 0;
+
+#if 0 //TODO handle power off/power on of chip
+	ret = ov5640_s_power(subdev, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "OV5640 power up failed\n");
+		return ret;
+	}
+#endif
+
+	ret = ov5640_reg_read(client, 0x302A, &revision);
+	if (ret) {
+		dev_err(&client->dev, "Failure to detect OV5640 chip\n");
+		goto out;
+	}
+
+	revision &= 0xF;
+
+	dev_info(&client->dev, "Detected a OV5640 chip, revision %x\n",
+		 revision);
+
+	/* SW Reset */
+	ret = ov5640_reg_set(client, 0x3008, 0x80);
+	if (ret)
+		goto out;
+
+	msleep(2);
+
+	ret = ov5640_reg_clr(client, 0x3008, 0x80);
+	if (ret)
+		goto out;
+
+	/* SW Powerdown */
+	ret = ov5640_reg_set(client, 0x3008, 0x40);
+	if (ret)
+		goto out;
+
+	ret = ov5640_reg_writes(client, configscript_common1,
+			ARRAY_SIZE(configscript_common1));
+	if (ret)
+		goto out;
+
+	ret = ov5640_reg_writes(client, configscript_common2,
+			ARRAY_SIZE(configscript_common2));
+	if (ret)
+		goto out;
+
+#if 0 // TODO: this V4L2 not support ctrl handler
+	/* Init controls */
+	ret = v4l2_ctrl_handler_init(&ov5640->ctrl_handler, 1);
+	if (ret)
+		goto out;
+
+	ov5640->pixel_rate = v4l2_ctrl_new_std(
+				&ov5640->ctrl_handler, NULL,
+				V4L2_CID_PIXEL_RATE,
+				0, 0, 1, 0);
+
+	subdev->ctrl_handler = &ov5640->ctrl_handler;
+#endif
+
+out:
+#if 0 //TODO handle power off/power on of chip
+	ov5640_s_power(subdev, 0);
+#endif
+
+	return ret;
+}
+
 static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
+#if 0 //TODO handle power off/power on of chip
 	.s_power	= ov5640_s_power,
-	.g_chip_ident =ov5640_g_chip_ident,
+#endif
+	 .init 		= ov5640_init,
+	.g_chip_ident = ov5640_g_chip_ident,
 };
 
 static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
@@ -1022,9 +1100,10 @@ static struct v4l2_subdev_internal_ops ov5640_subdev_internal_ops = {
 };
 #endif
 
+#if 0 // TODO rewrite clock management/ power management
 static int ov5640_get_resources(struct ov5640 *ov5640, struct device *dev)
 {
-#if 0 // TODO rewrite clock management
+
 	const struct ov5640_platform_data *pdata = ov5640->pdata;
 	int ret = 0;
 
@@ -1045,9 +1124,7 @@ static int ov5640_get_resources(struct ov5640 *ov5640, struct device *dev)
 		ret = -EINVAL;
 		goto err_clk_set_rate;
 	}
-#endif
 
-#if 0 // TODO rewrite power management and chip reset
 	if (!pdata->reg_avdd)
 		goto get_reg_dovdd;
 
@@ -1123,27 +1200,27 @@ err_reg_avdd:
 
 err_clk_set_rate:
 	clk_put(ov5640->xvclk);
-#endif
-	return 0;
+
+return 0;
 }
 
 static void ov5640_put_resources(struct ov5640 *ov5640)
 {
-#if 0 // TODO rewrite power management, chip reset and clk
 	if (gpio_is_valid(ov5640->pdata->gpio_resetb))
 		gpio_free(ov5640->pdata->gpio_resetb);
 	if (gpio_is_valid(ov5640->pdata->gpio_pwdn))
 		gpio_free(ov5640->pdata->gpio_pwdn);
 	clk_put(ov5640->xvclk);
-#endif
 }
+#endif
+
+
 
 static int ov5640_probe(struct i2c_client *client,
 			 const struct i2c_device_id *did)
 {
 	struct ov5640 *ov5640;
 	int ret;
-	u8 revision = 0;
 
 #if 0 // TODO: handle platform data
 	if (!client->dev.platform_data) {
@@ -1160,11 +1237,13 @@ static int ov5640_probe(struct i2c_client *client,
 	ov5640->pdata = client->dev.platform_data;
 #endif
 
+#if 0 // TODO: handle clock and power management
 	ret = ov5640_get_resources(ov5640, &client->dev);
 	if (ret) {
 		kfree(ov5640);
 		return ret;
 	}
+#endif
 
 	ov5640->format.fmt.pix.pixelformat = V4L2_PIX_FMT_UYVY;
 	ov5640->format.fmt.pix.width = ov5640_frmsizes[OV5640_SIZE_VGA].width;
@@ -1180,14 +1259,14 @@ static int ov5640_probe(struct i2c_client *client,
 
 	v4l2_i2c_subdev_init(&ov5640->subdev, client, &ov5640_subdev_ops);
 
-	ret = ov5640_reg_read(client,0x302A, &revision);
-	if (ret<0) {
-		dev_info(&client->dev,"Failure to detect OV5640\n");
+	ret = ov5640_init(&ov5640->subdev,0);
+	if(ret<0)
+	{
+		kfree(ov5640);
 		return ret;
 	}
 
-	dev_info(&client->dev, "Detected a OV5640 chip, revision %x\n",
-          revision);
+	ov5640_s_stream(&ov5640->subdev,0);
 
 
 #if 0 // TODO all this feature not supported by this version of V4L2
@@ -1217,7 +1296,10 @@ static int ov5640_remove(struct i2c_client *client)
 	media_entity_cleanup(&subdev->entity);
 #endif
 	v4l2_device_unregister_subdev(subdev);
+
+#if 0 // TODO: handle clock and power management
 	ov5640_put_resources(ov5640);
+#endif
 	kfree(ov5640);
 	return 0;
 }
