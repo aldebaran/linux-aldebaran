@@ -1,6 +1,7 @@
 /*
  * OmniVision OV5640 sensor driver
  *
+ * Copyright (C) 2012 Aldebaran Robotics
  * Copyright (C) 2011 Texas Instruments Incorporated - http://www.ti.com/
  *
  * This program is free software; you can redistribute it and/or
@@ -130,11 +131,46 @@ struct ov5640_reg {
 	u8	val;
 };
 
+/* SYSTEM AND I/O pad control registers */
+#define SYSTEM_RESET_02			0x3002
+#define SYSTEM_RESET_03			0x3003
+#define CLOCK_ENABLE_02			0x3006
+#define SYSTEM_CTRL_0			0x3008
+#define MIPI_CONTROL_0 			0x300e
+#define PAD_OUTPUT_ENABLE_01	0x3017
+#define PAD_OUTPUT_ENABLE_02	0x3018
+#define CHIP_REVISION			0x302A
+#define SC_PLL_CONTROL_0		0x3034
+#define SC_PLL_CONTROL_1		0x3035
+#define SC_PLL_CONTROL_2		0x3036
+#define SC_PLL_CONTROL_3		0x3037
+
+/* SCCB control */
+#define SCCB_SYSTEM_CTRL_1		0x3103
+#define SYSTEM_ROOT_DIVIDER		0x3108
+
+/* DVP Control */
+#define CCIR656_CTRL			0x4719
+#define CCIR656_CTRL_00			0x4730
+
+
+
+/* MIPI Control */
+#define MIPI_CTRL_00			0x4800
+
+/* Format control */
+#define FORMAT_CONTROL_0		0x4300
+
+/* ISP top control */
+#define ISP_CONTROL_0 			0x5000
+#define ISP_CONTROL_1			0x5001
+#define FORMAT_MUX_CONTROL		0x501F
+
 /* TODO: Divide this properly */
 static const struct ov5640_reg configscript_common1[] = {
-	{ 0x3103, 0x03 },
-	{ 0x3017, 0x00 },
-	{ 0x3018, 0x00 },
+	{ SCCB_SYSTEM_CTRL_1, 0x03 },
+	{ PAD_OUTPUT_ENABLE_01, 0x1F }, /*PCLK, D[9:6] output enable*/
+	{ PAD_OUTPUT_ENABLE_02, 0xFC }, /*D[5:0] output enable */
 	{ 0x3630, 0x2e },
 	{ 0x3632, 0xe2 },
 	{ 0x3633, 0x23 },
@@ -152,17 +188,17 @@ static const struct ov5640_reg configscript_common1[] = {
 	{ 0x3731, 0x12 },
 	{ 0x3600, 0x04 },
 	{ 0x3601, 0x22 },
-	{ 0x471c, 0x50 },
-	{ 0x3002, 0x1c },
-	{ 0x3006, 0xc3 },
-	{ 0x300e, 0x05 },
-	{ 0x302e, 0x08 },
+//	{ 0x471c, 0x50 }, /* Change not recommended*/
+	{ SYSTEM_RESET_02, 0x1c }, /* Reset JFIFO,SFIFO,JPG*/
+	{ CLOCK_ENABLE_02, 0xc3 }, /* Disable JPEG CLK */
+	{ MIPI_CONTROL_0, 0x58 },  /* DVP Enable */
+//  { 0x302e, 0x08 }, /* Change not recommended */
 	{ 0x3612, 0x4b },
 	{ 0x3618, 0x04 },
-	{ 0x3034, 0x18 },
-	{ 0x3035, 0x11 },
-	{ 0x3036, 0x54 },
-	{ 0x3037, 0x13 },
+	{ SC_PLL_CONTROL_0, 0x18 },
+	{ SC_PLL_CONTROL_1, 0x11 },
+	{ SC_PLL_CONTROL_2, 0x54 },
+	{ SC_PLL_CONTROL_3, 0x13 },
 	{ 0x3708, 0x21 },
 	{ 0x3709, 0x12 },
 	{ 0x370c, 0x00 },
@@ -183,14 +219,16 @@ static const struct ov5640_reg configscript_common2[] = {
 	{ 0x4001, 0x02 },
 	{ 0x4004, 0x06 },
 	{ 0x460b, 0x37 },
-	{ 0x4750, 0x00 },
-	{ 0x4751, 0x00 },
-	{ 0x4800, 0x24 },
+//	{ 0x4750, 0x00 }, /* Change not recommended */
+//	{ 0x4751, 0x00 }, /* Change not recommended */
+	{ CCIR656_CTRL, 0x00 },
+	{ CCIR656_CTRL_00, 0x11 }, /* CCIR656 mode enable, Blanking data always 0 */
+	{ MIPI_CTRL_00, 0x04 },
 	{ 0x5a00, 0x08 },
 	{ 0x5a21, 0x00 },
 	{ 0x5a24, 0x00 },
-	{ 0x5000, 0x27 },
-	{ 0x5001, 0x87 },
+	{ ISP_CONTROL_0, 0x27 },
+	{ ISP_CONTROL_1, 0x87 },
 	{ 0x3820, 0x40 },
 	{ 0x3821, 0x06 },
 	{ 0x3824, 0x01 },
@@ -245,8 +283,8 @@ static const struct ov5640_reg configscript_common2[] = {
 	{ 0x3a1f, 0x18 },
 	{ 0x3a18, 0x00 },
 	{ 0x3a19, 0xf8 },
-	{ 0x3003, 0x03 },
-	{ 0x3003, 0x01 },
+	{ SYSTEM_RESET_03, 0x03 }, /* RESET MIPI, RESET DVP*/
+	{ SYSTEM_RESET_03, 0x02 }, /* RESET MIPI */
 };
 
 static const struct ov5640_timing_cfg timing_cfg[OV5640_SIZE_LAST] = {
@@ -738,7 +776,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret = 0;
 
-	dev_err(&client->dev, "ov5640_s_stream");
+	dev_err(&client->dev, "ov5640_s_stream enable:%d",enable);
 
 	if (enable) {
 		u8 fmtreg = 0, fmtmuxreg = 0;
@@ -759,11 +797,11 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 			return ret;
 		}
 
-		ret = ov5640_reg_write(client, 0x4300, fmtreg);
+		ret = ov5640_reg_write(client, FORMAT_CONTROL_0, fmtreg);
 		if (ret)
 			return ret;
 
-		ret = ov5640_reg_write(client, 0x501F, fmtmuxreg);
+		ret = ov5640_reg_write(client, FORMAT_MUX_CONTROL, fmtmuxreg);
 		if (ret)
 			return ret;
 
@@ -775,29 +813,29 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		if ((i == OV5640_SIZE_QVGA) ||
 		    (i == OV5640_SIZE_VGA) ||
 		    (i == OV5640_SIZE_720P)) {
-			ret = ov5640_reg_write(client, 0x3108,
+			ret = ov5640_reg_write(client, SYSTEM_ROOT_DIVIDER,
 					(i == OV5640_SIZE_720P) ? 0x1 : 0);
 			if (ret)
 				return ret;
-			ret = ov5640_reg_set(client, 0x5001, 0x20);
+			ret = ov5640_reg_set(client, ISP_CONTROL_1, 0x20);
 		} else {
-			ret = ov5640_reg_clr(client, 0x5001, 0x20);
+			ret = ov5640_reg_clr(client, ISP_CONTROL_1, 0x20);
 			if (ret)
 				return ret;
-			ret = ov5640_reg_write(client, 0x3108, 0x2);
+			ret = ov5640_reg_write(client, SYSTEM_ROOT_DIVIDER, 0x2);
 		}
 
-		ret = ov5640_reg_clr(client, 0x3008, 0x40);
+		ret = ov5640_reg_clr(client, SYSTEM_CTRL_0, 0x40);
 		if (ret)
 			goto out;
 	} else {
 		u8 tmpreg = 0;
 
-		ret = ov5640_reg_read(client, 0x3008, &tmpreg);
+		ret = ov5640_reg_read(client, SYSTEM_CTRL_0, &tmpreg);
 		if (ret)
 			goto out;
 
-		ret = ov5640_reg_write(client, 0x3008, tmpreg | 0x40);
+		ret = ov5640_reg_write(client, SYSTEM_CTRL_0, tmpreg | 0x40);
 		if (ret)
 			goto out;
 	}
@@ -900,7 +938,7 @@ static int ov5640_init(struct v4l2_subdev *subdev, u32 val)
 	}
 #endif
 
-	ret = ov5640_reg_read(client, 0x302A, &revision);
+	ret = ov5640_reg_read(client, CHIP_REVISION, &revision);
 	if (ret) {
 		dev_err(&client->dev, "Failure to detect OV5640 chip\n");
 		goto out;
@@ -912,18 +950,18 @@ static int ov5640_init(struct v4l2_subdev *subdev, u32 val)
 		 revision);
 
 	/* SW Reset */
-	ret = ov5640_reg_set(client, 0x3008, 0x80);
+	ret = ov5640_reg_set(client, SYSTEM_CTRL_0, 0x80);
 	if (ret)
 		goto out;
 
 	msleep(2);
 
-	ret = ov5640_reg_clr(client, 0x3008, 0x80);
+	ret = ov5640_reg_clr(client, SYSTEM_CTRL_0, 0x80);
 	if (ret)
 		goto out;
 
 	/* SW Powerdown */
-	ret = ov5640_reg_set(client, 0x3008, 0x40);
+	ret = ov5640_reg_set(client, SYSTEM_CTRL_0, 0x40);
 	if (ret)
 		goto out;
 
@@ -1005,100 +1043,6 @@ static struct v4l2_subdev_ops ov5640_subdev_ops = {
 #endif
 };
 
-#if 0 // TODO no open/close/registered operation, no subdev_internal_ops
-static int ov5640_registered(struct v4l2_subdev *subdev)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(subdev);
-	struct ov5640 *ov5640 = to_ov5640(subdev);
-
-	int ret = 0;
-	u8 revision = 0;
-
-	ret = ov5640_s_power(subdev, 1);
-	if (ret < 0) {
-		dev_err(&client->dev, "OV5640 power up failed\n");
-		return ret;
-	}
-
-	ret = ov5640_reg_read(client, 0x302A, &revision);
-	if (ret) {
-		dev_err(&client->dev, "Failure to detect OV5640 chip\n");
-		goto out;
-	}
-
-	revision &= 0xF;
-
-	dev_info(&client->dev, "Detected a OV5640 chip, revision %x\n",
-		 revision);
-
-	/* SW Reset */
-	ret = ov5640_reg_set(client, 0x3008, 0x80);
-	if (ret)
-		goto out;
-
-	msleep(2);
-
-	ret = ov5640_reg_clr(client, 0x3008, 0x80);
-	if (ret)
-		goto out;
-
-	/* SW Powerdown */
-	ret = ov5640_reg_set(client, 0x3008, 0x40);
-	if (ret)
-		goto out;
-
-	ret = ov5640_reg_writes(client, configscript_common1,
-			ARRAY_SIZE(configscript_common1));
-	if (ret)
-		goto out;
-
-	ret = ov5640_reg_writes(client, configscript_common2,
-			ARRAY_SIZE(configscript_common2));
-	if (ret)
-		goto out;
-
-	/* Init controls */
-	ret = v4l2_ctrl_handler_init(&ov5640->ctrl_handler, 1);
-	if (ret)
-		goto out;
-
-	ov5640->pixel_rate = v4l2_ctrl_new_std(
-				&ov5640->ctrl_handler, NULL,
-				V4L2_CID_PIXEL_RATE,
-				0, 0, 1, 0);
-
-	subdev->ctrl_handler = &ov5640->ctrl_handler;
-out:
-	ov5640_s_power(subdev, 0);
-
-	return ret;
-}
-
-static int ov5640_open(struct v4l2_subdev *subdev, struct v4l2_subdev_fh *fh)
-{
-	struct v4l2_mbus_framefmt *format;
-
-	format = v4l2_subdev_get_try_format(fh, 0);
-	format->code = V4L2_MBUS_FMT_UYVY8_1X16;
-	format->width = ov5640_frmsizes[OV5640_SIZE_VGA].width;
-	format->height = ov5640_frmsizes[OV5640_SIZE_VGA].height;
-	format->field = V4L2_FIELD_NONE;
-	format->colorspace = V4L2_COLORSPACE_JPEG;
-
-	return 0;
-}
-
-static int ov5640_close(struct v4l2_subdev *subdev, struct v4l2_subdev_fh *fh)
-{
-	return 0;
-}
-
-static struct v4l2_subdev_internal_ops ov5640_subdev_internal_ops = {
-	.registered = ov5640_registered,
-	.open = ov5640_open,
-	.close = ov5640_close,
-};
-#endif
 
 #if 0 // TODO rewrite clock management/ power management
 static int ov5640_get_resources(struct ov5640 *ov5640, struct device *dev)
