@@ -170,7 +170,7 @@ struct ov5640_reg {
 static const struct ov5640_reg configscript_common1[] = {
 	{ SCCB_SYSTEM_CTRL_1, 0x03 },
 	{ PAD_OUTPUT_ENABLE_01, 0x1F }, /*PCLK, D[9:6] output enable*/
-	{ PAD_OUTPUT_ENABLE_02, 0xFC }, /*D[5:0] output enable */
+	{ PAD_OUTPUT_ENABLE_02, 0xF0 }, /*D[5:0] output enable */
 	{ 0x3630, 0x2e },
 	{ 0x3632, 0xe2 },
 	{ 0x3633, 0x23 },
@@ -195,10 +195,10 @@ static const struct ov5640_reg configscript_common1[] = {
 //  { 0x302e, 0x08 }, /* Change not recommended */
 	{ 0x3612, 0x4b },
 	{ 0x3618, 0x04 },
-	{ SC_PLL_CONTROL_0, 0x18 },
+	{ SC_PLL_CONTROL_0, 0x1A },
 	{ SC_PLL_CONTROL_1, 0x11 },
-	{ SC_PLL_CONTROL_2, 0x54 },
-	{ SC_PLL_CONTROL_3, 0x13 },
+	{ SC_PLL_CONTROL_2, 0x46 },
+	{ SC_PLL_CONTROL_3, 0x14 },
 	{ 0x3708, 0x21 },
 	{ 0x3709, 0x12 },
 	{ 0x370c, 0x00 },
@@ -221,8 +221,8 @@ static const struct ov5640_reg configscript_common2[] = {
 	{ 0x460b, 0x37 },
 //	{ 0x4750, 0x00 }, /* Change not recommended */
 //	{ 0x4751, 0x00 }, /* Change not recommended */
-	{ CCIR656_CTRL, 0x00 },
-	{ CCIR656_CTRL_00, 0x11 }, /* CCIR656 mode enable, Blanking data always 0 */
+	{ CCIR656_CTRL, 0x01 },
+	{ CCIR656_CTRL_00, 0x01 }, /* CCIR656 mode enable, Blanking data always 0 */
 	{ MIPI_CTRL_00, 0x04 },
 	{ 0x5a00, 0x08 },
 	{ 0x5a21, 0x00 },
@@ -283,6 +283,9 @@ static const struct ov5640_reg configscript_common2[] = {
 	{ 0x3a1f, 0x18 },
 	{ 0x3a18, 0x00 },
 	{ 0x3a19, 0xf8 },
+
+	{ 0x503D, 0x00},
+
 	{ SYSTEM_RESET_03, 0x03 }, /* RESET MIPI, RESET DVP*/
 	{ SYSTEM_RESET_03, 0x02 }, /* RESET MIPI */
 };
@@ -864,7 +867,7 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 {
 	struct ov5640 *ov5640 = to_ov5640(sd);
 
-	ov5640_try_fmt_internal(sd, fmt);
+//	ov5640_try_fmt_internal(sd, fmt);
 
 	memcpy(&ov5640->format,fmt,sizeof(struct v4l2_format));
 
