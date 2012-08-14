@@ -149,11 +149,33 @@ struct ov5640_reg {
 #define SCCB_SYSTEM_CTRL_1		0x3103
 #define SYSTEM_ROOT_DIVIDER		0x3108
 
+/* Timing control */
+#define TIMING_HS_HIGH			0x3800
+#define TIMING_HS_LOW			0x3801
+#define TIMING_VS_HIGH			0x3802
+#define TIMING_VS_LOW			0x3803
+#define TIMING_HW_HIGH			0x3804
+#define TIMING_HW_LOW			0x3805
+#define TIMING_VH_HIGH			0x3806
+#define TIMING_VH_LOW			0x3807
+#define TIMING_DVPHO_HIGH		0x3808
+#define TIMING_DVPHO_LOW		0x3809
+#define TIMING_DVPVO_HIGH		0x380A
+#define TIMING_DVPVO_LOW		0x380B
+#define TIMING_HTS_HIGH			0x380C
+#define TIMING_HTS_LOW			0x380D
+#define TIMING_VTS_HIGH			0x380E
+#define TIMING_VTS_LOW			0x380F
+#define TIMING_HOFFSET_HIGH		0x3810
+#define TIMING_HOFFSET_LOW		0x3811
+#define TIMING_VOFFSET_HIGH		0x3812
+#define TIMING_VOFFSET_LOW		0x3813
+#define TIMING_X_INC			0x3814
+#define TIMING_Y_INC			0x3815
+
 /* DVP Control */
 #define CCIR656_CTRL			0x4719
 #define CCIR656_CTRL_00			0x4730
-
-
 
 /* MIPI Control */
 #define MIPI_CTRL_00			0x4800
@@ -514,134 +536,134 @@ static int ov5640_config_timing(struct v4l2_subdev *sd)
 	i = ov5640_find_framesize(ov5640->format.fmt.pix.width, ov5640->format.fmt.pix.height);
 
 	ret = ov5640_reg_write(client,
-			0x3800,
+			TIMING_HS_HIGH,
 			(timing_cfg[i].x_addr_start & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3801,
+			TIMING_HS_LOW,
 			timing_cfg[i].x_addr_start & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3802,
+			TIMING_VS_HIGH,
 			(timing_cfg[i].y_addr_start & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3803,
+			TIMING_VS_LOW,
 			timing_cfg[i].y_addr_start & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3804,
+			TIMING_HW_HIGH,
 			(timing_cfg[i].x_addr_end & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3805,
+			TIMING_HW_LOW,
 			timing_cfg[i].x_addr_end & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3806,
+			TIMING_VH_HIGH,
 			(timing_cfg[i].y_addr_end & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3807,
+			TIMING_VH_LOW,
 			timing_cfg[i].y_addr_end & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3808,
+			TIMING_DVPHO_HIGH,
 			(timing_cfg[i].h_output_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3809,
+			TIMING_DVPHO_LOW,
 			timing_cfg[i].h_output_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380A,
+			TIMING_DVPVO_HIGH,
 			(timing_cfg[i].v_output_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380B,
+			TIMING_DVPVO_LOW,
 			timing_cfg[i].v_output_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380C,
+			TIMING_HTS_HIGH,
 			(timing_cfg[i].h_total_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380D,
+			TIMING_HTS_LOW,
 			timing_cfg[i].h_total_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380E,
+			TIMING_VTS_HIGH,
 			(timing_cfg[i].v_total_size & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x380F,
+			TIMING_VTS_LOW,
 			timing_cfg[i].v_total_size & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3810,
+			TIMING_HOFFSET_HIGH,
 			(timing_cfg[i].isp_h_offset & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3811,
+			TIMING_HOFFSET_LOW,
 			timing_cfg[i].isp_h_offset & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3812,
+			TIMING_VOFFSET_HIGH,
 			(timing_cfg[i].isp_v_offset & 0xFF00) >> 8);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3813,
+			TIMING_VOFFSET_LOW,
 			timing_cfg[i].isp_v_offset & 0xFF);
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3814,
+			TIMING_X_INC,
 			((timing_cfg[i].h_odd_ss_inc & 0xF) << 4) |
 			(timing_cfg[i].h_even_ss_inc & 0xF));
 	if (ret)
 		return ret;
 
 	ret = ov5640_reg_write(client,
-			0x3815,
+			TIMING_Y_INC,
 			((timing_cfg[i].v_odd_ss_inc & 0xF) << 4) |
 			(timing_cfg[i].v_even_ss_inc & 0xF));
 
