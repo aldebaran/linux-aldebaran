@@ -97,10 +97,10 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv, struct v4l2_for
     return -EINVAL;
   }
   field = f->fmt.pix.field;
-  maxw = 1280;
-  maxh = 960;
-  minw = 160;
-  minh = 120;
+  maxw = MAX_WIDTH;
+  maxh = MAX_HEIGHT;
+  minw = MIN_WIDTH;
+  minh = MIN_HEIGHT;
 
   if (f->fmt.pix.height < minh)
     f->fmt.pix.height = minh;

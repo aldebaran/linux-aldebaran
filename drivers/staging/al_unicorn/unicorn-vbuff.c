@@ -122,8 +122,8 @@ static int buffer_prepare(struct videobuf_queue *q, struct videobuf_buffer *vb,
   int rc;
   dprintk_video(1, dev->name, "%s()\n", __func__);
   BUG_ON(NULL == fh->fmt);
-  if (fh->width < 160 || fh->width > 1280 ||
-      fh->height < 120 || fh->height > 960)
+  if (fh->width < MIN_WIDTH || fh->width > MAX_WIDTH ||
+      fh->height < MIN_HEIGHT || fh->height > MAX_HEIGHT)
     return -EINVAL;
 
   buf->vb.size = (fh->width * fh->height * fh->fmt->depth) >> 3;

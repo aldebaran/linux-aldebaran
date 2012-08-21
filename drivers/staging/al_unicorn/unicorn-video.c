@@ -36,7 +36,7 @@ MODULE_PARM_DESC(video_nr, "video device numbers");
 module_param(video_debug, int, 0644);
 MODULE_PARM_DESC(video_debug, "enable debug messages [video]");
 
-unsigned int vid_limit = 16;
+unsigned int vid_limit = 48;
 module_param(vid_limit, int, 0644);
 MODULE_PARM_DESC(vid_limit, "capture memory limit in megabytes");
 

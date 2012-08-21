@@ -39,16 +39,19 @@
 #define UNICORN_MAXBOARDS 2
 #define RESOURCE_VIDEO0       1
 #define RESOURCE_VIDEO1       2
-#define MAX_WIDTH 1280
-#define MAX_HEIGHT 960
+#define MAX_WIDTH 2560
+#define MAX_HEIGHT 1920
+#define MIN_WIDTH 320
+#define MIN_HEIGHT 240
 #define MAX_DEPTH 16
 
 #define AHB32_GLOBAL_REGISTERS			  0x00000000
 #define AHB32_INTERRUPTS_CTRL			  0x00010000
 #define AHB32_I2C_MASTER				  0x00020000
+#define AHB32_SPI_FLASH					  0x00030000
 #define AHB32_PCIE_GLOBAL_REGISTERS	      0x00040000
 #define AHB32_PCIE_DMA					  0x00050000
-#define AHB32_SPI_FLASH					  0x00030000
+
 
 #define IT_DMA_CHAN_0_TX_BUFF_0_END    (0x01 << 0)
 #define IT_DMA_CHAN_0_TX_BUFF_1_END    (0x01 << 1)
@@ -130,10 +133,6 @@ BIT	Reserved	31..2	0	read_only
 #define PEGD_SUBVENDOR_ID 		     0x8087
 #define PEGD_SUBDEVICE_ID 		     0x3029
 
-#define PCI_DEVICE_ID_NETMOS_9901 	     0x9901
-#define PCI_DEVICE_ID_NETMOS_9902 	     0x9902
-#define PCI_SUBVEN_ID_STAREX      	     0x3004
-#define PCI_SUBDEV_ID_STAREX      	     0xa000
 
 #define	UNICORN_BAR0	  		     0			/* PCIe base address */
 

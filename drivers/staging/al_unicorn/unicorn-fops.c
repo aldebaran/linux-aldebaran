@@ -52,8 +52,8 @@ static int video_open(struct file *file)
   file->private_data = fh;
   fh->dev = dev;
   fh->type = type;
-  fh->width = 160;
-  fh->height = 120;
+  fh->width = MIN_WIDTH;
+  fh->height = MIN_HEIGHT;
 
   fh->channel = vdev->index;
   fh->input = fh->channel;
