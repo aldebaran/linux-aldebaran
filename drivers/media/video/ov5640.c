@@ -925,7 +925,6 @@ static int ov5640_reg_read(struct i2c_client *client, u16 reg, u8 *val)
 	return 0;
 
 err:
-	dev_err(&client->dev, "Failed reading register 0x%02x!\n", reg);
 	return ret;
 }
 
@@ -949,7 +948,7 @@ static int ov5640_reg_write(struct i2c_client *client, u16 reg, u8 val)
 
 	ret = i2c_transfer(client->adapter, &msg, 1);
 	if (ret < 0) {
-		dev_err(&client->dev, "Failed writing register 0x%02x!\n", reg);
+		dev_info(&client->dev, "Failed writing register 0x%02x!\n", reg);
 		return ret;
 	}
 
@@ -1309,8 +1308,6 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret = 0;
 
-	dev_err(&client->dev, "%s() enable:%d",__func__,enable);
-
 	if (enable) {
 		u8 fmtreg = 0, fmtmuxreg = 0;
 		int i;
@@ -1489,7 +1486,6 @@ static int ov5640_init(struct v4l2_subdev *subdev, u32 val)
 
 	ret = ov5640_reg_read(client, CHIP_REVISION, &revision);
 	if (ret) {
-		dev_err(&client->dev, "Failure to detect OV5640 chip\n");
 		goto out;
 	}
 
@@ -1756,7 +1752,7 @@ static int ov5640_probe(struct i2c_client *client,
 	if(ret<0)
 	{
 		kfree(ov5640);
-		return ret;
+		return 0;
 	}
 
 	ov5640_s_stream(&ov5640->subdev,0);
