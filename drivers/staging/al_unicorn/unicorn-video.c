@@ -388,6 +388,7 @@ static int unicorn_attach_camera(struct unicorn_dev *dev)
           dprintk_video(1, dev->name, "i2c subdev is null\n");
         if (ret == -ENOIOCTLCMD )
           printk(KERN_INFO "i2c core or chip ident is null\n");
+        dev->sensor[i] = NULL;
       }
       else
       {
@@ -397,21 +398,34 @@ static int unicorn_attach_camera(struct unicorn_dev *dev)
         dprintk_video(1, dev->name, "MT9M114: Unsupported sensor type 0x%x", chip.ident);
         dev->sensor[i] = NULL;
       }
-#if 0
-      // try to find ov7670
+
+      // try to find ov5640
       if(dev->sensor[i]==NULL)
       {
-        dev->sensor[i] = v4l2_i2c_new_subdev(&dev->v4l2_dev, dev->i2c_adapter[i],
-                                                      "ov7670", "0v7670", 0x42, NULL);
+          dev->sensor[i] = v4l2_i2c_new_subdev(&dev->v4l2_dev, dev->i2c_adapter[i],
+                                                  "ov5640", "ov5640", 0x3C, NULL);
 
-        chip.ident = V4L2_IDENT_NONE;
-        chip.match.type = V4L2_CHIP_MATCH_I2C_ADDR;
-        chip.match.addr = 0x42;
-        ret = v4l2_subdev_call(dev->sensor[i], core, g_chip_ident, &chip);
-        printk(KERN_INFO "OV7670: type 0x%x", chip.ident);
-
+          chip.ident = V4L2_IDENT_NONE;
+          chip.match.type = V4L2_CHIP_MATCH_I2C_ADDR;
+          chip.match.addr = 0x3C;
+          ret = v4l2_subdev_call(dev->sensor[i], core, g_chip_ident, &chip);
+          if (ret)
+          {
+            if (ret == -ENODEV )
+              dprintk_video(1, dev->name, "i2c subdev is null\n");
+            if (ret == -ENOIOCTLCMD )
+              printk(KERN_INFO "i2c core or chip ident is null\n");
+          }
+          else
+          {
+            break;
+          }
+          if (chip.ident != V4L2_IDENT_OV5640) {
+            dprintk_video(1, dev->name, "OV5640: Unsupported sensor type 0x%x", chip.ident);
+            dev->sensor[i] = NULL;
+          }
       }
-#endif
+
     }
   }
   return 0;
