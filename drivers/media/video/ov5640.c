@@ -948,7 +948,6 @@ static int ov5640_reg_write(struct i2c_client *client, u16 reg, u8 val)
 
 	ret = i2c_transfer(client->adapter, &msg, 1);
 	if (ret < 0) {
-		dev_info(&client->dev, "Failed writing register 0x%02x!\n", reg);
 		return ret;
 	}
 
@@ -1410,7 +1409,6 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 //	ov5640_try_fmt_internal(sd, fmt);
-	dev_err(&client->dev, "%s() width:%d height:%d",__func__,fmt->fmt.pix.width,fmt->fmt.pix.height);
 
 	memcpy(&ov5640->format,fmt,sizeof(struct v4l2_format));
 
@@ -1752,7 +1750,7 @@ static int ov5640_probe(struct i2c_client *client,
 	if(ret<0)
 	{
 		kfree(ov5640);
-		return 0;
+		return -ENODEV;
 	}
 
 	ov5640_s_stream(&ov5640->subdev,0);
