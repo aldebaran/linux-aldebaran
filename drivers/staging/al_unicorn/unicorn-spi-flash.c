@@ -49,6 +49,8 @@ static int flash_access = 0;
 #define FPGA_SYNCHRO_WORD     0x665599AA
 #endif
 
+const int FPGA1[] = {0x03B960,0xFE008d,0xD4C10C};
+const int FPGA2[] = {0x42F524,0xBB42CC,0x868042};
 /* Functions to handle a winbond flash w25q64BV */
 
 enum {
@@ -468,8 +470,28 @@ static ssize_t flash_access_show(struct class *unicorn_class, char *buf)
 
 static ssize_t flash_access_store(struct class *unicorn_class, const char *buf, size_t count)
 {
-  flash_access = simple_strtol(buf, NULL, 10);
-  return count;
+  int tbl[3];
+  int i=0,j=0;
+  if(count==sizeof(FPGA1)-2)
+  {
+	  for(i=0;i<sizeof(FPGA1)-2;i+=3)
+	  {
+		  tbl[j]=buf[i]<<16 | buf[i+1]<<8 | buf[i+2];
+		  j++;
+	  }
+	  for(i=0;i<3;i++)
+	  {
+		  if( (tbl[i]^FPGA2[i]) != FPGA1[i])
+		  {
+			  goto err;
+		  }
+	  }
+  	  flash_access^=1;
+	  return count;
+  }
+
+err:
+  return -EPERM;
  }
 
 static struct class_attribute class_attr_flash_access = {
@@ -581,8 +603,45 @@ static ssize_t flash_synchro_write(struct kobject *kobj, struct bin_attribute *b
   mutex_lock(&update_lock);
 
   offset += FPGA_START_ADDRESS;
+  if(flash_access==0)
+  {
+	  printk(KERN_ERR "unicorn: no write access to write fpga synchro dword\n");
+      ret_count = -EPERM;
+  }
+  else
+  {
+	sector = offset / FLASH_SECTOR_SIZE;
+	dst = (uint32_t*)dev->spi_flash->data + (FPGA_SYNCHRO_ADDRESS/4);
 
-  ret_count = -EPERM;
+	if (FlashExecuteCommand(dev, NULL, NULL, FLASH_CMD_WRITE_ENABLE, 0, false, 0))
+	{
+		ret_count = -EIO;
+		goto err;
+	}
+
+	if (FlashExecuteCommand(dev, NULL, NULL, FLASH_CMD_PAGE_PROGRAM, sector, false, 0))
+	{
+		ret_count = -EIO;
+		goto err;
+	}
+
+	*dst++ = FPGA_SYNCHRO_WORD;
+
+	if (dev->spi_flash->status.error)
+	{
+		ret_count = -EIO;
+		goto err;
+	}
+
+	if (FlashWaitWriteCompleted(dev))
+	{
+		ret_count = -EIO;
+		goto err;
+	}
+
+	dprintk(1, "unicorn-spi-flash", "flash_synchro_write: off:0x%llx count:%x\n",offset,count);
+	ret_count = count;
+  }
 
  err:
   mutex_unlock(&update_lock);
