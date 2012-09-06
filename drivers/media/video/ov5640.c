@@ -53,13 +53,6 @@ struct ov5640_timing_cfg {
 	u8 v_even_ss_inc;
 };
 
-struct ov5640_clk_cfg {
-	u8 sc_pll_prediv;
-	u8 sc_pll_rdiv;
-	u8 sc_pll_mult;
-	u8 sysclk_div;
-	u8 mipi_div;
-};
 
 enum ov5640_mode {
 	ov5640_mode_MIN = 0,
@@ -71,48 +64,10 @@ enum ov5640_mode {
 	ov5640_mode_MAX = 5
 };
 
-static const struct v4l2_frmsize_discrete ov5640_frmsizes[ov5640_mode_MAX] = {
-	{  320,  240 },
-	{  640,  480 },
-	{ 1280,  720 },
-	{ 1920, 1080 },
-	{ 2560, 1920 },
-};
-
-/* Find a frame size in an array */
-static int ov5640_find_framesize(u32 width, u32 height)
-{
-	int i;
-
-	for (i = 0; i < ov5640_mode_MAX; i++) {
-		if ((ov5640_frmsizes[i].width >= width) &&
-		    (ov5640_frmsizes[i].height >= height))
-			break;
-	}
-
-	/* If not found, select biggest */
-	if (i >= ov5640_mode_MAX)
-		i = ov5640_mode_MAX - 1;
-
-	return i;
-}
 
 struct ov5640 {
 	struct v4l2_subdev subdev;
 	struct v4l2_format format;
-
-#if 0 // TODO: handle platform data
-	const struct ov5640_platform_data *pdata;
-#endif
-	struct v4l2_ctrl *pixel_rate;
-
-	/* HW control */
-	struct clk *xvclk;
-	struct regulator *avdd;
-	struct regulator *dovdd;
-
-	/* System Clock config */
-	struct ov5640_clk_cfg clk_cfg;
 };
 
 static inline struct ov5640 *to_ov5640(struct v4l2_subdev *sd)
@@ -606,6 +561,26 @@ static const struct ov5640_timing_cfg timing_cfg[ov5640_mode_MAX] = {
 	},
 };
 
+/* Find a frame size in an array */
+static int ov5640_find_framesize(u32 width, u32 height)
+{
+	int i;
+
+	for (i = 0; i < ov5640_mode_MAX; i++) {
+		if ((ov5640_mode_info_data[i].width >= width) &&
+		    (ov5640_mode_info_data[i].height >= height))
+			break;
+	}
+
+	/* If not found, select biggest */
+	if (i >= ov5640_mode_MAX)
+		i = ov5640_mode_MAX - 1;
+
+	return i;
+}
+
+
+
 /**
  * ov5640_reg_read - Read a value from a register in an ov5640 sensor device
  * @client: i2c driver client structure
@@ -718,25 +693,6 @@ static int ov5640_reg_clr(struct i2c_client *client, u16 reg, u8 val)
 
 	return ov5640_reg_write(client, reg, tmpval & ~val);
 }
-
-#if 0 // TODO: REWRITE clk management if needed
-static unsigned long ov5640_get_pclk(struct v4l2_subdev *sd)
-{
-	struct ov5640 *ov5640 = to_ov5640(sd);
-	unsigned long xvclk, vco, mipi_pclk;
-
-	xvclk = clk_get_rate(ov5640->xvclk);
-
-	vco = (xvclk / ov5640->clk_cfg.sc_pll_prediv) *
-		ov5640->clk_cfg.sc_pll_mult;
-
-	mipi_pclk = vco /
-		ov5640->clk_cfg.sysclk_div /
-		ov5640->clk_cfg.mipi_div;
-
-	return mipi_pclk;
-}
-#endif
 
 static int ov5640_config_timing(struct v4l2_subdev *sd)
 {
@@ -885,7 +841,7 @@ static int ov5640_try_fmt_internal(struct v4l2_subdev *sd,
     struct v4l2_format *fmt)
 {
   struct v4l2_pix_format *pix = &fmt->fmt.pix;
-  const struct v4l2_frmsize_discrete *wsize;
+  int i;
 
   if( pix->pixelformat != V4L2_PIX_FMT_UYVY)
   {
@@ -901,22 +857,22 @@ static int ov5640_try_fmt_internal(struct v4l2_subdev *sd,
    * Round requested image size down to the nearest
    * we support, but not below the smallest.
    */
-  for (wsize = ov5640_frmsizes; wsize < ov5640_frmsizes + ov5640_mode_MAX;
-      wsize++)
+  for (i = 0; i < ov5640_mode_MAX; i++)
   {
-    if (pix->width >= wsize->width && pix->height >= wsize->height)
-      break;
+	  if ((ov5640_mode_info_data[i].width >= pix->width) &&
+		    (ov5640_mode_info_data[i].height >= pix->height))
+			break;
   }
-  if (wsize >= ov5640_frmsizes + ov5640_mode_MAX)
-  {
-    wsize--;   /* Take the smallest one */
-  }
+
+  /* If not found, select biggest */
+  if (i >= ov5640_mode_MAX)
+	 i = ov5640_mode_MAX - 1;
 
   /*
    * Note the size we'll actually handle.
    */
-  pix->width = wsize->width;
-  pix->height = wsize->height;
+  pix->width = ov5640_mode_info_data[i].width;
+  pix->height = ov5640_mode_info_data[i].height;
   pix->bytesperline = pix->width*2;
   pix->sizeimage = pix->height*pix->bytesperline;
   return 0;
@@ -935,72 +891,10 @@ static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 
 
 	if (on) {
-		int ret;
 
-		if (ov5640->pdata->pre_poweron) {
-			ret = ov5640->pdata->pre_poweron(sd);
-			if (ret) {
-				dev_err(dev,
-					"Error in pre_poweron (%d)\n", ret);
-				return ret;
-			}
-		}
-
-		if (ov5640->dovdd) {
-			ret = regulator_enable(ov5640->dovdd);
-			if (ret) {
-				dev_err(dev,
-					"Error in enabling DOVDD (%d)\n", ret);
-				if (ov5640->pdata->post_poweroff)
-					ov5640->pdata->post_poweroff(sd);
-				return ret;
-			}
-		}
-
-		if (ov5640->avdd) {
-			ret = regulator_enable(ov5640->avdd);
-			if (ret) {
-				dev_err(dev,
-					"Error in enabling AVDD (%d)\n", ret);
-				if (ov5640->dovdd)
-					regulator_disable(ov5640->dovdd);
-				if (ov5640->pdata->post_poweroff)
-					ov5640->pdata->post_poweroff(sd);
-				return ret;
-			}
-			usleep_range(5000, 5000);
-		}
-
-		ret = clk_enable(ov5640->xvclk);
-		if (ret) {
-			dev_err(dev, "Error in enabling XVCLK (%d)\n", ret);
-			if (ov5640->avdd)
-				regulator_disable(ov5640->avdd);
-			if (ov5640->dovdd)
-				regulator_disable(ov5640->dovdd);
-			if (ov5640->pdata->post_poweroff)
-				ov5640->pdata->post_poweroff(sd);
-			return ret;
-		}
-		if (gpio_is_valid(ov5640->pdata->gpio_pwdn)) {
-			gpio_set_value(ov5640->pdata->gpio_pwdn,
-				       ov5640->pdata->is_gpio_pwdn_acthi ?
-				       1 : 0);
-		}
 		usleep_range(2000, 2000);
 	} else {
-		if (gpio_is_valid(ov5640->pdata->gpio_pwdn)) {
-			gpio_set_value(ov5640->pdata->gpio_pwdn,
-				       ov5640->pdata->is_gpio_pwdn_acthi ?
-				       0 : 1);
-		}
-		clk_disable(ov5640->xvclk);
-		if (ov5640->avdd)
-			regulator_disable(ov5640->avdd);
-		if (ov5640->dovdd)
-			regulator_disable(ov5640->dovdd);
-		if (ov5640->pdata->post_poweroff)
-			ov5640->pdata->post_poweroff(sd);
+
 	}
 	return 0;
 }
@@ -1044,8 +938,6 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 			return ret;
 
 		i = ov5640_find_framesize(ov5640->format.fmt.pix.width, ov5640->format.fmt.pix.height);
-
-		dev_err(&client->dev, "%s() framesize:%d",__func__,i);
 
 		ret = ov5640_reg_writes(client, ov5640_mode_info_data[i].init_data_ptr,
 				ov5640_mode_info_data[i].init_data_size);
@@ -1119,13 +1011,9 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 	struct ov5640 *ov5640 = to_ov5640(sd);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
-//	ov5640_try_fmt_internal(sd, fmt);
+	ov5640_try_fmt_internal(sd, fmt);
 
 	memcpy(&ov5640->format,fmt,sizeof(struct v4l2_format));
-
-#if 0 // clk management
-	ov5640->pixel_rate->cur.val64 = ov5640_get_pclk(sd) / 16;
-#endif
 
 	ov5640_s_stream(sd,1);
 
@@ -1152,23 +1040,6 @@ static int ov5640_enum_fmt(struct v4l2_subdev *subdev,
 	}
 	return 0;
 }
-
-#if 0 // TODO rewrite ov5640_enum_framesizes
-static int ov5640_enum_framesizes(struct v4l2_subdev *subdev,
-									struct v4l2_fmtdesc *fmt)
-{
-	if ((fse->index >= ov5640_mode_MAX) ||
-	    (fse->code != V4L2_MBUS_FMT_UYVY8_1X16 &&
-	     fse->code != V4L2_MBUS_FMT_YUYV8_1X16))
-		return -EINVAL;
-
-	fse->min_width = ov5640_frmsizes[fse->index].width;
-	fse->max_width = fse->min_width;
-	fse->min_height = ov5640_frmsizes[fse->index].height;
-	fse->max_height = fse->min_height;
-	return 0;
-}
-#endif
 
 static int ov5640_g_chip_ident(struct v4l2_subdev *sd,
     struct v4l2_dbg_chip_ident *chip)
@@ -1233,20 +1104,6 @@ static int ov5640_init(struct v4l2_subdev *subdev, u32 val)
 	if (ret)
 		goto out;
 
-#if 0 // TODO: this V4L2 not support ctrl handler
-	/* Init controls */
-	ret = v4l2_ctrl_handler_init(&ov5640->ctrl_handler, 1);
-	if (ret)
-		goto out;
-
-	ov5640->pixel_rate = v4l2_ctrl_new_std(
-				&ov5640->ctrl_handler, NULL,
-				V4L2_CID_PIXEL_RATE,
-				0, 0, 1, 0);
-
-	subdev->ctrl_handler = &ov5640->ctrl_handler;
-#endif
-
 out:
 #if 0 //TODO handle power off/power on of chip
 	ov5640_s_power(subdev, 0);
@@ -1271,152 +1128,11 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 	.s_stream	= ov5640_s_stream,
 };
 
-#if 0 // TODO put this function in sub_dev_core_ops
-static struct v4l2_subdev_pad_ops ov5640_subdev_pad_ops = {
-	.enum_mbus_code = ov5640_enum_fmt,
-	.enum_frame_size = ov5640_enum_framesizes,
-	.get_fmt = ov5640_g_fmt,
-	.set_fmt = ov5640_s_fmt,
-};
-
-static int ov5640_g_skip_frames(struct v4l2_subdev *sd, u32 *frames)
-{
-	/* Quantity of initial bad frames to skip. Revisit. */
-	*frames = 3;
-
-	return 0;
-}
-
-static struct v4l2_subdev_sensor_ops ov5640_subdev_sensor_ops = {
-	.g_skip_frames	= ov5640_g_skip_frames,
-};
-#endif
-
 
 static struct v4l2_subdev_ops ov5640_subdev_ops = {
 	.core	= &ov5640_subdev_core_ops,
 	.video	= &ov5640_subdev_video_ops,
-#if 0 // TODO only skip top line no skip frame in V4L2
-	.sensor	= &ov5640_subdev_sensor_ops,
-#endif
 };
-
-
-#if 0 // TODO rewrite clock management/ power management
-static int ov5640_get_resources(struct ov5640 *ov5640, struct device *dev)
-{
-
-	const struct ov5640_platform_data *pdata = ov5640->pdata;
-	int ret = 0;
-
-	ov5640->xvclk = clk_get(dev, pdata->clk_xvclk);
-	if (IS_ERR(ov5640->xvclk)) {
-		dev_err(dev, "Unable to get XVCLK (%s)\n", pdata->clk_xvclk);
-		return -ENODEV;
-	}
-
-	if (clk_round_rate(ov5640->xvclk, 24000000) != 24000000)
-		dev_warn(dev, "XVCLK set to rounded aproximate (%lu Hz)",
-			 clk_round_rate(ov5640->xvclk, 24000000));
-
-	if (clk_set_rate(ov5640->xvclk,
-			 clk_round_rate(ov5640->xvclk, 24000000))) {
-		dev_err(dev, "Unable to change XVCLK (%s) rate!\n",
-			pdata->clk_xvclk);
-		ret = -EINVAL;
-		goto err_clk_set_rate;
-	}
-
-	if (!pdata->reg_avdd)
-		goto get_reg_dovdd;
-
-	ov5640->avdd = devm_regulator_get(dev, pdata->reg_avdd);
-	if (IS_ERR(ov5640->avdd)) {
-		dev_err(dev, "Unable to get AVDD (%s) regulator\n",
-			pdata->reg_avdd);
-		ret = -ENODEV;
-		goto err_reg_avdd;
-	}
-
-	if (regulator_set_voltage(ov5640->avdd, 2800000, 2800000)) {
-		dev_err(dev, "Unable to set valid AVDD (%s) regulator"
-			" voltage to: 2.8V\n", pdata->reg_avdd);
-		ret = -ENODEV;
-		goto err_reg_avdd;
-	}
-
-get_reg_dovdd:
-	if (!pdata->reg_dovdd)
-		goto get_gpio_pwdn;
-
-	ov5640->dovdd = devm_regulator_get(dev, pdata->reg_dovdd);
-	if (IS_ERR(ov5640->dovdd)) {
-		dev_err(dev, "Unable to get DOVDD (%s) regulator\n",
-			pdata->reg_dovdd);
-		ret = -ENODEV;
-		goto err_reg_dovdd;
-	}
-
-	if (regulator_set_voltage(ov5640->dovdd, 1800000, 1800000)) {
-		dev_err(dev, "Unable to set valid DOVDD (%s) regulator"
-			" voltage to: 1.8V\n", pdata->reg_dovdd);
-		ret = -ENODEV;
-		goto err_reg_dovdd;
-	}
-
-get_gpio_pwdn:
-	if (!gpio_is_valid(pdata->gpio_pwdn))
-		goto get_gpio_resetb;
-
-	if (gpio_request_one(pdata->gpio_pwdn,
-			     pdata->is_gpio_pwdn_acthi ?
-			     GPIOF_OUT_INIT_LOW : GPIOF_OUT_INIT_HIGH,
-			     "OV5640_PWDN")) {
-		dev_err(dev, "Cannot request GPIO %d\n", pdata->gpio_pwdn);
-		ret = -ENODEV;
-		goto err_gpio_pwdn;
-	}
-
-get_gpio_resetb:
-	if (!gpio_is_valid(pdata->gpio_resetb))
-		goto out;
-
-	if (gpio_request_one(pdata->gpio_resetb,
-			     pdata->is_gpio_resetb_acthi ?
-			     GPIOF_OUT_INIT_LOW : GPIOF_OUT_INIT_HIGH,
-			     "OV5640_RESETB")) {
-		dev_err(dev, "Cannot request GPIO %d\n", pdata->gpio_resetb);
-		ret = -ENODEV;
-		goto err_gpio_resetb;
-	}
-
-out:
-	return 0;
-
-err_gpio_resetb:
-	if (gpio_is_valid(pdata->gpio_pwdn))
-		gpio_free(pdata->gpio_pwdn);
-err_gpio_pwdn:
-err_reg_dovdd:
-err_reg_avdd:
-
-err_clk_set_rate:
-	clk_put(ov5640->xvclk);
-
-return 0;
-}
-
-static void ov5640_put_resources(struct ov5640 *ov5640)
-{
-	if (gpio_is_valid(ov5640->pdata->gpio_resetb))
-		gpio_free(ov5640->pdata->gpio_resetb);
-	if (gpio_is_valid(ov5640->pdata->gpio_pwdn))
-		gpio_free(ov5640->pdata->gpio_pwdn);
-	clk_put(ov5640->xvclk);
-}
-#endif
-
-
 
 static int ov5640_probe(struct i2c_client *client,
 			 const struct i2c_device_id *did)
@@ -1424,40 +1140,15 @@ static int ov5640_probe(struct i2c_client *client,
 	struct ov5640 *ov5640;
 	int ret;
 
-#if 0 // TODO: handle platform data
-	if (!client->dev.platform_data) {
-		dev_err(&client->dev, "No platform data!!\n");
-		return -ENODEV;
-	}
-#endif
-
 	ov5640 = kzalloc(sizeof(*ov5640), GFP_KERNEL);
 	if (!ov5640)
 		return -ENOMEM;
 
-#if 0 // TODO: handle platform data
-	ov5640->pdata = client->dev.platform_data;
-#endif
-
-#if 0 // TODO: handle clock and power management
-	ret = ov5640_get_resources(ov5640, &client->dev);
-	if (ret) {
-		kfree(ov5640);
-		return ret;
-	}
-#endif
-
 	ov5640->format.fmt.pix.pixelformat = V4L2_PIX_FMT_UYVY;
-	ov5640->format.fmt.pix.width = ov5640_frmsizes[ov5640_mode_VGA_640_480].width;
-	ov5640->format.fmt.pix.height = ov5640_frmsizes[ov5640_mode_VGA_640_480].height;
+	ov5640->format.fmt.pix.width = ov5640_mode_info_data[ov5640_mode_VGA_640_480].width;
+	ov5640->format.fmt.pix.height = ov5640_mode_info_data[ov5640_mode_VGA_640_480].height;
 	ov5640->format.fmt.pix.field = V4L2_FIELD_NONE;
 	ov5640->format.fmt.pix.colorspace = V4L2_COLORSPACE_JPEG;
-
-	ov5640->clk_cfg.sc_pll_prediv = 3;
-	ov5640->clk_cfg.sc_pll_rdiv = 1;
-	ov5640->clk_cfg.sc_pll_mult = 84;
-	ov5640->clk_cfg.sysclk_div = 1;
-	ov5640->clk_cfg.mipi_div = 1;
 
 	v4l2_i2c_subdev_init(&ov5640->subdev, client, &ov5640_subdev_ops);
 
@@ -1470,21 +1161,6 @@ static int ov5640_probe(struct i2c_client *client,
 
 	ov5640_s_stream(&ov5640->subdev,0);
 
-
-#if 0 // TODO all this feature not supported by this version of V4L2
-	ov5640->subdev.internal_ops = &ov5640_subdev_internal_ops;
-	ov5640->subdev.flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
-	ov5640->subdev.entity.type = MEDIA_ENT_T_V4L2_SUBDEV_SENSOR;
-	ov5640->pad.flags = MEDIA_PAD_FL_SOURCE;
-
-	ret = media_entity_init(&ov5640->subdev.entity, 1, &ov5640->pad, 0);
-	if (ret < 0) {
-		media_entity_cleanup(&ov5640->subdev.entity);
-		ov5640_put_resources(ov5640);
-		kfree(ov5640);
-	}
-#endif
-
 	return ret;
 }
 
@@ -1493,15 +1169,8 @@ static int ov5640_remove(struct i2c_client *client)
 	struct v4l2_subdev *subdev = i2c_get_clientdata(client);
 	struct ov5640 *ov5640 = to_ov5640(subdev);
 
-#if 0 //TODO this function not supported by this version of V4L2
-	v4l2_ctrl_handler_free(&ov5640->ctrl_handler);
-	media_entity_cleanup(&subdev->entity);
-#endif
 	v4l2_device_unregister_subdev(subdev);
 
-#if 0 // TODO: handle clock and power management
-	ov5640_put_resources(ov5640);
-#endif
 	kfree(ov5640);
 	return 0;
 }
