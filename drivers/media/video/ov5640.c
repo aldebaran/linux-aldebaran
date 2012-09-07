@@ -28,7 +28,6 @@
 
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-device.h>
-#include <media/ov5640.h>
 
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
@@ -131,8 +130,8 @@ struct ov5640_reg {
 #define TIMING_VOFFSET_LOW		0x3813
 #define TIMING_X_INC			0x3814
 #define TIMING_Y_INC			0x3815
-#define TIMING_TC_REG20			0x3820
-#define TIMING_TC_REG21			0x3821
+#define TIMING_TC_VFLIP			0x3820
+#define TIMING_TC_HFLIP			0x3821
 
 /* 50/60Hz detctor control */
 #define LIGHT_METER1_THRES_LOW	0x3C07
@@ -209,9 +208,10 @@ static const struct ov5640_reg configscript_common1[] = {
 	{ 0x3c0a, 0x9c },
 	{ 0x3c0b, 0x40 },
 
+	{ TIMING_TC_VFLIP, 0x41 },
+	{ TIMING_TC_HFLIP, 0x07 },
+
 	/* Timing VGA */
-	{ TIMING_TC_REG20, 0x41 },
-	{ TIMING_TC_REG21, 0x07 },
 	{ TIMING_X_INC, 0x31 },
 	{ TIMING_Y_INC, 0x31 },
 	{ TIMING_HS_HIGH, 0x00 },
@@ -900,6 +900,100 @@ static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 }
 #endif
 
+
+/*
+ * Camera control functions
+ */
+
+static int ov5640_g_hflip(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, TIMING_TC_HFLIP, &reg);
+
+	*value=(reg&0x04)>>2;
+
+	return 0;
+}
+
+static int ov5640_s_hflip(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	if(value==0)
+		ov5640_reg_clr(client, TIMING_TC_HFLIP, 0x06);
+	else
+		ov5640_reg_set(client, TIMING_TC_HFLIP, 0x06);
+	return 0;
+}
+
+
+static int ov5640_g_vflip(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, TIMING_TC_VFLIP, &reg);
+
+	*value=(reg&0x04)>>2;
+
+	return 0;
+}
+
+static int ov5640_s_vflip(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	if(value==0)
+		ov5640_reg_clr(client, TIMING_TC_VFLIP, 0x06);
+	else
+		ov5640_reg_set(client, TIMING_TC_VFLIP, 0x06);
+	return 0;
+}
+
+static int ov5640_queryctrl(struct v4l2_subdev *sd,
+    struct v4l2_queryctrl *qc)
+{
+	/* Fill in min, max, step and default value for these controls. */
+	switch (qc->id) {
+		case V4L2_CID_VFLIP:
+		case V4L2_CID_HFLIP:
+		  return v4l2_ctrl_query_fill(qc, 0, 1, 1, 0);
+	}
+	return -EINVAL;
+}
+
+static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+{
+	switch (ctrl->id) {
+	case V4L2_CID_VFLIP:
+	  return ov5640_g_vflip(sd, &ctrl->value);
+	case V4L2_CID_HFLIP:
+	  return ov5640_g_hflip(sd, &ctrl->value);
+	}
+	return -EINVAL;
+}
+
+static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
+{
+	switch (ctrl->id) {
+	case V4L2_CID_VFLIP:
+		return ov5640_s_vflip(sd, ctrl->value);
+	case V4L2_CID_HFLIP:
+		return ov5640_s_hflip(sd, ctrl->value);
+	}
+	return -EINVAL;
+}
+
+static int ov5640_g_chip_ident(struct v4l2_subdev *sd,
+    struct v4l2_dbg_chip_ident *chip)
+{
+  struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+  return v4l2_chip_ident_i2c_client(client, chip, V4L2_IDENT_OV5640, 0);
+}
+
 static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct ov5640 *ov5640 = to_ov5640(sd);
@@ -974,6 +1068,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		ret = ov5640_reg_clr(client, SYSTEM_CTRL_0, 0x40);
 		if (ret)
 			goto out;
+
 	} else {
 		u8 tmpreg = 0;
 
@@ -1009,7 +1104,6 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 			struct v4l2_format *fmt)
 {
 	struct ov5640 *ov5640 = to_ov5640(sd);
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	ov5640_try_fmt_internal(sd, fmt);
 
@@ -1039,14 +1133,6 @@ static int ov5640_enum_fmt(struct v4l2_subdev *subdev,
 		break;
 	}
 	return 0;
-}
-
-static int ov5640_g_chip_ident(struct v4l2_subdev *sd,
-    struct v4l2_dbg_chip_ident *chip)
-{
-  struct i2c_client *client = v4l2_get_subdevdata(sd);
-
-  return v4l2_chip_ident_i2c_client(client, chip, V4L2_IDENT_OV5640, 0);
 }
 
 static int ov5640_init(struct v4l2_subdev *subdev, u32 val)
@@ -1116,8 +1202,11 @@ static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
 #if 0 //TODO handle power off/power on of chip
 	.s_power	= ov5640_s_power,
 #endif
-	 .init 		= ov5640_init,
+	.init 		= ov5640_init,
 	.g_chip_ident = ov5640_g_chip_ident,
+	.g_ctrl = ov5640_g_ctrl,
+	.s_ctrl = ov5640_s_ctrl,
+	.queryctrl = ov5640_queryctrl,
 };
 
 static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
