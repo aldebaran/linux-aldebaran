@@ -107,6 +107,16 @@ struct ov5640_reg {
 #define SCCB_SYSTEM_CTRL_1		0x3103
 #define SYSTEM_ROOT_DIVIDER		0x3108
 
+/* AEC/AGC control registers */
+#define AEC_AGC_MANUAL			0x3503
+#define AEC_MANUAL				0x01
+#define AGC_MANUAL				0x02
+#define AGC_REAL_GAIN_HIGH		0x350A
+#define AGC_REAL_GAIN_LOW		0x350B
+#define AEC_EXPOSURE_19_16		0x3500
+#define AEC_EXPOSURE_15_8		0x3501
+#define AEC_EXPOSURE_7_0		0x3502
+
 /* Timing control */
 #define TIMING_HS_HIGH			0x3800
 #define TIMING_HS_LOW			0x3801
@@ -156,7 +166,28 @@ struct ov5640_reg {
 /* ISP top control */
 #define ISP_CONTROL_0 			0x5000
 #define ISP_CONTROL_1			0x5001
+#define ISP_CTRL_AWB			0x01
+
 #define FORMAT_MUX_CONTROL		0x501F
+
+/* AWB control registers */
+#define AWB_RED_GAIN_HIGH		0x519F
+#define AWB_RED_GAIN_LOW		0x51A0
+#define AWB_GREEN_GAIN_HIGH		0x51A1
+#define AWB_GREEN_GAIN_LOW		0x51A2
+#define AWB_BLUE_GAIN_HIGH		0x51A3
+#define AWB_BLUE_GAIN_LOW		0x51A4
+
+/* SDE Control */
+#define SDE_CTRL_0				0x5580
+#define SDE_CTRL_HUE_COS		0x5581
+#define SDE_CTRL_HUE_SIN		0x5582
+#define SDE_CTRL_CONTRAST		0x5586
+#define SDE_CTRL_BRIGHTNESS		0x5587
+#define SDE_CTRL_SATURATION_U	0x5583
+#define SDE_CTRL_SATURATION_V	0x5584
+
+
 
 static const struct ov5640_reg configscript_common1[] = {
 	{ SCCB_SYSTEM_CTRL_1, 0x03 },
@@ -303,7 +334,7 @@ static const struct ov5640_reg configscript_common2[] = {
 	{0x5486, 0x71}, {0x5487, 0x7d}, {0x5488, 0x87},
 	{0x5489, 0x91}, {0x548a, 0x9a}, {0x548b, 0xaa},
 	{0x548c, 0xb8}, {0x548d, 0xcd}, {0x548e, 0xdd},
-	{0x548f, 0xea}, {0x5490, 0x1d}, {0x5580, 0x02},
+	{0x548f, 0xea}, {0x5490, 0x1d}, {SDE_CTRL_0, 0x07},
 	{0x5583, 0x40}, {0x5584, 0x10}, {0x5589, 0x10},
 	{0x558a, 0x00}, {0x558b, 0xf8}, {0x5800, 0x23},
 	{0x5801, 0x15}, {0x5802, 0x10}, {0x5803, 0x10},
@@ -952,14 +983,314 @@ static int ov5640_s_vflip(struct v4l2_subdev *sd, int value)
 	return 0;
 }
 
+static int ov5640_s_auto_exposure(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	if(value==1)
+		ov5640_reg_clr(client, AEC_AGC_MANUAL, AEC_MANUAL);
+	else
+		ov5640_reg_set(client, AEC_AGC_MANUAL, AEC_MANUAL);
+	return 0;
+}
+
+static int ov5640_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, AEC_AGC_MANUAL, &reg);
+
+	*value=~(reg&AEC_MANUAL);
+	return 0;
+}
+
+static int ov5640_s_auto_white_balance(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	if(value==0)
+		ov5640_reg_clr(client, ISP_CONTROL_1, ISP_CTRL_AWB);
+	else
+		ov5640_reg_set(client, ISP_CONTROL_1, ISP_CTRL_AWB);
+	return 0;
+}
+
+static int ov5640_g_auto_white_balance(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, ISP_CONTROL_1, &reg);
+
+	*value=(reg&ISP_CTRL_AWB);
+	return 0;
+}
+
+static int ov5640_s_auto_gain(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	if(value==1)
+		ov5640_reg_clr(client, AEC_AGC_MANUAL, AGC_MANUAL);
+	else
+		ov5640_reg_set(client, AEC_AGC_MANUAL, AGC_MANUAL);
+	return 0;
+}
+
+static int ov5640_g_auto_gain(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, AEC_AGC_MANUAL, &reg);
+
+	*value=~((reg&AGC_MANUAL)>>1);
+	return 0;
+}
+
+static int ov5640_s_brightness(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_write(client, SDE_CTRL_BRIGHTNESS, value);
+
+	return 0;
+}
+
+static int ov5640_g_brightness(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, SDE_CTRL_BRIGHTNESS, &reg);
+
+	*value=reg;
+
+	return 0;
+}
+
+static int ov5640_s_contrast(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_write(client, SDE_CTRL_CONTRAST, value);
+
+	return 0;
+}
+
+static int ov5640_g_contrast(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, SDE_CTRL_CONTRAST, &reg);
+
+	*value=reg;
+
+	return 0;
+}
+
+static int ov5640_s_saturation(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_write(client, SDE_CTRL_SATURATION_U, value);
+	ov5640_reg_write(client, SDE_CTRL_SATURATION_V, value);
+
+	return 0;
+}
+
+static int ov5640_g_saturation(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, SDE_CTRL_SATURATION_U, &reg);
+
+	*value=reg;
+
+	return 0;
+}
+
+static int ov5640_s_hue(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+
+	ov5640_reg_write(client, SDE_CTRL_HUE_COS, value);
+	ov5640_reg_write(client, SDE_CTRL_HUE_SIN, value);
+
+	return 0;
+}
+
+static int ov5640_g_hue(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, SDE_CTRL_HUE_COS, &reg);
+
+	*value=reg;
+
+	return 0;
+}
+
+static int ov5640_s_gain(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_write(client, AGC_REAL_GAIN_HIGH, (value&0x300)>>8);
+	ov5640_reg_write(client, AGC_REAL_GAIN_LOW, (value&0xFF));
+
+	return 0;
+}
+
+static int ov5640_g_gain(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg_high;
+	u8 reg_low;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, AGC_REAL_GAIN_HIGH, &reg_high);
+	ov5640_reg_read(client, AGC_REAL_GAIN_LOW, &reg_low);
+
+	*value=(((u32)reg_high)<<8)|((u32)reg_low);
+
+	return 0;
+}
+
+static int ov5640_s_red_balance(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_write(client, AWB_RED_GAIN_HIGH, (value&0xF00)>>8);
+	ov5640_reg_write(client, AWB_RED_GAIN_LOW, (value&0xFF));
+
+	return 0;
+}
+
+static int ov5640_g_red_balance(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg_high;
+	u8 reg_low;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, AWB_RED_GAIN_HIGH, &reg_high);
+	ov5640_reg_read(client, AWB_RED_GAIN_LOW, &reg_low);
+
+	*value=(((u32)reg_high)<<8)|((u32)reg_low);
+
+	return 0;
+}
+
+static int ov5640_s_green_balance(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_write(client, AWB_GREEN_GAIN_HIGH, (value&0xF00)>>8);
+	ov5640_reg_write(client, AWB_GREEN_GAIN_LOW, (value&0xFF));
+
+	return 0;
+}
+
+static int ov5640_g_green_balance(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg_high;
+	u8 reg_low;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, AWB_GREEN_GAIN_HIGH, &reg_high);
+	ov5640_reg_read(client, AWB_GREEN_GAIN_LOW, &reg_low);
+
+	*value=(((u32)reg_high)<<8)|((u32)reg_low);
+
+	return 0;
+}
+
+static int ov5640_s_blue_balance(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_write(client, AWB_BLUE_GAIN_HIGH, (value&0xF00)>>8);
+	ov5640_reg_write(client, AWB_BLUE_GAIN_LOW, (value&0xFF));
+
+	return 0;
+}
+
+static int ov5640_g_blue_balance(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg_high;
+	u8 reg_low;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, AWB_BLUE_GAIN_HIGH, &reg_high);
+	ov5640_reg_read(client, AWB_BLUE_GAIN_LOW, &reg_low);
+
+	*value=(((u32)reg_high)<<8)|((u32)reg_low);
+
+	return 0;
+}
+
+static int ov5640_s_exposure(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_write(client, AEC_EXPOSURE_19_16, (value&0xF0000)>>16);
+	ov5640_reg_write(client, AEC_EXPOSURE_15_8, (value&0xFF00)>>8);
+	ov5640_reg_write(client, AEC_EXPOSURE_7_0, (value&0xF0));
+
+	return 0;
+}
+
+static int ov5640_g_exposure(struct v4l2_subdev *sd, __s32 *value)
+{
+	u8 reg_7_0;
+	u8 reg_15_8;
+	u8 reg_19_16;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, AEC_EXPOSURE_19_16, &reg_19_16);
+	ov5640_reg_read(client, AEC_EXPOSURE_15_8, &reg_15_8);
+	ov5640_reg_read(client, AEC_EXPOSURE_7_0, &reg_7_0);
+
+	*value=(u32)reg_7_0|(u32)(reg_15_8)<<8|(u32)(reg_19_16)<<16;
+
+	return 0;
+}
+
 static int ov5640_queryctrl(struct v4l2_subdev *sd,
     struct v4l2_queryctrl *qc)
 {
 	/* Fill in min, max, step and default value for these controls. */
 	switch (qc->id) {
+		case V4L2_CID_BRIGHTNESS:
+		  return v4l2_ctrl_query_fill(qc, 0, 255, 1, 55);
+		case V4L2_CID_CONTRAST:
+		  return v4l2_ctrl_query_fill(qc, 0, 255, 1, 32);
+		case V4L2_CID_SATURATION:
+		  return v4l2_ctrl_query_fill(qc, 0, 255, 1, 128);
+		case V4L2_CID_HUE:
+		  return v4l2_ctrl_query_fill(qc, 0, 255, 1, 0);
 		case V4L2_CID_VFLIP:
 		case V4L2_CID_HFLIP:
 		  return v4l2_ctrl_query_fill(qc, 0, 1, 1, 0);
+	    case V4L2_CID_EXPOSURE_AUTO:
+	      return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
+	    case V4L2_CID_AUTO_WHITE_BALANCE:
+	      return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
+	    case V4L2_CID_AUTOGAIN:
+	      return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
+	    case V4L2_CID_GAIN:
+	      return v4l2_ctrl_query_fill(qc, 0, 1024, 1, 32);
+	    case V4L2_CID_EXPOSURE:
+	      return v4l2_ctrl_query_fill(qc, 0, 1048576, 1, 0);
+	    case V4L2_CID_GREEN_BALANCE:
+	      return v4l2_ctrl_query_fill(qc, 0, 4096, 1, 2048);
+	    case V4L2_CID_BLUE_BALANCE:
+	      return v4l2_ctrl_query_fill(qc, 0, 4096, 1, 2048);
+	    case V4L2_CID_RED_BALANCE:
+	      return v4l2_ctrl_query_fill(qc, 0, 4096, 1, 2048);
 	}
 	return -EINVAL;
 }
@@ -967,10 +1298,34 @@ static int ov5640_queryctrl(struct v4l2_subdev *sd,
 static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	switch (ctrl->id) {
-	case V4L2_CID_VFLIP:
-	  return ov5640_g_vflip(sd, &ctrl->value);
-	case V4L2_CID_HFLIP:
-	  return ov5640_g_hflip(sd, &ctrl->value);
+		case V4L2_CID_BRIGHTNESS:
+			return ov5640_s_brightness(sd, ctrl->value);
+		case V4L2_CID_CONTRAST:
+			return ov5640_s_contrast(sd, ctrl->value);
+		case V4L2_CID_SATURATION:
+			return ov5640_s_saturation(sd, ctrl->value);
+		case V4L2_CID_HUE:
+			return ov5640_s_hue(sd, ctrl->value);
+		case V4L2_CID_VFLIP:
+		  return ov5640_s_vflip(sd, ctrl->value);
+		case V4L2_CID_HFLIP:
+		  return ov5640_s_hflip(sd, ctrl->value);
+		case V4L2_CID_EXPOSURE_AUTO:
+			return ov5640_s_auto_exposure(sd, ctrl->value);
+		case V4L2_CID_AUTO_WHITE_BALANCE:
+			return ov5640_s_auto_white_balance(sd, ctrl->value);
+		case V4L2_CID_AUTOGAIN:
+			return ov5640_s_auto_gain(sd, ctrl->value);
+		case V4L2_CID_GAIN:
+			return ov5640_s_gain(sd, ctrl->value);
+		case V4L2_CID_EXPOSURE:
+			return ov5640_s_exposure(sd, ctrl->value);
+		case V4L2_CID_GREEN_BALANCE:
+			return ov5640_s_green_balance(sd, ctrl->value);
+		case V4L2_CID_RED_BALANCE:
+			return ov5640_s_red_balance(sd, ctrl->value);
+		case V4L2_CID_BLUE_BALANCE:
+			return ov5640_s_blue_balance(sd, ctrl->value);
 	}
 	return -EINVAL;
 }
@@ -978,10 +1333,34 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 {
 	switch (ctrl->id) {
-	case V4L2_CID_VFLIP:
-		return ov5640_s_vflip(sd, ctrl->value);
-	case V4L2_CID_HFLIP:
-		return ov5640_s_hflip(sd, ctrl->value);
+		case V4L2_CID_BRIGHTNESS:
+			return ov5640_g_brightness(sd, &ctrl->value);
+		case V4L2_CID_CONTRAST:
+			return ov5640_g_contrast(sd, &ctrl->value);
+		case V4L2_CID_SATURATION:
+			return ov5640_g_saturation(sd, &ctrl->value);
+		case V4L2_CID_HUE:
+			return ov5640_g_hue(sd, &ctrl->value);
+		case V4L2_CID_VFLIP:
+			return ov5640_g_vflip(sd, &ctrl->value);
+		case V4L2_CID_HFLIP:
+			return ov5640_g_hflip(sd, &ctrl->value);
+		case V4L2_CID_EXPOSURE_AUTO:
+			return ov5640_g_auto_exposure(sd, &ctrl->value);
+		case V4L2_CID_AUTO_WHITE_BALANCE:
+			return ov5640_g_auto_white_balance(sd, &ctrl->value);
+		case V4L2_CID_AUTOGAIN:
+			return ov5640_g_auto_gain(sd, &ctrl->value);
+		case V4L2_CID_GAIN:
+			return ov5640_g_gain(sd, &ctrl->value);
+		case V4L2_CID_EXPOSURE:
+			return ov5640_g_exposure(sd, &ctrl->value);
+		case V4L2_CID_GREEN_BALANCE:
+			return ov5640_g_green_balance(sd, &ctrl->value);
+		case V4L2_CID_RED_BALANCE:
+			return ov5640_g_red_balance(sd, &ctrl->value);
+		case V4L2_CID_BLUE_BALANCE:
+			return ov5640_g_blue_balance(sd, &ctrl->value);
 	}
 	return -EINVAL;
 }
