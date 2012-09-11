@@ -3521,17 +3521,16 @@ static int patch_ad1989a_naoV4(struct hda_codec *codec)
 					(1 << AC_AMPCAP_MUTE_SHIFT));
 
 	snd_hda_override_amp_caps(codec, 0x0C, HDA_OUTPUT,
-					(0x30 << AC_AMPCAP_OFFSET_SHIFT) |
-					(0x30 << AC_AMPCAP_NUM_STEPS_SHIFT) |
+					(0x34 << AC_AMPCAP_OFFSET_SHIFT) |
+					(0x34 << AC_AMPCAP_NUM_STEPS_SHIFT) |
 					(0x05 << AC_AMPCAP_STEP_SIZE_SHIFT) |
 					(1 << AC_AMPCAP_MUTE_SHIFT));
 
 	snd_hda_override_amp_caps(codec, 0x0D, HDA_OUTPUT,
-					(0x30 << AC_AMPCAP_OFFSET_SHIFT) |
-					(0x30 << AC_AMPCAP_NUM_STEPS_SHIFT) |
+					(0x34 << AC_AMPCAP_OFFSET_SHIFT) |
+					(0x34 << AC_AMPCAP_NUM_STEPS_SHIFT) |
 					(0x05 << AC_AMPCAP_STEP_SIZE_SHIFT) |
 					(1 << AC_AMPCAP_MUTE_SHIFT));
-
 	//spec->vmaster_nid = 0x04;
 
 	codec->no_trigger_sense = 1;
