@@ -240,7 +240,7 @@ static const struct ov5640_reg configscript_common1[] = {
 	{ 0x3c0b, 0x40 },
 
 	{ TIMING_TC_VFLIP, 0x41 },
-	{ TIMING_TC_HFLIP, 0x07 },
+	{ TIMING_TC_HFLIP, 0x01 },
 
 	/* Timing VGA */
 	{ TIMING_X_INC, 0x31 },
