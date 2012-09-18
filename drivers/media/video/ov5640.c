@@ -29,6 +29,10 @@
 #include <media/v4l2-chip-ident.h>
 #include <media/v4l2-device.h>
 
+#ifndef V4L2_CID_GREEN_BALANCE
+#define V4L2_CID_GREEN_BALANCE V4L2_CID_DO_WHITE_BALANCE
+#endif
+
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
 	enum v4l2_mbus_pixelcode	code;
