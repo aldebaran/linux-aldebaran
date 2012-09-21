@@ -2316,8 +2316,8 @@ static struct snd_kcontrol_new ad1989a_playback_mixers[] = {
 	 .get = snd_hda_mixer_amp_volume_get,
 	 .put = snd_hda_mixer_amp_volume_put,
 	 .tlv = { .c = snd_hda_mixer_amp_tlv },
-		//allows to set first gain value to -36 dB (min gain is 0)
-	 .private_value = HDA_COMPOSE_AMP_VAL_OFS(0x03, 3, 0x0, HDA_OUTPUT,0xa)
+	  //allows to set first gain value to -55.5 dB (min gain is 0)
+	 .private_value = HDA_COMPOSE_AMP_VAL_OFS(0x03, 3, 0x0, HDA_OUTPUT,0x0)
 	},
 	//HDA_CODEC_MUTE("PCM Playback Switch", 0x03, 0x0, HDA_OUTPUT),
 	{ .iface = SNDRV_CTL_ELEM_IFACE_MIXER,
@@ -3515,8 +3515,8 @@ static int patch_ad1989a_naoV4(struct hda_codec *codec)
 	codec->patch_ops.init = ad1989a_auto_init;
 
 	snd_hda_override_amp_caps(codec, 0x03, HDA_OUTPUT,
-					(0x23 << AC_AMPCAP_OFFSET_SHIFT) | // 0dB equal to max value
-					(0x23 << AC_AMPCAP_NUM_STEPS_SHIFT) | // max value
+					(0x27 << AC_AMPCAP_OFFSET_SHIFT) | // 0dB equal to max value
+					(0x27 << AC_AMPCAP_NUM_STEPS_SHIFT) | // max value
 					(0x05 << AC_AMPCAP_STEP_SIZE_SHIFT) |
 					(1 << AC_AMPCAP_MUTE_SHIFT));
 
