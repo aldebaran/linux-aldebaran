@@ -45,13 +45,6 @@ obj-$(CONFIG_COMPAT_WIRELESS_MODULES) += drivers/net/wireless/
 
 obj-$(CONFIG_COMPAT_NET_USB_MODULES) += drivers/net/usb/
 
-obj-$(CONFIG_COMPAT_NETWORK_MODULES) += drivers/net/ethernet/atheros/
-obj-$(CONFIG_COMPAT_NETWORK_MODULES) += drivers/net/ethernet/broadcom/
-
-obj-$(CONFIG_COMPAT_VAR_MODULES) += drivers/ssb/
-obj-$(CONFIG_COMPAT_VAR_MODULES) += drivers/bcma/
-obj-$(CONFIG_COMPAT_VAR_MODULES) += drivers/misc/eeprom/
-
 ifeq ($(CONFIG_STAGING_EXCLUDE_BUILD),)
 endif
 
@@ -202,14 +195,14 @@ install-scripts:
 	@# Udev stuff needed for the new compat_firmware_class.
 	@./compat/scripts/compat_firmware_install
 	@/sbin/depmod -a
-	@echo 
+	@echo
 	@echo Now run:
-	@echo 
+	@echo
 	@echo sudo make unload to unload all: wireless, bluetooth and ethernet modules
 	@echo sudo make wlunload to unload wireless modules
 	@echo sudo make btunload to unload bluetooth modules
 	@echo
-	@echo Run sudo modprobe 'driver-name' to load your desired driver. 
+	@echo Run sudo modprobe 'driver-name' to load your desired driver.
 	@echo If unsure reboot.
 	@echo
 
@@ -232,7 +225,7 @@ uninstall:
 	@rm -f $(KLIB)/$(KMODDIR)/drivers/net/b44.ko*
 	@/sbin/depmod -a
 	@./scripts/update-initramfs
-	@echo 
+	@echo
 
 clean:
 	@if [ -d net -a -d $(KLIB_BUILD) ]; then \
