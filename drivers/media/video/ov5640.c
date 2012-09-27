@@ -33,6 +33,16 @@
 #define V4L2_CID_GREEN_BALANCE V4L2_CID_DO_WHITE_BALANCE
 #endif
 
+static int debug = 0;
+module_param(debug, bool, 0644);
+MODULE_PARM_DESC(debug, "Debug level (0-1)");
+
+#define dprintk(level, name,  fmt, arg...)\
+  do { if (debug >= level)\
+    printk(KERN_DEBUG "%s/0: " fmt, name, ## arg);\
+  } while (0)
+
+
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
 	enum v4l2_mbus_pixelcode	code;
@@ -120,6 +130,15 @@ struct ov5640_reg {
 #define AEC_EXPOSURE_19_16		0x3500
 #define AEC_EXPOSURE_15_8		0x3501
 #define AEC_EXPOSURE_7_0		0x3502
+#define AEC_MAX_EXPOSURE_HIGH_60HZ      0x3A01
+#define AEC_MAX_EXPOSURE_LOW_60HZ       0x3A02
+#define AEC_STABLE_RANGE_HIGH           0x3A0F
+#define AEC_STABLE_RANGE_LOW            0x3A10
+#define AEC_HYSTERESIS_RANGE_HIGH       0x3A1B
+#define AEC_HYSTERESIS_RANGE_LOW        0x3A1E
+
+#define AEC_MAX_EXPOSURE_HIGH_50HZ      0x3A14
+#define AEC_MAX_EXPOSURE_LOW_50HZ       0x3A15
 
 /* Timing control */
 #define TIMING_HS_HIGH			0x3800
@@ -191,6 +210,24 @@ struct ov5640_reg {
 #define SDE_CTRL_SATURATION_U	0x5583
 #define SDE_CTRL_SATURATION_V	0x5584
 
+/* GAMMA Control */
+#define GAMMA_CONTROL00                 0x5480
+#define GAMMA_YST00                     0x5481
+#define GAMMA_YST01                     0x5482
+#define GAMMA_YST02                     0x5483
+#define GAMMA_YST03                     0x5484
+#define GAMMA_YST04                     0x5485
+#define GAMMA_YST05                     0x5486
+#define GAMMA_YST06                     0x5487
+#define GAMMA_YST07                     0x5488
+#define GAMMA_YST08                     0x5489
+#define GAMMA_YST09                     0x548A
+#define GAMMA_YST0A                     0x548B
+#define GAMMA_YST0B                     0x548C
+#define GAMMA_YST0C                     0x548D
+#define GAMMA_YST0D                     0x548E
+#define GAMMA_YST0E                     0x548F
+#define GAMMA_YST0F                     0x5490
 
 
 static const struct ov5640_reg configscript_common1[] = {
@@ -224,6 +261,13 @@ static const struct ov5640_reg configscript_common1[] = {
 	{ 0x3620, 0x52 },
 	{ 0x371b, 0x20 },
 	{ 0x471c, 0x50 },
+
+	/* Autoexposure Control Functions */
+	{AEC_STABLE_RANGE_HIGH,     0x48},
+	{AEC_HYSTERESIS_RANGE_HIGH, 0x48},
+	{AEC_STABLE_RANGE_LOW,      0x30},
+	{AEC_HYSTERESIS_RANGE_LOW,  0x30},
+
 	{ 0x3a18, 0x00 },
 	{ 0x3a19, 0xf8 },
 
@@ -252,7 +296,7 @@ static const struct ov5640_reg configscript_common1[] = {
 	{ TIMING_HS_HIGH, 0x00 },
 	{ TIMING_HS_LOW, 0x00 },
 	{ TIMING_VS_HIGH, 0x00 },
-	{ TIMING_VS_LOW, 0x04 },
+	{ TIMING_VS_LOW, 0x00 },
 	{ TIMING_HW_HIGH, 0x0a },
 	{ TIMING_HW_LOW, 0x3f },
 	{ TIMING_VH_HIGH, 0x07 },
@@ -333,12 +377,12 @@ static const struct ov5640_reg configscript_common2[] = {
 	{0x5303, 0x00}, {0x5304, 0x08}, {0x5305, 0x30},
 	{0x5306, 0x08}, {0x5307, 0x16}, {0x5309, 0x08},
 	{0x530a, 0x30}, {0x530b, 0x04}, {0x530c, 0x06},
-	{0x5480, 0x01}, {0x5481, 0x08}, {0x5482, 0x14},
-	{0x5483, 0x28}, {0x5484, 0x51}, {0x5485, 0x65},
-	{0x5486, 0x71}, {0x5487, 0x7d}, {0x5488, 0x87},
-	{0x5489, 0x91}, {0x548a, 0x9a}, {0x548b, 0xaa},
-	{0x548c, 0xb8}, {0x548d, 0xcd}, {0x548e, 0xdd},
-	{0x548f, 0xea}, {0x5490, 0x1d}, {SDE_CTRL_0, 0x07},
+	{GAMMA_CONTROL00, 0x01}, {GAMMA_YST00, 0x26}, {GAMMA_YST01, 0x35},
+	{GAMMA_YST02, 0x48},     {GAMMA_YST03, 0x57}, {GAMMA_YST04, 0x63},
+	{GAMMA_YST05, 0x6E},     {GAMMA_YST06, 0x77}, {GAMMA_YST07, 0x80},
+	{GAMMA_YST08, 0x88},     {GAMMA_YST09, 0x96}, {GAMMA_YST0A, 0xa3},
+	{GAMMA_YST0B, 0xaf},     {GAMMA_YST0C, 0xc5}, {GAMMA_YST0D, 0xd7},
+	{GAMMA_YST0E, 0xe8},     {GAMMA_YST0F, 0x0F}, {SDE_CTRL_0, 0x07},
 	{0x5583, 0x40}, {0x5584, 0x10}, {0x5589, 0x10},
 	{0x558a, 0x00}, {0x558b, 0xf8}, {0x5800, 0x23},
 	{0x5801, 0x15}, {0x5802, 0x10}, {0x5803, 0x10},
@@ -373,16 +417,16 @@ static const struct ov5640_reg ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{0x3708, 0x21},
 	{0x3709, 0x12},
 	{0x370c, 0x00},
-	{0x3a02, 0x07},
-	{0x3a03, 0xb0},
+	{AEC_MAX_EXPOSURE_HIGH_60HZ, 0x07},
+	{AEC_MAX_EXPOSURE_LOW_60HZ, 0xb0},
 	{0x3a08, 0x01},
 	{0x3a09, 0x27},
 	{0x3a0a, 0x00},
 	{0x3a0b, 0xf6},
 	{0x3a0e, 0x06},
 	{0x3a0d, 0x08},
-	{0x3a14, 0x07},
-	{0x3a15, 0xb0},
+	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x07},
+	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xb0},
 	{BLC_CTRL04, 0x06},
 	{ JPG_MODE_SELECT, 0x02 },
 	{ VFIFO_CTRL_0C, 0x20 },
@@ -397,16 +441,16 @@ static const struct ov5640_reg ov5640_setting_30fps_VGA_640_480[] = {
 	{0x3708, 0x62},
 	{0x3709, 0x52},
 	{0x370c, 0x03},
-	{0x3a02, 0x03},
-	{0x3a03, 0xd8},
+	{AEC_MAX_EXPOSURE_HIGH_60HZ, 0x03},
+	{AEC_MAX_EXPOSURE_LOW_60HZ, 0xd8},
 	{0x3a08, 0x01},
 	{0x3a09, 0x27},
 	{0x3a0a, 0x00},
 	{0x3a0b, 0xf6},
 	{0x3a0e, 0x03},
 	{0x3a0d, 0x04},
-	{0x3a14, 0x03},
-	{0x3a15, 0xd8},
+	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x03},
+	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xd8},
 	{BLC_CTRL04, 0x02},
 	{ JPG_MODE_SELECT, 0x03 },
 	{ VFIFO_CTRL_0C, 0x22 },
@@ -421,16 +465,16 @@ static const struct ov5640_reg ov5640_setting_30fps_QVGA_320_240[] = {
 	{0x3708, 0x62},
 	{0x3709, 0x52},
 	{0x370c, 0x03},
-	{0x3a02, 0x03},
-	{0x3a03, 0xd8},
+	{AEC_MAX_EXPOSURE_HIGH_60HZ, 0x03},
+	{AEC_MAX_EXPOSURE_LOW_60HZ, 0xd8},
 	{0x3a08, 0x01},
 	{0x3a09, 0x27},
 	{0x3a0a, 0x00},
 	{0x3a0b, 0xf6},
 	{0x3a0e, 0x03},
 	{0x3a0d, 0x04},
-	{0x3a14, 0x03},
-	{0x3a15, 0xd8},
+	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x03},
+	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xd8},
 	{BLC_CTRL04, 0x02},
 	{ JPG_MODE_SELECT, 0x03 },
 	{ VFIFO_CTRL_0C, 0x22 },
@@ -445,16 +489,16 @@ static const struct ov5640_reg ov5640_setting_30fps_720P_1280_720[] = {
 	{0x3708, 0x62},
 	{0x3709, 0x52},
 	{0x370c, 0x03},
-	{0x3a02, 0x02},
-	{0x3a03, 0xe4},
+	{AEC_MAX_EXPOSURE_HIGH_60HZ, 0x02},
+	{AEC_MAX_EXPOSURE_LOW_60HZ, 0xe4},
 	{0x3a08, 0x01},
 	{0x3a09, 0xbc},
 	{0x3a0a, 0x01},
 	{0x3a0b, 0x72},
 	{0x3a0e, 0x01},
 	{0x3a0d, 0x02},
-	{0x3a14, 0x02},
-	{0x3a15, 0xe4},
+	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x02},
+	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xe4},
 	{BLC_CTRL04, 0x02},
 	{ JPG_MODE_SELECT, 0x02 },
 	{ VFIFO_CTRL_0C, 0x20 },
@@ -469,16 +513,16 @@ static const struct ov5640_reg ov5640_setting_30fps_1080P_1920_1080[] = {
 	{0x3708, 0x62},
 	{0x3709, 0x12},
 	{0x370c, 0x00},
-	{0x3a02, 0x04},
-	{0x3a03, 0x60},
+	{AEC_MAX_EXPOSURE_HIGH_60HZ, 0x04},
+	{AEC_MAX_EXPOSURE_LOW_60HZ, 0x60},
 	{0x3a08, 0x01},
 	{0x3a09, 0x50},
 	{0x3a0a, 0x01},
 	{0x3a0b, 0x18},
 	{0x3a0e, 0x03},
 	{0x3a0d, 0x04},
-	{0x3a14, 0x04},
-	{0x3a15, 0x60},
+	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x04},
+	{AEC_MAX_EXPOSURE_LOW_50HZ, 0x60},
 	{BLC_CTRL04, 0x06},
 	{ JPG_MODE_SELECT, 0x02 },
 	{ VFIFO_CTRL_0C, 0x20 },
@@ -935,6 +979,34 @@ static int ov5640_s_power(struct v4l2_subdev *sd, int on)
 }
 #endif
 
+/*
+ * Camera debug functions
+ */
+
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+static int ov5640_g_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
+{
+  struct i2c_client *client = v4l2_get_subdevdata(sd);
+  u16 addr = reg->reg & 0xffff;
+  u8 val = 0;
+
+  ov5640_reg_read(client, addr, &val);
+  dprintk(1,"OV5640","OV5640: ov5640_g_register addr: 0x%x, val: 0x%x\n", addr, val);
+  reg->val = (u32)val;
+  return 0;
+}
+
+static int ov5640_s_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
+{
+  struct i2c_client *client = v4l2_get_subdevdata(sd);
+  u16 addr = reg->reg & 0xffff;
+  u8 val = reg->val & 0xff;
+
+  ov5640_reg_write(client, addr, val);
+  dprintk(1,"OV5640","OV5640: ov5640_s_register addr: 0x%x, val: 0x%x\n", addr, val);
+  return 0;
+}
+#endif
 
 /*
  * Camera control functions
@@ -1590,13 +1662,17 @@ static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
 	.g_ctrl = ov5640_g_ctrl,
 	.s_ctrl = ov5640_s_ctrl,
 	.queryctrl = ov5640_queryctrl,
+#ifdef CONFIG_VIDEO_ADV_DEBUG
+	.g_register = ov5640_g_register,
+	.s_register = ov5640_s_register,
+#endif
 };
 
 static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 	.enum_fmt = ov5640_enum_fmt,
 	.try_fmt = ov5640_try_fmt,
-    .s_fmt = ov5640_s_fmt,
-    .g_fmt = ov5640_g_fmt,
+	.s_fmt = ov5640_s_fmt,
+	.g_fmt = ov5640_g_fmt,
 	.s_stream	= ov5640_s_stream,
 };
 
