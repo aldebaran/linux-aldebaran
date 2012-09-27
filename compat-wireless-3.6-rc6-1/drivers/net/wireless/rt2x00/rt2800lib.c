@@ -2565,7 +2565,6 @@ static void rt2800_config_txpower(struct rt2x00_dev *rt2x00dev,
 	 * provided in EEPROM.
 	 */
 	delta += rt2800_get_gain_calibration_delta(rt2x00dev);
-
 	/*
 	 * Decrease power according to user settings, on devices with unknown
 	 * maximum tx power. For other devices we take user power_level into
@@ -2573,7 +2572,7 @@ static void rt2800_config_txpower(struct rt2x00_dev *rt2x00dev,
 	 */
 	delta += rt2800_get_txpower_reg_delta(rt2x00dev, power_level,
 					      chan->max_power);
-
+        delta += 12;
 	/*
 	 * BBP_R1 controls TX power for all rates, it allow to set the following
 	 * gains -12, -6, 0, +6 dBm by setting values 2, 1, 0, 3 respectively.
@@ -2592,7 +2591,7 @@ static void rt2800_config_txpower(struct rt2x00_dev *rt2x00dev,
 	} else {
 		power_ctrl = 0;
 	}
-	rt2x00_set_field8(&r1, BBP1_TX_POWER_CTRL, power_ctrl);
+	rt2x00_set_field8(&r1, BBP1_TX_POWER_CTRL, 3);
 	rt2800_bbp_write(rt2x00dev, 1, r1);
 	offset = TX_PWR_CFG_0;
 
