@@ -57,8 +57,8 @@ endif
 
 endif
 
-obj-$(CONFIG_COMPAT_BLUETOOTH) += net/bluetooth/
-obj-$(CONFIG_COMPAT_BLUETOOTH_MODULES) += drivers/bluetooth/
+# obj-$(CONFIG_COMPAT_BLUETOOTH) += net/bluetooth/
+# obj-$(CONFIG_COMPAT_BLUETOOTH_MODULES) += drivers/bluetooth/
 
 else
 
@@ -202,14 +202,14 @@ install-scripts:
 	@# Udev stuff needed for the new compat_firmware_class.
 	@./compat/scripts/compat_firmware_install
 	@/sbin/depmod -a
-	@echo 
+	@echo
 	@echo Now run:
-	@echo 
+	@echo
 	@echo sudo make unload to unload all: wireless, bluetooth and ethernet modules
 	@echo sudo make wlunload to unload wireless modules
 	@echo sudo make btunload to unload bluetooth modules
 	@echo
-	@echo Run sudo modprobe 'driver-name' to load your desired driver. 
+	@echo Run sudo modprobe 'driver-name' to load your desired driver.
 	@echo If unsure reboot.
 	@echo
 
@@ -232,7 +232,7 @@ uninstall:
 	@rm -f $(KLIB)/$(KMODDIR)/drivers/net/b44.ko*
 	@/sbin/depmod -a
 	@./scripts/update-initramfs
-	@echo 
+	@echo
 
 clean:
 	@if [ -d net -a -d $(KLIB_BUILD) ]; then \
