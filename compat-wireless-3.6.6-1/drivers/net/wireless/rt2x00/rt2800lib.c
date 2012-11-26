@@ -2535,10 +2535,10 @@ static void rt2800_config_txpower(struct rt2x00_dev *rt2x00dev,
 	delta += rt2800_get_gain_calibration_delta(rt2x00dev);
 
 	/*
-	 * set to normal bbp tx power control mode: +/- 0dBm
+	 * set to increased bbp tx power control mode: + 6dBm
 	 */
 	rt2800_bbp_read(rt2x00dev, 1, &r1);
-	rt2x00_set_field8(&r1, BBP1_TX_POWER_CTRL, 0);
+	rt2x00_set_field8(&r1, BBP1_TX_POWER_CTRL, 3);
 	rt2800_bbp_write(rt2x00dev, 1, r1);
 	offset = TX_PWR_CFG_0;
 
