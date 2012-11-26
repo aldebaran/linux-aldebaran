@@ -867,7 +867,7 @@ static int ath9k_init_device(struct ath9k_htc_priv *priv,
 	ath9k_hw_name(priv->ah, hw_name, sizeof(hw_name));
 	wiphy_info(hw->wiphy, "%s\n", hw_name);
 
-	ath9k_init_leds(priv);
+/*	ath9k_init_leds(priv);*/
 	ath9k_start_rfkill_poll(priv);
 
 	return 0;
