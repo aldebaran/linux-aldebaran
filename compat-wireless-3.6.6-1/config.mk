@@ -226,13 +226,13 @@ export CONFIG_BT_HCIBTUART=m
 endif #CONFIG_PCMCIA
 
 
-# We need CONFIG_WIRELESS_EXT for CONFIG_CFG80211_WEXT for every kernel 
-# version. The new way CONFIG_CFG80211_WEXT is called from the kernel 
-# does not work with compat-wireless because it calls some callback 
-# function on struct wiphy. This struct is shipped with compat-wireless 
-# and changes from kernel version to version. We are using the 
-# wireless_handlers attribute which will be activated by 
-# export CONFIG_WIRELESS_EXT. 
+# We need CONFIG_WIRELESS_EXT for CONFIG_CFG80211_WEXT for every kernel
+# version. The new way CONFIG_CFG80211_WEXT is called from the kernel
+# does not work with compat-wireless because it calls some callback
+# function on struct wiphy. This struct is shipped with compat-wireless
+# and changes from kernel version to version. We are using the
+# wireless_handlers attribute which will be activated by
+# export CONFIG_WIRELESS_EXT.
 ifdef CONFIG_WIRELESS_EXT
 export CONFIG_CFG80211_WEXT=y
 else #CONFIG_CFG80211_WEXT
@@ -246,7 +246,7 @@ endif #CONFIG_STAGING
 # mac80211 test driver
 export CONFIG_MAC80211_HWSIM=m
 
-export CONFIG_ATH5K=m
+#export CONFIG_ATH5K=m
 # export CONFIG_ATH5K_DEBUG=y
 # export CONFIG_ATH5K_TRACER=y
 # export CONFIG_ATH5K_AHB=y
@@ -269,9 +269,9 @@ export CONFIG_COMPAT_ATH9K_RATE_CONTROL=y
 export CONFIG_ATH9K_BTCOEX_SUPPORT=y
 
 # WIL6210 requires MSI only available >= 2.6.30
-ifndef CONFIG_COMPAT_KERNEL_2_6_30
-export CONFIG_WIL6210=m
-endif #CONFIG_COMPAT_KERNEL_2_6_30
+# ifndef CONFIG_COMPAT_KERNEL_2_6_30
+# export CONFIG_WIL6210=m
+# endif #CONFIG_COMPAT_KERNEL_2_6_30
 
 ifndef CONFIG_COMPAT_KERNEL_2_6_27
 export CONFIG_ATH6KL=m
@@ -491,22 +491,22 @@ export CONFIG_USB_NET_COMPAT_CDCETHER=m
 endif #CONFIG_COMPAT_KERNEL_2_6_29
 
 
-export CONFIG_P54_USB=m
-export CONFIG_RTL8187=m
+ # export CONFIG_P54_USB=m
+ # export CONFIG_RTL8187=m
 ifdef CONFIG_MAC80211_LEDS
 export CONFIG_RTL8187_LEDS=y
 endif #CONFIG_MAC80211_LEDS
 
-export CONFIG_AT76C50X_USB=m
+#export CONFIG_AT76C50X_USB=m
 
-ifndef CONFIG_COMPAT_KERNEL_2_6_29
-export CONFIG_CARL9170=m
-ifdef CONFIG_MAC80211_LEDS
-export CONFIG_CARL9170_LEDS=y
-endif #CONFIG_MAC80211_LEDS
-# export CONFIG_CARL9170_DEBUGFS=y
-export CONFIG_CARL9170_WPC=y
-endif #CONFIG_COMPAT_KERNEL_2_6_29
+# ifndef CONFIG_COMPAT_KERNEL_2_6_29
+# export CONFIG_CARL9170=m
+# ifdef CONFIG_MAC80211_LEDS
+# export CONFIG_CARL9170_LEDS=y
+# endif #CONFIG_MAC80211_LEDS
+# # export CONFIG_CARL9170_DEBUGFS=y
+# export CONFIG_CARL9170_WPC=y
+# endif #CONFIG_COMPAT_KERNEL_2_6_29
 
 # This activates a threading fix for usb urb.
 # this is mainline commit: b3e670443b7fb8a2d29831b62b44a039c283e351
@@ -536,17 +536,17 @@ ifdef CONFIG_CRC_ITU_T
 export CONFIG_RT73USB=m
 endif #CONFIG_CRC_ITU_T
 
-ifdef CONFIG_COMPAT_KERNEL_2_6_27
-export CONFIG_LIBERTAS_THINFIRM_USB=n
-export CONFIG_LIBERTAS_USB=n
-NEED_LIBERTAS=n
-else #CONFIG_COMPAT_KERNEL_2_6_27
-export CONFIG_LIBERTAS_THINFIRM_USB=m
-export CONFIG_LIBERTAS_USB=m
-NEED_LIBERTAS=y
-endif #CONFIG_COMPAT_KERNEL_2_6_27
+# ifdef CONFIG_COMPAT_KERNEL_2_6_27
+# export CONFIG_LIBERTAS_THINFIRM_USB=n
+# export CONFIG_LIBERTAS_USB=n
+# NEED_LIBERTAS=n
+# else #CONFIG_COMPAT_KERNEL_2_6_27
+# export CONFIG_LIBERTAS_THINFIRM_USB=m
+# export CONFIG_LIBERTAS_USB=m
+# NEED_LIBERTAS=y
+# endif #CONFIG_COMPAT_KERNEL_2_6_27
 
-export CONFIG_ORINOCO_USB=m
+# export CONFIG_ORINOCO_USB=m
 
 export CONFIG_BT_HCIBTUSB=m
 export CONFIG_BT_HCIBCM203X=m
@@ -554,7 +554,7 @@ export CONFIG_BT_HCIBPA10X=m
 export CONFIG_BT_HCIBFUSB=m
 export CONFIG_BT_ATH3K=m
 
-export CONFIG_RTL8192CU=m
+#export CONFIG_RTL8192CU=m
 
 endif #CONFIG_USB end of USB driver list
 
@@ -580,42 +580,42 @@ endif #CONFIG_COMPAT_KERNEL_2_6_27
 endif #CONFIG_COMPAT_KERNEL_2_6_25
 endif #CONFIG_SPI_MASTER end of SPI driver list
 
-ifdef CONFIG_MMC
+# ifdef CONFIG_MMC
 
-export CONFIG_SSB_SDIOHOST=y
-export CONFIG_B43_SDIO=y
+# export CONFIG_SSB_SDIOHOST=y
+# export CONFIG_B43_SDIO=y
 
-ifdef CONFIG_CRC7
-ifdef CONFIG_WL12XX_PLATFORM_DATA
-ifndef CONFIG_COMPAT_KERNEL_2_6_37
-export CONFIG_COMPAT_WL1251_SDIO=m
-endif #CONFIG_COMPAT_KERNEL_2_6_37
-export CONFIG_WLCORE_SDIO=m
-endif #CONFIG_WL12XX_PLATFORM_DATA
-endif #CONFIG_CRC7
+# ifdef CONFIG_CRC7
+# ifdef CONFIG_WL12XX_PLATFORM_DATA
+# ifndef CONFIG_COMPAT_KERNEL_2_6_37
+# export CONFIG_COMPAT_WL1251_SDIO=m
+# endif #CONFIG_COMPAT_KERNEL_2_6_37
+# export CONFIG_WLCORE_SDIO=m
+# endif #CONFIG_WL12XX_PLATFORM_DATA
+# endif #CONFIG_CRC7
 
-export CONFIG_MWIFIEX_SDIO=m
+# export CONFIG_MWIFIEX_SDIO=m
 
-ifndef CONFIG_COMPAT_KERNEL_2_6_32
-export CONFIG_COMPAT_LIBERTAS_SDIO=m
-NEED_LIBERTAS=y
-endif #CONFIG_COMPAT_KERNEL_2_6_32
+# ifndef CONFIG_COMPAT_KERNEL_2_6_32
+# export CONFIG_COMPAT_LIBERTAS_SDIO=m
+# NEED_LIBERTAS=y
+# endif #CONFIG_COMPAT_KERNEL_2_6_32
 
-export CONFIG_IWM=m
-# export CONFIG_IWM_DEBUG=y
-# export CONFIG_IWM_TRACING=y
+# export CONFIG_IWM=m
+# # export CONFIG_IWM_DEBUG=y
+# # export CONFIG_IWM_TRACING=y
 
-export CONFIG_BT_HCIBTSDIO=m
-export CONFIG_BT_MRVL_SDIO=m
+# export CONFIG_BT_HCIBTSDIO=m
+# export CONFIG_BT_MRVL_SDIO=m
 
-export CONFIG_ATH6KL_SDIO=m
+# export CONFIG_ATH6KL_SDIO=m
 
-export CONFIG_BRCMFMAC_SDIO=y
+# export CONFIG_BRCMFMAC_SDIO=y
 
-endif #CONFIG_MMC
+# endif #CONFIG_MMC
 
-export CONFIG_RTLWIFI=m
-export CONFIG_RTL8192C_COMMON=m
+# export CONFIG_RTLWIFI=m
+# export CONFIG_RTL8192C_COMMON=m
 
 # Common rt2x00 requirements
 ifeq ($(NEED_RT2X00),y)
@@ -636,11 +636,11 @@ endif #CONFIG_COMPAT_KERNEL_2_6_25
 # export CONFIG_RT2X00_LIB_DEBUGFS=y
 endif
 
-# p54
-export CONFIG_P54_COMMON=m
-ifdef CONFIG_MAC80211_LEDS
-export CONFIG_P54_LEDS=y
-endif #CONFIG_MAC80211_LEDS
+# # p54
+# export CONFIG_P54_COMMON=m
+# ifdef CONFIG_MAC80211_LEDS
+# export CONFIG_P54_LEDS=y
+# endif #CONFIG_MAC80211_LEDS
 
 # Atheros
 export CONFIG_ATH_COMMON=m
@@ -656,13 +656,13 @@ endif #CONFIG_COMPAT_KERNEL_2_6_29
 export CONFIG_WL_TI=y
 export CONFIG_WLCORE=m
 
-ifdef CONFIG_CRC7
-export CONFIG_WL1251=m
-export CONFIG_WL12XX=m
-ifndef CONFIG_COMPAT_KERNEL_2_6_30
-export CONFIG_WL18XX=m
-endif #CONFIG_COMPAT_KERNEL_2_6_30
-endif #CONFIG_CRC7
+# ifdef CONFIG_CRC7
+# export CONFIG_WL1251=m
+# export CONFIG_WL12XX=m
+# ifndef CONFIG_COMPAT_KERNEL_2_6_30
+# export CONFIG_WL18XX=m
+# endif #CONFIG_COMPAT_KERNEL_2_6_30
+# endif #CONFIG_CRC7
 
 export CONFIG_MWIFIEX=m
 
@@ -674,16 +674,16 @@ ifndef CONFIG_CRC8
 export CONFIG_COMPAT_CRC8=y
 endif #CONFIG_CRC8
 
-ifdef CONFIG_COMPAT_KERNEL_2_6_27
-export CONFIG_LIBERTAS=n
-else #CONFIG_COMPAT_KERNEL_2_6_27
-ifeq ($(NEED_LIBERTAS),y)
-export CONFIG_LIBERTAS_THINFIRM=m
-export CONFIG_LIBERTAS=m
-export CONFIG_LIBERTAS_MESH=y
-# export CONFIG_LIBERTAS_DEBUG=y
-endif
-endif #CONFIG_COMPAT_KERNEL_2_6_27
+# ifdef CONFIG_COMPAT_KERNEL_2_6_27
+# export CONFIG_LIBERTAS=n
+# else #CONFIG_COMPAT_KERNEL_2_6_27
+# ifeq ($(NEED_LIBERTAS),y)
+# export CONFIG_LIBERTAS_THINFIRM=m
+# export CONFIG_LIBERTAS=m
+# export CONFIG_LIBERTAS_MESH=y
+# # export CONFIG_LIBERTAS_DEBUG=y
+# endif
+# endif #CONFIG_COMPAT_KERNEL_2_6_27
 
 # We need the backported rfkill module on kernel < 2.6.31.
 # In more recent kernel versions use the in kernel rfkill module.
@@ -694,4 +694,3 @@ export CONFIG_RFKILL_BACKPORT_LEDS=y
 endif #CONFIG_LEDS_TRIGGERS
 export CONFIG_RFKILL_BACKPORT_INPUT=y
 endif #CONFIG_COMPAT_KERNEL_2_6_31
-
