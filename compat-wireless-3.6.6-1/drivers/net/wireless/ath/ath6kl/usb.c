@@ -803,7 +803,11 @@ static int ath6kl_usb_map_service_pipe(struct ath6kl *ar, u16 svc_id,
 		*dl_pipe = ATH6KL_USB_PIPE_RX_DATA;
 		break;
 	case WMI_DATA_VI_SVC:
-		*ul_pipe = ATH6KL_USB_PIPE_TX_DATA_MP;
+
+		if (ar->version.target_ver == AR6004_HW_1_3_VERSION)
+			*ul_pipe = ATH6KL_USB_PIPE_TX_DATA_LP;
+		else
+			*ul_pipe = ATH6KL_USB_PIPE_TX_DATA_MP;
 		/*
 		* Disable rxdata2 directly, it will be enabled
 		* if FW enable rxdata2
@@ -811,7 +815,11 @@ static int ath6kl_usb_map_service_pipe(struct ath6kl *ar, u16 svc_id,
 		*dl_pipe = ATH6KL_USB_PIPE_RX_DATA;
 		break;
 	case WMI_DATA_VO_SVC:
-		*ul_pipe = ATH6KL_USB_PIPE_TX_DATA_HP;
+
+		if (ar->version.target_ver == AR6004_HW_1_3_VERSION)
+			*ul_pipe = ATH6KL_USB_PIPE_TX_DATA_LP;
+		else
+			*ul_pipe = ATH6KL_USB_PIPE_TX_DATA_MP;
 		/*
 		* Disable rxdata2 directly, it will be enabled
 		* if FW enable rxdata2
