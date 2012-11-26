@@ -36,8 +36,8 @@ ath6kl_core-y += wmi.o
 ath6kl_core-y += core.o
 ath6kl_core-$(CONFIG_NL80211_TESTMODE) += testmode.o
 
-obj-$(CONFIG_ATH6KL_SDIO) += ath6kl_sdio.o
-ath6kl_sdio-y += sdio.o
+# obj-$(CONFIG_ATH6KL_SDIO) += ath6kl_sdio.o
+# ath6kl_sdio-y += sdio.o
 
 obj-$(CONFIG_ATH6KL_USB) += ath6kl_usb.o
 ath6kl_usb-y += usb.o
