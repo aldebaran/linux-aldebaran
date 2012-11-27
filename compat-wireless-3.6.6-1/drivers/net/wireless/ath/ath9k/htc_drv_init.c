@@ -168,7 +168,6 @@ static void ath9k_deinit_device(struct ath9k_htc_priv *priv)
 	struct ieee80211_hw *hw = priv->hw;
 
 	wiphy_rfkill_stop_polling(hw->wiphy);
-	ath9k_deinit_leds(priv);
 	ieee80211_unregister_hw(hw);
 	ath9k_rx_cleanup(priv);
 	ath9k_tx_cleanup(priv);
