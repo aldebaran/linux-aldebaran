@@ -375,6 +375,7 @@ void ath6kl_reset_device(struct ath6kl *ar, u32 target_type,
 	if (status)
 		ath6kl_err("failed to reset target\n");
 }
+EXPORT_SYMBOL(ath6kl_reset_device);
 
 static void ath6kl_install_static_wep_keys(struct ath6kl_vif *vif)
 {

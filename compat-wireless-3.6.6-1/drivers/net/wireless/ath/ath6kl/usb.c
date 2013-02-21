@@ -1121,6 +1121,7 @@ static int ath6kl_usb_probe(struct usb_interface *interface,
 	ret = ath6kl_core_init(ar, ATH6KL_HTC_TYPE_PIPE);
 	if (ret) {
 		ath6kl_err("Failed to init ath6kl core: %d\n", ret);
+                ath6kl_reset_device(ar, ar->target_type, true, true);
 		goto err_core_free;
 	}
 
