@@ -945,6 +945,10 @@ static void do_recv_completion(struct htc_endpoint *ep,
 		packet = list_first_entry(queue_to_indicate,
 					  struct htc_packet, list);
 		list_del(&packet->list);
+                if (ep->ep_cb.rx == NULL) {
+                  printk("ath6kl: rx callback is null, continue\n");
+                  continue;
+                }
 		ep->ep_cb.rx(ep->target, packet);
 	}
 
