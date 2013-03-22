@@ -4518,6 +4518,12 @@ v4l_dev_init(void)
    VbiDevice *vbi;
    V4LDevice *pp;
    int a,d;
+   //Big fat framebuffer hack for Nao V3
+   //
+   //Bug and fix discovered by Bill Silver
+   //Implemented hackishly by Octavian Neamtu (Northern Bites)
+   //popularized by Tom Whelan (RoboEireann)
+   //flips the cacheable bit on the framebuffer memory range
    printk("Writing to the FB memory range msr ...");
    asm ("movl $0x1810, %%ecx;"
 	"rdmsr;"
