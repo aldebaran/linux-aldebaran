@@ -20,12 +20,20 @@
 struct module;
 struct tracepoint;
 
+#define HAVE_KABI_2635_TRACEPOINT
+
+struct tracepoint_func {
+	void *func;
+	void *data;
+	bool kabi_2635;
+};
+
 struct tracepoint {
 	const char *name;		/* Tracepoint name */
 	int state;			/* State. */
 	void (*regfunc)(void);
 	void (*unregfunc)(void);
-	void **funcs;
+	struct tracepoint_func *funcs;
 } __attribute__((aligned(32)));		/*
 					 * Aligned on 32 bytes because it is
 					 * globally visible and gcc happily
@@ -43,17 +51,33 @@ struct tracepoint {
 /*
  * it_func[0] is never NULL because there is at least one element in the array
  * when the array itself is non NULL.
+ *
+ * Note, the proto and args passed in includes "__data" as the first parameter.
+ * The reason for this is to handle the "void" prototype. If a tracepoint
+ * has a "void" prototype, then it is invalid to declare a function
+ * as "(void *, void)". The DECLARE_TRACE_NOARGS() will pass in just
+ * "void *data", where as the DECLARE_TRACE() will pass in "void *data, proto".
  */
-#define __DO_TRACE(tp, proto, args)					\
+#define __DO_TRACE(tp, data_proto, data_args, proto, args)		\
 	do {								\
-		void **it_func;						\
+		struct tracepoint_func *it_func_ptr;			\
+		void *it_func;						\
 									\
 		rcu_read_lock_sched_notrace();				\
-		it_func = rcu_dereference((tp)->funcs);			\
-		if (it_func) {						\
+		it_func_ptr = rcu_dereference((tp)->funcs);		\
+		if (it_func_ptr) {					\
 			do {						\
-				((void(*)(proto))(*it_func))(args);	\
-			} while (*(++it_func));				\
+				if (it_func_ptr->kabi_2635) {		\
+					void *__data;			\
+									\
+					it_func = (it_func_ptr)->func;	\
+					__data = (it_func_ptr)->data;	\
+					((void(*)(data_proto))(it_func))(data_args); \
+				} else {				\
+					it_func = (it_func_ptr)->func;	\
+					((void(*)(proto))(it_func))(args); \
+				}					\
+			} while ((++it_func_ptr)->func);		\
 		}							\
 		rcu_read_unlock_sched_notrace();			\
 	} while (0)
@@ -63,22 +87,39 @@ struct tracepoint {
  * not add unwanted padding between the beginning of the section and the
  * structure. Force alignment to the same alignment as the section start.
  */
-#define DECLARE_TRACE(name, proto, args)				\
+#define __DECLARE_TRACE(name, proto, args, data_proto, data_args)	\
 	extern struct tracepoint __tracepoint_##name;			\
 	static inline void trace_##name(proto)				\
 	{								\
 		if (unlikely(__tracepoint_##name.state))		\
 			__DO_TRACE(&__tracepoint_##name,		\
-				TP_PROTO(proto), TP_ARGS(args));	\
+				TP_PROTO(data_proto),			\
+				TP_ARGS(data_args),			\
+				TP_PROTO(proto),			\
+				TP_ARGS(args));				\
 	}								\
-	static inline int register_trace_##name(void (*probe)(proto))	\
-	{								\
+	static inline int						\
+	register_trace_##name(void (*probe)(proto))			\
+ 	{								\
 		return tracepoint_probe_register(#name, (void *)probe);	\
-	}								\
-	static inline int unregister_trace_##name(void (*probe)(proto))	\
-	{								\
-		return tracepoint_probe_unregister(#name, (void *)probe);\
-	}
+ 	}								\
+	static inline int						\
+	unregister_trace_##name(void (*probe)(proto))			\
+ 	{								\
+		return tracepoint_probe_unregister(#name, (void *)probe); \
+ 	}								\
+	static inline int						\
+	kabi_2635_register_trace_##name(void (*probe)(data_proto), void *data) \
+ 	{								\
+		return kabi_2635_tracepoint_probe_register(#name, (void *)probe,	\
+						 data);			\
+ 	}								\
+	static inline int						\
+	kabi_2635_unregister_trace_##name(void (*probe)(data_proto), void *data) \
+ 	{								\
+		return kabi_2635_tracepoint_probe_unregister(#name, (void *)probe, \
+						   data);		\
+ 	}
 
 
 #define DEFINE_TRACE_FN(name, reg, unreg)				\
@@ -100,19 +141,29 @@ extern void tracepoint_update_probe_range(struct tracepoint *begin,
 	struct tracepoint *end);
 
 #else /* !CONFIG_TRACEPOINTS */
-#define DECLARE_TRACE(name, proto, args)				\
-	static inline void _do_trace_##name(struct tracepoint *tp, proto) \
-	{ }								\
-	static inline void trace_##name(proto)				\
-	{ }								\
-	static inline int register_trace_##name(void (*probe)(proto))	\
-	{								\
-		return -ENOSYS;						\
-	}								\
-	static inline int unregister_trace_##name(void (*probe)(proto))	\
-	{								\
-		return -ENOSYS;						\
-	}
+#define __DECLARE_TRACE(name, proto, args, data_proto, data_args)	\
+ 	static inline void trace_##name(proto)				\
+ 	{ }								\
+	static inline int						\
+	register_trace_##name(void (*probe)(proto))			\
+ 	{								\
+ 		return -ENOSYS;						\
+ 	}								\
+	static inline int						\
+	unregister_trace_##name(void (*probe)(proto))			\
+ 	{								\
+ 		return -ENOSYS;						\
+ 	}								\
+	static inline int						\
+	kabi_2635_register_trace_##name(void (*probe)(data_proto), void *data) \
+ 	{								\
+ 		return -ENOSYS;						\
+ 	}								\
+	static inline int						\
+	kabi_2635_unregister_trace_##name(void (*probe)(data_proto), void *data) \
+ 	{								\
+ 		return -ENOSYS;						\
+ 	}
 
 #define DEFINE_TRACE_FN(name, reg, unreg)
 #define DEFINE_TRACE(name)
@@ -123,6 +174,28 @@ static inline void tracepoint_update_probe_range(struct tracepoint *begin,
 	struct tracepoint *end)
 { }
 #endif /* CONFIG_TRACEPOINTS */
+
+/*
+ * The need for the DECLARE_TRACE_NOARGS() is to handle the prototype
+ * (void). "void" is a special value in a function prototype and can
+ * not be combined with other arguments. Since the DECLARE_TRACE()
+ * macro adds a data element at the beginning of the prototype,
+ * we need a way to differentiate "(void *data, proto)" from
+ * "(void *data, void)". The second prototype is invalid.
+ *
+ * DECLARE_TRACE_NOARGS() passes "void" as the tracepoint prototype
+ * and "void *__data" as the callback prototype.
+ *
+ * DECLARE_TRACE() passes "proto" as the tracepoint protoype and
+ * "void *__data, proto" as the callback prototype.
+ */
+#define DECLARE_TRACE_NOARGS(name)					\
+	__DECLARE_TRACE(name, void, , void *__data, __data)
+#define DECLARE_TRACE(name, proto, args)				\
+	__DECLARE_TRACE(name, PARAMS(proto), PARAMS(args),		\
+			PARAMS(void *__data, proto),			\
+			PARAMS(__data, args))
+
 #endif /* DECLARE_TRACE */
 
 /*
@@ -130,15 +203,23 @@ static inline void tracepoint_update_probe_range(struct tracepoint *begin,
  * Internal API, should not be used directly.
  */
 extern int tracepoint_probe_register(const char *name, void *probe);
+extern int kabi_2635_tracepoint_probe_register(const char *name, void *probe, void *data);
 
 /*
  * Disconnect a probe from a tracepoint.
  * Internal API, should not be used directly.
  */
-extern int tracepoint_probe_unregister(const char *name, void *probe);
+extern int
+tracepoint_probe_unregister(const char *name, void *probe);
+extern int
+kabi_2635_tracepoint_probe_unregister(const char *name, void *probe, void *data);
 
 extern int tracepoint_probe_register_noupdate(const char *name, void *probe);
+extern int kabi_2635_tracepoint_probe_register_noupdate(const char *name, void *probe,
+					      void *data);
 extern int tracepoint_probe_unregister_noupdate(const char *name, void *probe);
+extern int kabi_2635_tracepoint_probe_unregister_noupdate(const char *name, void *probe,
+						void *data);
 extern void tracepoint_probe_update_all(void);
 
 struct tracepoint_iter {
