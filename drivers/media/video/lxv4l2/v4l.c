@@ -4517,7 +4517,37 @@ v4l_dev_init(void)
    VidDevice *vid;
    VbiDevice *vbi;
    V4LDevice *pp;
-
+   int a,d;
+   //Big fat framebuffer hack for Nao V3
+   //
+   //Bug and fix discovered by Bill Silver
+   //Implemented hackishly by Octavian Neamtu (Northern Bites)
+   //popularized by Tom Whelan (RoboEireann)
+   //flips the cacheable bit on the framebuffer memory range
+   printk("Writing to the FB memory range msr ...");
+   asm ("movl $0x1810, %%ecx;"
+	"rdmsr;"
+	"andl $0xFFFFFFC0, %%eax;"
+	"orl  $0x00000008, %%eax;"
+	"wrmsr;"
+	"rdmsr;"
+	"movl %%eax, %0;"
+	"movl %%edx, %1;"
+	:"=r"(a), "=r"(d)	/* y is output operand */
+	:	        /* no output */
+	:"%eax", "%edx", "%ecx");	/* %eax is clobbered register */
+   //   asm ("movl $0x1815, %%ecx;"
+   //	"rdmsr;"
+   //	"andl $0xFFFFFFC0, %%eax;"
+   //	"orl  $0x00000008, %%eax;"
+   //	"wrmsr;"
+   //	"rdmsr;"
+   //	"movl %%eax, %0;"
+   //	"movl %%edx, %1;"
+   //	:"=r"(a), "=r"(d)	/* y is output operand */
+   //	:	        /* no output */
+   //	:"%eax", "%edx", "%ecx");
+   printk("done, with lower = %i\n", a);
    printk(KERN_INFO AMD_VERSION "\n");
 
    pp = kmalloc(sizeof(*pp),GFP_KERNEL);
