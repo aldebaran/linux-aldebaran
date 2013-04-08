@@ -698,7 +698,22 @@ static void ov7670_reset(struct i2c_client *client)
 
 static int ov7670_init(struct i2c_client *client)
 {
-	return ov7670_write_array(client, ov7670_default_regs);
+    //hack to ensure YUV ordering
+    int returnVal;
+    unsigned char val;
+    unsigned char reg = (unsigned)0x32;
+    
+    do
+    {
+        printk(KERN_INFO "Applying default params...\n");
+        
+        returnVal = ov7670_write_array(client, ov7670_default_regs);
+        
+        ov7670_read(client, reg, &val);
+        
+    } while((unsigned)val != (unsigned)0xb6);
+    
+    return returnVal;
 }
 
 
@@ -903,7 +918,7 @@ static int ov7670_set_hw(struct i2c_client *client, int hstart, int hstop,
 	ret += ov7670_write(client, REG_HSTOP, (hstop >> 3) & 0xff);
 	ret += ov7670_read(client, REG_HREF, &v);
 	v = (v & 0xc0) | ((hstop & 0x7) << 3) | (hstart & 0x7);
-	msleep(10);
+	msleep(100);
 	ret += ov7670_write(client, REG_HREF, v);
 /*
  * Vertical: similar arrangement, but only 10 bits.
@@ -912,7 +927,7 @@ static int ov7670_set_hw(struct i2c_client *client, int hstart, int hstop,
 	ret += ov7670_write(client, REG_VSTOP, (vstop >> 2) & 0xff);
 	ret += ov7670_read(client, REG_VREF, &v);
 	v = (v & 0xf0) | ((vstop & 0x3) << 2) | (vstart & 0x3);
-	msleep(10);
+	msleep(100);
 	ret += ov7670_write(client, REG_VREF, v);
 	return ret;
 }
