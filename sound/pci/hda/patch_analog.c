@@ -3514,21 +3514,22 @@ static int patch_ad1989a_naoV4(struct hda_codec *codec)
 	codec->patch_ops = ad1989a_patch_ops;
 	codec->patch_ops.init = ad1989a_auto_init;
 
+	//set gains of dac0 (loudspeakers)
 	snd_hda_override_amp_caps(codec, 0x03, HDA_OUTPUT,
-					(0x27 << AC_AMPCAP_OFFSET_SHIFT) | // 0dB equal to max value
-					(0x27 << AC_AMPCAP_NUM_STEPS_SHIFT) | // max value
+					(0x25 << AC_AMPCAP_OFFSET_SHIFT) | // 0dB equal to max value
+					(0x25 << AC_AMPCAP_NUM_STEPS_SHIFT) | // max value
 					(0x05 << AC_AMPCAP_STEP_SIZE_SHIFT) |
 					(1 << AC_AMPCAP_MUTE_SHIFT));
-
+	//set gains of adc0 (left/right mics)
 	snd_hda_override_amp_caps(codec, 0x0C, HDA_OUTPUT,
-					(0x34 << AC_AMPCAP_OFFSET_SHIFT) |
-					(0x34 << AC_AMPCAP_NUM_STEPS_SHIFT) |
+					(0x30 << AC_AMPCAP_OFFSET_SHIFT) |
+					(0x30 << AC_AMPCAP_NUM_STEPS_SHIFT) |
 					(0x05 << AC_AMPCAP_STEP_SIZE_SHIFT) |
 					(1 << AC_AMPCAP_MUTE_SHIFT));
-
+	//set gains of adc1 (front/rear mics)
 	snd_hda_override_amp_caps(codec, 0x0D, HDA_OUTPUT,
-					(0x34 << AC_AMPCAP_OFFSET_SHIFT) |
-					(0x34 << AC_AMPCAP_NUM_STEPS_SHIFT) |
+					(0x30 << AC_AMPCAP_OFFSET_SHIFT) |
+					(0x30 << AC_AMPCAP_NUM_STEPS_SHIFT) |
 					(0x05 << AC_AMPCAP_STEP_SIZE_SHIFT) |
 					(1 << AC_AMPCAP_MUTE_SHIFT));
 	//spec->vmaster_nid = 0x04;
