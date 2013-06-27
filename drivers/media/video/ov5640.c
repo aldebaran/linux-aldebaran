@@ -1077,7 +1077,7 @@ static int ov5640_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
 
 	ov5640_reg_read(client, AEC_AGC_MANUAL, &reg);
 
-	*value=~(reg&AEC_MANUAL);
+	*value=!(reg&AEC_MANUAL);
 	return 0;
 }
 
@@ -1121,7 +1121,7 @@ static int ov5640_g_auto_gain(struct v4l2_subdev *sd, __s32 *value)
 
 	ov5640_reg_read(client, AEC_AGC_MANUAL, &reg);
 
-	*value=~((reg&AGC_MANUAL)>>1);
+	*value=!((reg&AGC_MANUAL)>>1);
 	return 0;
 }
 
