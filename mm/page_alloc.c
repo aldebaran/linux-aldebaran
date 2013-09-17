@@ -1829,6 +1829,8 @@ __alloc_pages_direct_reclaim(gfp_t gfp_mask, unsigned int order,
 	struct task_struct *p = current;
 	bool drained = false;
 
+	printk(KERN_ERR "__alloc_pages_direct_reclaim");
+
 	cond_resched();
 
 	/* We now go into synchronous reclaim */
