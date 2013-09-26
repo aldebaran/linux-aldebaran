@@ -136,7 +136,6 @@ MODULE_PARM_DESC(snoop, "Enable/disable snooping");
 #define azx_snoop(chip)		true
 #endif
 
-
 MODULE_LICENSE("GPL");
 MODULE_SUPPORTED_DEVICE("{{Intel, ICH6},"
 			 "{Intel, ICH6M},"

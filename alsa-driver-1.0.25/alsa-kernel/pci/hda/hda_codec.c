@@ -39,6 +39,11 @@
 #define CREATE_TRACE_POINTS
 #include "hda_trace.h"
 
+static bool mute_on_close = false;
+module_param(mute_on_close, bool, 0644);
+MODULE_PARM_DESC(mute_on_close,
+		"If true playback amplifier will be muted on device close.");
+
 /*
  * vendor / preset table
  */
@@ -101,6 +106,12 @@ static void hda_keep_power_on(struct hda_codec *codec);
 static inline void hda_keep_power_on(struct hda_codec *codec) {}
 #define hda_codec_is_power_on(codec)	1
 #endif
+
+bool snd_hda_mute_on_close(void)
+{
+  return mute_on_close;
+}
+EXPORT_SYMBOL_HDA(snd_hda_mute_on_close);
 
 /**
  * snd_hda_get_jack_location - Give a location string of the jack

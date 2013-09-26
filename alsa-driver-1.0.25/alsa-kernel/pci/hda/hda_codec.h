@@ -1059,6 +1059,8 @@ static inline void snd_hda_power_down(struct hda_codec *codec) {}
 int snd_hda_load_patch(struct hda_bus *bus, const char *patch);
 #endif
 
+bool snd_hda_mute_on_close(void);
+
 /*
  * Codec modularization
  */

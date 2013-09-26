@@ -389,6 +389,17 @@ static int ad1988_independent_hp_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static void ad198x_playback_mute_amplifier(struct hda_codec *codec, bool mute)
+{
+	snd_hda_codec_write(codec, 0x1B, 0, AC_VERB_SET_PIN_WIDGET_CONTROL, 0);
+	snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_MASK, 3);
+	snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DIRECTION, 3);
+	if (mute)
+		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 1);
+        else
+		snd_hda_codec_write(codec, 0x01, 0, AC_VERB_SET_GPIO_DATA, 2);
+}
+
 /*
  * Analog playback callbacks
  */
@@ -398,6 +409,9 @@ static int ad198x_playback_pcm_open(struct hda_pcm_stream *hinfo,
 {
 	struct ad198x_spec *spec = codec->spec;
 	int err;
+	if (snd_hda_mute_on_close())
+		ad198x_playback_mute_amplifier(codec, false);
+
 	set_stream_active(codec, true);
 	err = snd_hda_multi_out_analog_open(codec, &spec->multiout, substream,
 					     hinfo);
@@ -432,6 +446,8 @@ static int ad198x_playback_pcm_close(struct hda_pcm_stream *hinfo,
 				 struct snd_pcm_substream *substream)
 {
 	set_stream_active(codec, false);
+        if (snd_hda_mute_on_close())
+		ad198x_playback_mute_amplifier(codec, true);
 	return 0;
 }
 
