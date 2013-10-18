@@ -140,6 +140,8 @@ struct ov5640_reg {
 #define AEC_MAX_EXPOSURE_HIGH_50HZ      0x3A14
 #define AEC_MAX_EXPOSURE_LOW_50HZ       0x3A15
 
+#define AVG_READOUT    0x56A1
+
 /* Timing control */
 #define TIMING_HS_HIGH			0x3800
 #define TIMING_HS_LOW			0x3801
@@ -1335,6 +1337,28 @@ static int ov5640_g_exposure(struct v4l2_subdev *sd, __s32 *value)
 	return 0;
 }
 
+
+static int ov5640_s_luminance(struct v4l2_subdev *sd, int value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_write(client, AVG_READOUT, (value&0xF));
+
+	return 0;
+}
+
+static int ov5640_g_luminance(struct v4l2_subdev *sd, __s32 *value)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	u8 reg;
+	ov5640_reg_read(client, AVG_READOUT, &reg);
+	*value=(u32)reg;
+
+	return 0;
+}
+
+
 static int ov5640_queryctrl(struct v4l2_subdev *sd,
     struct v4l2_queryctrl *qc)
 {
@@ -1396,6 +1420,8 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ov5640_s_gain(sd, ctrl->value);
 		case V4L2_CID_EXPOSURE:
 			return ov5640_s_exposure(sd, ctrl->value);
+		case V4L2_CID_BG_COLOR:
+			return ov5640_s_luminance(sd, ctrl->value);
 		case V4L2_CID_GREEN_BALANCE:
 			return ov5640_s_green_balance(sd, ctrl->value);
 		case V4L2_CID_RED_BALANCE:
@@ -1431,6 +1457,8 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ov5640_g_gain(sd, &ctrl->value);
 		case V4L2_CID_EXPOSURE:
 			return ov5640_g_exposure(sd, &ctrl->value);
+		case V4L2_CID_BG_COLOR:
+			return ov5640_g_luminance(sd, &ctrl->value);
 		case V4L2_CID_GREEN_BALANCE:
 			return ov5640_g_green_balance(sd, &ctrl->value);
 		case V4L2_CID_RED_BALANCE:
