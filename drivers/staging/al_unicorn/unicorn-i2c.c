@@ -486,11 +486,16 @@ void unicorn_i2c_unregister(struct i2c_adapter * adapter)
 
 void unicorn_i2c_remove(struct unicorn_dev * dev)
 {
-  int i;
+  int i,j;
+
   for(i=0;i<MAX_I2C_ADAPTER;i++)
   {
 #ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
-    v4l2_device_unregister_subdev(dev->sensor[i]);
+	for (j=0; j<max_subdev_per_video_bus; j++)
+	{
+		if(dev->sensor[i][j]!=NULL)
+		    v4l2_device_unregister_subdev(dev->sensor[i][j]);
+	}
 #endif
     unicorn_i2c_unregister(dev->i2c_adapter[i]);
   }

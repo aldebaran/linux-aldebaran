@@ -29,12 +29,12 @@
 #define FORMAT_FLAGS_PACKED       0x01
 
 struct unicorn_fmt formats[] = {
-{
-  .name = "4:2:2, packed, YUYV",
-  .fourcc = V4L2_PIX_FMT_YUYV,
-  .depth = 16,
-  .flags = FORMAT_FLAGS_PACKED,
-},
+  {
+    .name = "4:2:2, packed, YUYV",
+    .fourcc = V4L2_PIX_FMT_YUYV,
+    .depth = 16,
+    .flags = FORMAT_FLAGS_PACKED,
+  },
 };
 
 int get_format_size(void)
@@ -93,7 +93,8 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv, struct v4l2_for
   fmt = format_by_fourcc(f->fmt.pix.pixelformat);
   if (NULL == fmt)
   {
-    printk(KERN_INFO "%s format_by_fourcc_fail fmt == NULL format %d \n",__func__,f->fmt.pix.pixelformat);
+    printk(KERN_INFO "%s format_by_fourcc_fail fmt == NULL format %d \n",
+           __func__, f->fmt.pix.pixelformat);
     return -EINVAL;
   }
   field = f->fmt.pix.field;
@@ -199,13 +200,15 @@ static int vidioc_s_input(struct file *file, void *priv, unsigned int i)
 
   dprintk_video(1, dev->name, "%s(%d)\n", __func__, i);
 
-  if (fh) {
+  if (fh)
+  {
     err = v4l2_prio_check(&dev->prio, &fh->prio);
     if (0 != err)
       return err;
   }
 
-  if (i > MAX_VIDEO_INPUT_ENTRY-1) {
+  if (i > MAX_VIDEO_INPUT_ENTRY-1)
+  {
     printk(KERN_INFO "%s() invalid input -EINVAL\n", __func__);
     return -EINVAL;
   }
@@ -225,9 +228,12 @@ static int vidioc_g_ctrl(struct file *file, void *priv, struct v4l2_control *ctl
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = (fh)->dev;
-
-  v4l2_subdev_call(dev->sensor[fh->input], core, g_ctrl, ctl);
-
+  int i;
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      v4l2_subdev_call(dev->sensor[fh->input][i], core, g_ctrl, ctl);
+  }
   return 0;
 }
 
@@ -236,15 +242,22 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = fh->dev;
-  int err;
+  int err,i;
 
-  if (fh) {
+  if (fh)
+  {
     err = v4l2_prio_check(&dev->prio, &fh->prio);
     if (0 != err)
       return err;
   }
 
-  return v4l2_subdev_call(dev->sensor[fh->input], core, s_ctrl, ctl);
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err += v4l2_subdev_call(dev->sensor[fh->input][i], core, s_ctrl, ctl);
+  }
+
+  return 0;
 }
 
 
@@ -290,7 +303,15 @@ static int vidioc_queryctrl(struct file *file, void *priv,
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = fh->dev;
-  return v4l2_subdev_call(dev->sensor[fh->input], core, queryctrl, qctrl);
+  int i, err;
+
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err += v4l2_subdev_call(dev->sensor[fh->input][i], core, queryctrl, qctrl);
+  }
+
+  return err;
 }
 
 static int vidioc_g_priority(struct file *file, void * priv, enum v4l2_priority *p)
@@ -316,9 +337,10 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = ((struct unicorn_fh *)priv)->dev;
-  int err;
+  int err,i;
 
-  if (fh) {
+  if (fh)
+  {
     err = v4l2_prio_check(&dev->prio, &fh->prio);
     if (0 != err)
     {
@@ -333,7 +355,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
   {
     dprintk_video(1, dev->name, "%s() MIRE input selected\n", __func__);
   }
-  else if(dev->sensor[fh->input]==NULL)
+  else if(dev->sensor[fh->input][0]==NULL)
   {
     printk(KERN_INFO "%s() no device on this input %d \n", __func__,fh->input);
     return -EINVAL;
@@ -350,7 +372,8 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
   fh->fmt = format_by_fourcc(f->fmt.pix.pixelformat);
   fh->vidq.field = f->fmt.pix.field;
 
-  if (fh->fmt->fourcc != V4L2_PIX_FMT_YUYV){
+  if (fh->fmt->fourcc != V4L2_PIX_FMT_YUYV)
+  {
     printk(KERN_INFO "%s() expected 0x%x  \n", __func__,V4L2_PIX_FMT_YUYV);
     printk(KERN_INFO "%s()0x%x pixel format not supported \n", __func__,fh->fmt->fourcc);
     return -EINVAL;
@@ -362,16 +385,18 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
   }
   else
   {
-    err = v4l2_subdev_call(dev->sensor[fh->input], video, s_fmt, f);
+    for (i=0; i<max_subdev_per_video_bus; i++)
+    {
+      if(dev->sensor[fh->input][i] != NULL)
+      {
+        err += v4l2_subdev_call(dev->sensor[fh->input][i], video, s_fmt, f);
+        dprintk_video(1, dev->name, "%s() width=%d height=%d field=%d err=%d\n", __func__, fh->width,
+        fh->height, fh->vidq.field, err);
+      }
+    }
   }
-
-
   fh->width = f->fmt.pix.width;
   fh->height = f->fmt.pix.height;
-
-  dprintk_video(1, dev->name, "%s() width=%d height=%d field=%d err=%d\n", __func__, fh->width,
-    fh->height, fh->vidq.field, err);
-
   return err;
 }
 
@@ -398,7 +423,8 @@ int res_get(struct unicorn_dev *dev, struct unicorn_fh *fh, unsigned int bit)
 
   /* is it free? */
   mutex_lock(&dev->mutex);
-  if (dev->resources & bit) {
+  if (dev->resources & bit)
+  {
     /* no, someone else uses it */
     mutex_unlock(&dev->mutex);
     return 0;
@@ -449,17 +475,14 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = fh->dev;
 
-  if (unlikely(fh->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)) {
+  if (unlikely(fh->type != V4L2_BUF_TYPE_VIDEO_CAPTURE))
     return -EINVAL;
-  }
 
-  if (unlikely(i != fh->type)) {
+  if (unlikely(i != fh->type))
     return -EINVAL;
-  }
 
-  if (unlikely(!res_get(dev, fh, get_resource(fh, 0x01 << fh->channel)))) {
+  if (unlikely(!res_get(dev, fh, get_resource(fh, 0x01 << fh->channel))))
     return -EBUSY;
-  }
 
   return videobuf_streamon(&fh->vidq);
 }
@@ -492,11 +515,14 @@ static int vidioc_log_status(struct file *file, void *priv)
   snprintf(name, sizeof(name), "%s/2", dev->name);
   printk(KERN_INFO "%s/2: ============  START LOG STATUS  ============\n",
          dev->name);
-  printk(KERN_INFO "DMA%d is %s\n",fh->channel,
+  printk(KERN_INFO "DMA%d is %s\n",
+         fh->channel,
          (dev->pcie_dma->dma[fh->channel].ctrl & DMA_CONTROL_RESET_MASK ) ? "reset" : "enable");
-  printk(KERN_INFO "Video channel %d is %s\n",fh->channel,
+  printk(KERN_INFO "Video channel %d is %s\n",
+         fh->channel,
          (dev->global_register->video[fh->channel].ctrl & VIDEO_CONTROL_ENABLE_MASK ) ? "enable" : "disable");
-  printk(KERN_INFO "video input %d reset = 0x%X\n",fh->input,
+  printk(KERN_INFO "video input %d reset = 0x%X\n",
+         fh->input,
          dev->global_register->video_in_reset);
   printk(KERN_INFO "%s/2: =============  END LOG STATUS  =============\n",
          dev->name);
@@ -519,30 +545,40 @@ static int vidioc_g_register(struct file *file, void *priv, struct v4l2_dbg_regi
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = (fh)->dev;
-  int err;
+  int err,i;
 
-  if (fh) {
+  if (fh)
+  {
     err = v4l2_prio_check(&dev->prio, &fh->prio);
     if (0 != err)
       return err;
   }
-  
-  return v4l2_subdev_call(dev->sensor[fh->input], core, g_register, reg);
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err+= v4l2_subdev_call(dev->sensor[fh->input][i], core, g_register, reg);
+  }
+  return err;
 }
 
 static int vidioc_s_register(struct file *file, void *priv, struct v4l2_dbg_register *reg)
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = (fh)->dev;
-  int err;
+  int err,i;
 
-  if (fh) {
+  if (fh)
+  {
     err = v4l2_prio_check(&dev->prio, &fh->prio);
     if (0 != err)
       return err;
   }
-
-  return v4l2_subdev_call(dev->sensor[fh->input], core, s_register, reg);
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err +=  v4l2_subdev_call(dev->sensor[fh->input][i], core, s_register, reg);
+  }
+  return err;
 }
 #endif
 

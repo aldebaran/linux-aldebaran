@@ -119,6 +119,7 @@ BIT	Reserved	31..2	0	read_only
 #define UNICORN_COMMAND_SIZE	1
 #define MAX_I2C_ADAPTER 5
 #define MAX_VIDEO_INPUT_ENTRY 5
+#define MAX_SUBDEV_PER_VIDEO_BUS 2
 #define MIRE_VIDEO_INPUT 4
 
 #define CH00  0		/* Video 1 */
@@ -304,7 +305,7 @@ struct unicorn_dev
   volatile struct abh32_spi_flash * spi_flash;
 
   /*V4L2 struct*/
-  struct v4l2_subdev  *sensor[MAX_VIDEO_INPUT_ENTRY];
+  struct v4l2_subdev  *sensor[MAX_VIDEO_INPUT_ENTRY][MAX_SUBDEV_PER_VIDEO_BUS];
   struct video_device *video_dev[MAX_VID_CHANNEL_NUM];
   struct video_device *vbi_dev;
   struct video_device *radio_dev;
@@ -366,6 +367,12 @@ unsigned int unicorn_debug = 0;
 extern unsigned int unicorn_version;
 #else
 unsigned int unicorn_version = 0;
+#endif
+
+#ifndef __UNICORN_VIDEO_C
+extern unsigned int max_subdev_per_video_bus;
+#else
+unsigned int max_subdev_per_video_bus = 1;
 #endif
 
 

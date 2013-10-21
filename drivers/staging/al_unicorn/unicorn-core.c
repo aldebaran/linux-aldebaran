@@ -504,6 +504,9 @@ static int __init unicorn_init(void)
 {
   int err = 0;
 
+  if(max_subdev_per_video_bus > MAX_SUBDEV_PER_VIDEO_BUS)
+    max_subdev_per_video_bus = MAX_SUBDEV_PER_VIDEO_BUS;
+
 /* Clear unicorn structure : */
   memset(&unicorn, 0, sizeof(unicorn));
 

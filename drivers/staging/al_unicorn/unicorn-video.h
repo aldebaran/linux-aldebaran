@@ -77,4 +77,13 @@ int unicorn_video_dma_flipflop_buf(struct unicorn_dev *dev,
           struct unicorn_fh *fh);
 int unicorn_init_video(struct unicorn_dev *dev);
 int unicorn_video_change_fps(struct unicorn_dev *dev, struct unicorn_fh *fh);
+
+struct camera_to_probe_t
+{
+  char *name;
+  int ident;
+  int i2c_addr;
+  struct i2c_adapter *i2c_adapter;
+};
+
 #endif

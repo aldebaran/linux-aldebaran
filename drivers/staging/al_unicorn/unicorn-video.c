@@ -40,7 +40,8 @@ unsigned int vid_limit = 48;
 module_param(vid_limit, int, 0644);
 MODULE_PARM_DESC(vid_limit, "capture memory limit in megabytes");
 
-
+module_param(max_subdev_per_video_bus, int, 0444);
+MODULE_PARM_DESC(max_subdev_per_video_bus, "maximal capture subdevice per physical video bus");
 
 int unicorn_start_video_dma(struct unicorn_dev *dev,
           struct unicorn_buffer *buf,
@@ -67,7 +68,7 @@ int unicorn_start_video_dma(struct unicorn_dev *dev,
    IT_DMA_CHAN_1_TX_BUFF_1_END   |
    IT_DMA_CHAN_1_ERROR           |
    IT_DMA_CHAN_1_FIFO_FULL_ERROR |
-   IT_VIDEO_CHANNEL_1_OF_TRAME	 |
+   IT_VIDEO_CHANNEL_1_OF_TRAME   |
 
    /* AHB32 Error */
    IT_ABH32_ERROR                |
@@ -158,8 +159,8 @@ int unicorn_video_dma_flipflop_buf(struct unicorn_dev *dev,
   int size=0;
 
   dprintk_video(1, dev->name, "%s() channel %d buff[0].size=%d buff[1].size=%d\n", __func__, fh->channel,
-		  dev->pcie_dma->dma[fh->channel].buff[0].size,
-		  dev->pcie_dma->dma[fh->channel].buff[1].size);
+      dev->pcie_dma->dma[fh->channel].buff[0].size,
+      dev->pcie_dma->dma[fh->channel].buff[1].size);
 
   if(dev->pcie_dma->dma[fh->channel].buff[0].size == 0)
   {
@@ -360,72 +361,107 @@ int unicorn_video_register(struct unicorn_dev *dev, int chan_num,
   return err;
 }
 
+static int unicorn_probe_camera(struct unicorn_dev *dev, struct v4l2_subdev **v4l2_subdev, struct camera_to_probe_t *cam_to_probe)
+   
+{
+  int ret;
+  struct v4l2_dbg_chip_ident chip;
+
+  *v4l2_subdev = v4l2_i2c_new_subdev(&dev->v4l2_dev,
+                            cam_to_probe->i2c_adapter,
+                            cam_to_probe->name,
+                            cam_to_probe->name,
+                            cam_to_probe->i2c_addr, NULL);
+  chip.ident = V4L2_IDENT_NONE;
+  chip.match.type = V4L2_CHIP_MATCH_I2C_ADDR;
+  chip.match.addr = cam_to_probe->i2c_addr;
+  ret = v4l2_subdev_call(*v4l2_subdev, core, g_chip_ident, &chip);
+
+  if (ret)
+  {
+    if (ret == -ENODEV )
+      dprintk_video(1, dev->name, "i2c subdev is null\n");
+    if (ret == -ENOIOCTLCMD )
+      printk(KERN_INFO "i2c core or chip ident is null\n");
+  	*v4l2_subdev = NULL;
+	  dprintk_video(1, dev->name, "%s : Device with ident 0x%x not found ", cam_to_probe->name,cam_to_probe->ident);
+    return 0;
+  }
+
+  if (chip.ident != cam_to_probe->ident)
+  {
+    dprintk_video(1, dev->name, "%s : Unsupported sensor type 0x%x",
+      cam_to_probe->name, chip.ident);
+ 	  *v4l2_subdev = NULL;
+    return 0;
+  }
+
+  return 1;
+}
+
+/* Camera subdevs supported in Aldebaran's robots
+ */
+static struct {
+  char name[32];
+  int  ident;
+  int  i2c_addr;
+  int  found_on_i2c_adapter[MAX_I2C_ADAPTER];
+}probed_subdevs[] = {
+  {  .name     = "ov5640",
+     .ident    = V4L2_IDENT_OV5640,
+     .i2c_addr = 0x3c,
+     .found_on_i2c_adapter = {0}
+  }
+  ,{ .name     = "mt9m114",
+     .ident    = V4L2_IDENT_MT9M114,
+     .i2c_addr = 0x48,
+     .found_on_i2c_adapter = {0}
+  }
+  ,{ .name     = "mt9m114",
+     .ident    = V4L2_IDENT_MT9M114,
+     .i2c_addr = 0x5d,
+     .found_on_i2c_adapter = {0}
+  }
+};
+
+
 static int unicorn_attach_camera(struct unicorn_dev *dev)
 {
-  int i=0,try_i=0;
+  int i=0, try_i=0;
 
-  dev->sensor[MIRE_VIDEO_INPUT] = NULL;
+  dev->sensor[MIRE_VIDEO_INPUT][0] = NULL;
 
-
-  for(i=0;i<(MAX_I2C_ADAPTER-1);i++)
+  // i2c_adapter[MAX_I2C_ADAPTER -1] is the multicast i2c device
+  for(i=0; i<(MAX_I2C_ADAPTER-1); i++)
   {
-    for (try_i=0;try_i<3;try_i++)
+    int nb_cam_on_vid_bus = 0;
+    for (try_i=0; try_i<3; try_i++)
     {
-      struct v4l2_dbg_chip_ident chip;
-      int ret;
-
-      // try to find mt9m114
-      dev->sensor[i] = v4l2_i2c_new_subdev(&dev->v4l2_dev, dev->i2c_adapter[i],
-                                              "mt9m114", "mt9m114", 0x48, NULL);
-
-      chip.ident = V4L2_IDENT_NONE;
-      chip.match.type = V4L2_CHIP_MATCH_I2C_ADDR;
-      chip.match.addr = 0x48;
-      ret = v4l2_subdev_call(dev->sensor[i], core, g_chip_ident, &chip);
-      if (ret)
+      int k;
+      for(k=0; k<(sizeof(probed_subdevs)/sizeof(probed_subdevs[0])); ++k)
       {
-        if (ret == -ENODEV )
-          dprintk_video(1, dev->name, "i2c subdev is null\n");
-        if (ret == -ENOIOCTLCMD )
-          printk(KERN_INFO "i2c core or chip ident is null\n");
-        dev->sensor[i] = NULL;
+        struct camera_to_probe_t cam_to_prob = {
+          .name        = probed_subdevs[k].name,
+          .ident       = probed_subdevs[k].ident,
+          .i2c_addr    = probed_subdevs[k].i2c_addr,
+          .i2c_adapter = dev->i2c_adapter[i]
+        };
+
+        if(nb_cam_on_vid_bus >= max_subdev_per_video_bus)
+          break;
+
+        if(probed_subdevs[k].found_on_i2c_adapter[i])
+          continue;
+
+        if(unicorn_probe_camera(dev, &dev->sensor[i][nb_cam_on_vid_bus], &cam_to_prob))
+        {
+          probed_subdevs[k].found_on_i2c_adapter[i] = 1;
+          nb_cam_on_vid_bus++;
+        }
       }
-      else
-      {
+
+      if(nb_cam_on_vid_bus >= max_subdev_per_video_bus)
         break;
-      }
-      if (chip.ident != V4L2_IDENT_MT9M114) {
-        dprintk_video(1, dev->name, "MT9M114: Unsupported sensor type 0x%x", chip.ident);
-        dev->sensor[i] = NULL;
-      }
-
-      // try to find ov5640
-      if(dev->sensor[i]==NULL)
-      {
-          dev->sensor[i] = v4l2_i2c_new_subdev(&dev->v4l2_dev, dev->i2c_adapter[i],
-                                                  "ov5640", "ov5640", 0x3C, NULL);
-
-          chip.ident = V4L2_IDENT_NONE;
-          chip.match.type = V4L2_CHIP_MATCH_I2C_ADDR;
-          chip.match.addr = 0x3C;
-          ret = v4l2_subdev_call(dev->sensor[i], core, g_chip_ident, &chip);
-          if (ret)
-          {
-            if (ret == -ENODEV )
-              dprintk_video(1, dev->name, "i2c subdev is null\n");
-            if (ret == -ENOIOCTLCMD )
-              printk(KERN_INFO "i2c core or chip ident is null\n");
-          }
-          else
-          {
-            break;
-          }
-          if (chip.ident != V4L2_IDENT_OV5640) {
-            dprintk_video(1, dev->name, "OV5640: Unsupported sensor type 0x%x", chip.ident);
-            dev->sensor[i] = NULL;
-          }
-      }
-
     }
   }
   return 0;
@@ -436,7 +472,7 @@ int unicorn_init_video(struct unicorn_dev *dev)
   int i=0;
   struct video_device *video_template[] = {
     &unicorn_video_template0,
-            &unicorn_video_template1,
+    &unicorn_video_template1,
   };
 
   unicorn_attach_camera(dev);
