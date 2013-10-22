@@ -29,6 +29,10 @@ static int debug = 0;
 module_param(debug, bool, 0644);
 MODULE_PARM_DESC(debug, "Debug level (0-1)");
 
+static int camera_sync = 0;
+module_param(camera_sync, int, 0);
+MODULE_PARM_DESC(camera_sync, "An integer to configure if camera are synched or not");
+
 #define dprintk(level, name,  fmt, arg...)\
   do { if (debug >= level)\
     printk(KERN_DEBUG "%s/0: " fmt, name, ## arg);\
