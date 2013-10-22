@@ -941,6 +941,13 @@ static int mt9m114_errata_1(struct v4l2_subdev *sd)
   return 0;
 }
 
+static int mt9m114_change_default_i2c_address (struct v4l2_subdev *sd, u8 ID0, u8 ID1)
+{
+   int value;
+   value = ID0<<1 | (ID1<<9);
+   mt9m114_write(sd, 0x002E, 2, value);
+   return 0;
+}
 
 #define RESET_REGISTER_MASK_BAD 0x0200
 static int mt9m114_errata_2(struct v4l2_subdev *sd)
