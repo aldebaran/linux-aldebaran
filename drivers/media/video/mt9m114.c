@@ -1404,6 +1404,28 @@ static int mt9m114_init(struct v4l2_subdev *sd,u32 val)
 {
   int ret = 0;
   ret += mt9m114_reset(sd,0);
+
+if(camera_sync)
+{
+  if(v4l2_i2c_subdev_addr(sd) == 0x5D)
+  {
+  	dprintk(0,"MT9M114","MT9M114 : changing default ID0 to 0x5D\n");
+	  ret += mt9m114_change_default_i2c_address (sd, 0x5D,0x5D);
+  }
+
+  if(v4l2_i2c_subdev_addr(sd) == 0x48)
+  {
+  	dprintk(0,"MT9M114","MT9M114 : changing default ID4 to 0x48\n");
+	  ret += mt9m114_change_default_i2c_address (sd, 0x48,0x48);
+  }
+
+  {
+    int value = 0;
+    mt9m114_read(sd,0x002E,2,&value);
+    dprintk(0,"MT9M114","MT9M114 : i2C IDS : %d\n",value);
+  }
+}
+
   ret += mt9m114_PLL_settings(sd);
   ret += mt9m114_write_array(sd, mt9m114_vga_30_scaling_regs);
   ret += mt9m114_sensor_optimization(sd);
