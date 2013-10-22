@@ -1436,9 +1436,12 @@ if(camera_sync)
   ret += mt9m114_CPIPE_preference(sd);
   ret += mt9m114_features(sd);
   ret += mt9m114_write_array(sd, uvc_ctrl_regs);
+if(!camera_sync)
+{
   ret += mt9m114_change_config(sd);
   ret += mt9m114_patch2_black_lvl_correction_fix(sd);
   ret += mt9m114_patch3_adaptive_sensitivity(sd);
+}
   if (ret != 0)
   {
     dprintk(1,"MT9M114","MT9M114 : init fail\n");
