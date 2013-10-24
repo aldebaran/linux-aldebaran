@@ -196,7 +196,7 @@ static int vidioc_s_input(struct file *file, void *priv, unsigned int i)
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = fh->dev;
-  int err;
+  int err = 0;
 
   dprintk_video(1, dev->name, "%s(%d)\n", __func__, i);
 
@@ -242,7 +242,7 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = fh->dev;
-  int err,i;
+  int err = 0, i;
 
   if (fh)
   {
@@ -257,7 +257,7 @@ static int vidioc_s_ctrl(struct file *file, void *priv,
       err += v4l2_subdev_call(dev->sensor[fh->input][i], core, s_ctrl, ctl);
   }
 
-  return 0;
+  return err;
 }
 
 
@@ -303,12 +303,14 @@ static int vidioc_queryctrl(struct file *file, void *priv,
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = fh->dev;
-  int i, err;
+  int i, err = 0;
 
   for (i=0; i<max_subdev_per_video_bus; i++)
   {
-    if(dev->sensor[fh->input][i] !=NULL)
+   if(dev->sensor[fh->input][i] !=NULL)
+   {
       err += v4l2_subdev_call(dev->sensor[fh->input][i], core, queryctrl, qctrl);
+   }
   }
 
   return err;
