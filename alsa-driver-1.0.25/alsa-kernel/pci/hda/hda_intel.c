@@ -380,7 +380,7 @@ struct azx_dev {
 					 */
 	unsigned char stream_tag;	/* assigned stream */
 	unsigned char index;		/* stream index */
-	int assigned_key;		/* last device# key assigned to */
+	int device;			/* last device number assigned to */
 
 	unsigned int opened :1;
 	unsigned int running :1;
@@ -1611,9 +1611,6 @@ azx_assign_device(struct azx *chip, struct snd_pcm_substream *substream)
 {
 	int dev, i, nums;
 	struct azx_dev *res = NULL;
-	/* make a non-zero unique key for the substream */
-	int key = (substream->pcm->device << 16) | (substream->number << 2) |
-		(substream->stream + 1);
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		dev = chip->playback_index_offset;
@@ -1625,12 +1622,12 @@ azx_assign_device(struct azx *chip, struct snd_pcm_substream *substream)
 	for (i = 0; i < nums; i++, dev++)
 		if (!chip->azx_dev[dev].opened) {
 			res = &chip->azx_dev[dev];
-			if (res->assigned_key == key)
+			if (res->device == substream->pcm->device)
 				break;
 		}
 	if (res) {
 		res->opened = 1;
-		res->assigned_key = key;
+		res->device = substream->pcm->device;
 	}
 	return res;
 }
