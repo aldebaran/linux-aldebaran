@@ -101,86 +101,99 @@ void unicorn_video_wakeup(struct unicorn_dev *dev, struct unicorn_dmaqueue *q, i
 /* IRQ handler */
 static irqreturn_t unicorn_irq_handler(int irq, void *dev_id)
 {
-  struct unicorn_dev *dev;
-
-#ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
-  int i=0;
-#endif
-
-  dev = (struct unicorn_dev *)dev_id;
+  struct unicorn_dev *dev = (struct unicorn_dev *)dev_id;
   dev->pending = dev->interrupts_controller->irq.pending;
   dprintk(1, dev->name, "%s() 0x%X\n", __func__,dev->pending);
 
-
   if (dev->pending)
   {
-
 #ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
-  for(i=0;i<MAX_VID_CHANNEL_NUM;i++)
-  {
-    if ((dev->pending>>(i*4)) & IT_DMA_CHAN_0_TX_BUFF_0_END)
+    // Verify Channel 0
+    if ((dev->pending>>(0*4)) & IT_DMA_CHAN_0_TX_BUFF_0_END)
     {
-      dprintk(1, dev->name, "%s() IT_DMA_CHAN_%d_TX_BUFF_0_END\n", __func__,i);
-      unicorn_video_wakeup(dev,  &dev->vidq[i],i,0);
+      dprintk(1, dev->name, "%s() IT_DMA_CHAN_0_TX_BUFF_0_END\n", __func__);
+      unicorn_video_wakeup(dev, &dev->vidq[0], 0, 0);
     }
-    if ((dev->pending>>(i*4)) & IT_DMA_CHAN_0_TX_BUFF_1_END)
+    if ((dev->pending>>(0*4)) & IT_DMA_CHAN_0_TX_BUFF_1_END)
     {
-      dprintk(1, dev->name, "%s() IT_DMA_CHAN_%d_TX_BUFF_1_END\n", __func__,i);
-      unicorn_video_wakeup(dev,  &dev->vidq[i],i,1);
+      dprintk(1, dev->name, "%s() IT_DMA_CHAN_0_TX_BUFF_1_END\n", __func__);
+      unicorn_video_wakeup(dev, &dev->vidq[0], 0, 1);
     }
-    if ((dev->pending>>(i*4)) & IT_DMA_CHAN_0_FIFO_FULL_ERROR)
+    if ((dev->pending>>(0*4)) & IT_DMA_CHAN_0_FIFO_FULL_ERROR)
     {
-      printk(KERN_ERR "%s() IT_DMA_CHAN_%d_FIFO_FULL_ERROR\n", __func__,i);
-      unicorn_recover_fifo_full_error(dev,i);
+      printk(KERN_ERR "%s() IT_DMA_CHAN_0_FIFO_FULL_ERROR\n", __func__);
+      unicorn_recover_fifo_full_error(dev,0);
     }
-    if ((dev->pending>>(i*4)) & IT_DMA_CHAN_0_ERROR)
+    if ((dev->pending>>(0*4)) & IT_DMA_CHAN_0_ERROR)
     {
-      printk(KERN_ERR "%s() IT_DMA_CHAN_%d_ERROR\n", __func__,i);
-      dev->global_register->video[i].ctrl &= ~VIDEO_CONTROL_ENABLE;
-      dev->pcie_dma->dma[i].ctrl |= DMA_CONTROL_RESET;
+      printk(KERN_ERR "%s() IT_DMA_CHAN_0_ERROR\n", __func__);
+      dev->global_register->video[0].ctrl &= ~VIDEO_CONTROL_ENABLE;
+      dev->pcie_dma->dma[0].ctrl |= DMA_CONTROL_RESET;
     }
-  }
-  if(dev->pending & IT_VIDEO_CHANNEL_0_OF_TRAME)
-  {
-    dprintk(1, dev->name, "%s() IT_VIDEO_CHANNEL_0_OF_TRAME\n", __func__);
-  }
-  if(dev->pending & IT_VIDEO_CHANNEL_1_OF_TRAME)
-  {
-    dprintk(1, dev->name, "%s() IT_VIDEO_CHANNEL_1_OF_TRAME\n", __func__);
-  }
+    if(dev->pending & IT_VIDEO_CHANNEL_0_OF_TRAME)
+    {
+      dprintk(1, dev->name, "%s() IT_VIDEO_CHANNEL_0_OF_TRAME\n", __func__);
+    }
+
+    // Verify Channel 1
+    if ((dev->pending>>(1*4)) & IT_DMA_CHAN_1_TX_BUFF_0_END)
+    {
+      dprintk(1, dev->name, "%s() IT_DMA_CHAN_1_TX_BUFF_0_END\n", __func__);
+      unicorn_video_wakeup(dev, &dev->vidq[1], 1, 0);
+    }
+    if ((dev->pending>>(1*4)) & IT_DMA_CHAN_1_TX_BUFF_1_END)
+    {
+      dprintk(1, dev->name, "%s() IT_DMA_CHAN_1_TX_BUFF_1_END\n", __func__);
+      unicorn_video_wakeup(dev, &dev->vidq[1], 1, 1);
+    }
+    if ((dev->pending>>(1*4)) & IT_DMA_CHAN_1_FIFO_FULL_ERROR)
+    {
+      printk(KERN_ERR "%s() IT_DMA_CHAN_1_FIFO_FULL_ERROR\n", __func__);
+      unicorn_recover_fifo_full_error(dev,1);
+    }
+    if ((dev->pending>>(1*4)) & IT_DMA_CHAN_1_ERROR)
+    {
+      printk(KERN_ERR "%s() IT_DMA_CHAN_1_ERROR\n", __func__);
+      dev->global_register->video[1].ctrl &= ~VIDEO_CONTROL_ENABLE;
+      dev->pcie_dma->dma[1].ctrl |= DMA_CONTROL_RESET;
+    }
+    if(dev->pending & IT_VIDEO_CHANNEL_1_OF_TRAME)
+    {
+      dprintk(1, dev->name, "%s() IT_VIDEO_CHANNEL_1_OF_TRAME\n", __func__);
+    }
 #endif
 
-  if ((dev->pending & IT_ABH32_ERROR)||
-    (dev->pending & IT_ABH32_FIFO_RX_ERROR)||
-    (dev->pending & IT_ABH32_FIFO_TX_ERROR))
-  {
-    printk(KERN_ERR "UNICORN %s() error IRQ \n", __func__);
-  }
-  if (dev->pending & IT_I2C_WRITE_FIFO_ERROR)
-  {
-    printk(KERN_ERR "UNICORN %s() IT_I2C_WRITE_FIFO_ERROR \n", __func__);
-  }
-  if (dev->pending & IT_I2C_READ_FIFO_ERROR)
-  {
-    printk(KERN_ERR "UNICORN %s() IT_I2C_READ_FIFO_ERROR \n", __func__);
-  }
-  if (dev->pending & IT_I2C_TRANSFER_END)
-  {
-    dev->i2c_eof = 1;
-     //dprintk(1, "UNICORN %s() IT_I2C_TRANSFER_END \n", __func__);
-  }
-  if (dev->pending & IT_I2C_ACCES_ERROR)
-  {
+    if ((dev->pending & IT_ABH32_ERROR)||
+        (dev->pending & IT_ABH32_FIFO_RX_ERROR)||
+        (dev->pending & IT_ABH32_FIFO_TX_ERROR))
+    {
+      printk(KERN_ERR "UNICORN %s() error IRQ \n", __func__);
+    }
+    if (dev->pending & IT_I2C_WRITE_FIFO_ERROR)
+    {
+      printk(KERN_ERR "UNICORN %s() IT_I2C_WRITE_FIFO_ERROR \n", __func__);
+    }
+    if (dev->pending & IT_I2C_READ_FIFO_ERROR)
+    {
+      printk(KERN_ERR "UNICORN %s() IT_I2C_READ_FIFO_ERROR \n", __func__);
+    }
+    if (dev->pending & IT_I2C_TRANSFER_END)
+    {
+      dev->i2c_eof = 1;
+      //dprintk(1, "UNICORN %s() IT_I2C_TRANSFER_END \n", __func__);
+    }
+    if (dev->pending & IT_I2C_ACCES_ERROR)
+    {
       dev->i2c_error = 1;
       dprintk(1, dev->name, "UNICORN %s() IT_I2C_ACCES_ERROR \n", __func__);
-  }
- /* if (dev->interrupts_controller->irq.pending)
+    }
+    /* if (dev->interrupts_controller->irq.pending)
   {
     printk(KERN_ERR "%s() irq still pending 0x%X unknown state \n", __func__,dev->pending);
   }*/
 
-  dev->interrupt_queue_flag = 1;
-  return IRQ_HANDLED;
+    dev->interrupt_queue_flag = 1;
+    return IRQ_HANDLED;
   }
   else
   {
