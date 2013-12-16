@@ -817,30 +817,42 @@ static int mt9m114_read(struct v4l2_subdev *sd,
     u16 size,
     u32 *value)
 {
+  int ret=0;
   u8 cmd[10];
+  int index=0;
 
   struct i2c_client *client = v4l2_get_subdevdata(sd);
-  cmd[0] = reg/256;
-  cmd[1] = reg%256;
-  i2c_master_send(client, cmd, 2);
-  i2c_master_recv(client, cmd, size);
-  if( size == 2 )
-  {
-    *value = (((u32)cmd[0])<<8) + cmd[1];
-  }
-  else if( size == 4 )
-  {
-    *value = (((u32)cmd[0])<<24) + (((u32)cmd[1])<<16) +
-      (((u32)cmd[2])<<8)  + (((u32)cmd[3])<<0);
-  }
-  else if( size == 1 )
-  {
-    *value = cmd[0];
+  if (NULL == client)
+    return -ENODEV;
+
+  cmd[0] = (reg >> 8) & 0xff;
+  cmd[1] = reg & 0xff;
+
+  ret = i2c_master_send(client, cmd, 2);
+  if (ret < 0)
+    return ret;
+
+  ret = i2c_master_recv(client, cmd, size);
+  if (ret < 0)
+    return ret;
+
+  // Camera is in Big Endian !
+  *value = 0;
+  switch (size) {
+    case 4:
+      *value += ((u32)cmd[index++]) << 24;
+      *value += ((u32)cmd[index++]) << 16;
+    case 2:
+      *value += ((u32)cmd[index++]) << 8;
+    case 1:
+      *value += ((u32)cmd[index++]);
+      break;
+    default:
+      return -EINVAL;
   }
 
   return 0;
 }
-
 
 #define MAX_MASTER_WRITE 48
 
@@ -849,34 +861,38 @@ static int mt9m114_burst_write(struct v4l2_subdev *sd,
     u16 * array,
     u16 size)
 {
-  int i=0;
+  int i=0, ret=0;
   int index=0, abs_index=0;
   int packet_size=0;
   u8 cmd[255];
 
   struct i2c_client *client = v4l2_get_subdevdata(sd);
+  if (NULL == client)
+    return -ENODEV;
 
-  while(size)
-  {
-    if (size >= MAX_MASTER_WRITE){
+  while(size) {
+    if (size >= MAX_MASTER_WRITE)
       packet_size = MAX_MASTER_WRITE;
-    }
-    else{
+    else
       packet_size = size;
-    }
     size -= packet_size;
+
     index = 0;
-    cmd[index++] = reg/256;
-    cmd[index++] = reg%256;
-    for (i = 0;i < packet_size; i++)
+    cmd[index++] = (reg >> 8) & 0xff;
+    cmd[index++] = reg & 0xff;
+
+    for (i = 0; i < packet_size; i++)
     {
       u16 val = array[abs_index++];
-      cmd[index++] = val / 256;
-      cmd[index++] = val % 256;
-      reg +=2;
+      cmd[index++] = (val >> 8) & 0xff;
+      cmd[index++] = val & 0xff;
+      reg += 2;
     }
-    i2c_master_send(client, cmd, index);
+    ret = i2c_master_send(client, cmd, index);
+    if (ret < 0)
+      return ret;
   }
+
   return 0;
 }
 
@@ -885,34 +901,35 @@ static int mt9m114_write(struct v4l2_subdev *sd,
     u16 size,
     u32 value)
 {
-
-  int ret=0;
   u8 cmd[10];
-  int index=0;
+  int index=0, ret=0;
+
   struct i2c_client *client = v4l2_get_subdevdata(sd);
+  if (NULL == client)
+    return -ENODEV;
 
-  cmd[index++] = reg/256;
-  cmd[index++] = reg%256;
+  cmd[index++] = (reg >> 8) & 0xff;
+  cmd[index++] = reg & 0xff;
 
-  if( size == 2)
-  {
-    cmd[index++] = value/256;
-    cmd[index++] = value%256;
+  // Camera is in Big Endian !
+  switch (size) {
+    case 4:
+      cmd[index++] = (value >> 24) & 0xff;
+      cmd[index++] = (value >> 16) & 0xff;
+    case 2:
+      cmd[index++] = (value >> 8) & 0xff;
+    case 1:
+      cmd[index++] = value & 0xff;
+      break;
+    default:
+      return -EINVAL;
   }
-  else if( size == 4)
-  {
-    cmd[index++] = value>>24 & 0xff;
-    cmd[index++] = value>>16 & 0xff;
-    cmd[index++] = value>>8   & 0xff;
-    cmd[index++] = value>>0   & 0xff;
-  }
-  else if( size == 1)
-  {
-    cmd[index++] = value;
-  }
-  i2c_master_send(client, cmd, index);
 
-  return ret;
+  ret = i2c_master_send(client, cmd, index);
+  if (ret < 0)
+    return ret;
+
+  return 0;
 }
 
 
@@ -1925,7 +1942,7 @@ static int mt9m114_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
 static int mt9m114_s_auto_exposure_algorithm(struct v4l2_subdev *sd, int value)
 {
   int ret = 0;
-    
+
   if(value >= 0x0 && value <= 0x3)
   {
     ret = mt9m114_write(sd, REG_AE_ALGORITHM+1, 1, value);
@@ -2188,8 +2205,8 @@ static int mt9m114_s_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *
   u32 val = reg->val & 0xff;
 
   dprintk(1,"MT9M114","MT9M114: mt9m114_s_register addr: 0x%x, size: %d, val: 0x%x\n", addr, size, val);
-  
-  ret = mt9m114_write(sd, addr, size, val); 
+
+  ret = mt9m114_write(sd, addr, size, val);
   mt9m114_refresh(sd);
   return ret;
 }
