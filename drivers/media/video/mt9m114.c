@@ -21,7 +21,9 @@
 #include <media/v4l2-i2c-drv.h>
 
 
-MODULE_AUTHOR("Joseph Pinkasfeld <joseph.pinkasfeld@gmail.com>;Ludovic SMAL <lsmal@aldebaran-robotics.com>, Corentin Le Molgat <clemolgat@aldebaran-robotics.com>");
+MODULE_AUTHOR("Joseph Pinkasfeld <joseph.pinkasfeld@gmail.com>;"
+    "Ludovic SMAL <lsmal@aldebaran-robotics.com>,"
+    "Corentin Le Molgat <clemolgat@aldebaran-robotics.com>");
 MODULE_DESCRIPTION("A low-level driver for Aptina MT9M114 sensors");
 MODULE_LICENSE("GPL");
 
@@ -802,7 +804,6 @@ static struct regval_list mt9m114_160x120_30_scaling_regs[] = {
  *
  */
 
-
 static struct regval_list mt9m114_fmt_yuv422[] = {
   {REG_CAM_OUTPUT_FORMAT, 2, 0x000A},
   {REG_CAM_OUTPUT_OFFSET, 1, 0x10},
@@ -810,13 +811,7 @@ static struct regval_list mt9m114_fmt_yuv422[] = {
   { 0xffff, 0xffff, 0xffff },
 };
 
-
-
-
-/*
- * Low-level register I/O.
- */
-
+/* Low-level register I/O.*/
 static int mt9m114_read(struct v4l2_subdev *sd,
     u16 reg,
     u16 size,
@@ -1257,7 +1252,6 @@ static int mt9m114_change_config(struct v4l2_subdev *sd)
   mt9m114_write(sd, REG_LOGICAL_ADDRESS_ACCESS, 2, 0x0000);
   ret = mt9m114_read(sd, REG_CAM_SENSOR_CONTROL_READ_MODE, 2, &v);
 
-
   if (info->flag_vflip)
     v |= CAM_SENSOR_CONTROL_VERT_FLIP_EN;
   else
@@ -1269,9 +1263,6 @@ static int mt9m114_change_config(struct v4l2_subdev *sd)
     v &= ~CAM_SENSOR_CONTROL_HORZ_FLIP_EN;
 
   mt9m114_write(sd, REG_CAM_SENSOR_CONTROL_READ_MODE, 2, v);
-
-
-
 
   // Set the desired next state (SYS_STATE_ENTER_CONFIG_CHANGE = 0x28)
   mt9m114_write(sd,REG_SYSMGR_NEXT_STATE, 1, MT9M114_SYS_STATE_ENTER_CONFIG_CHANGE);
@@ -1477,12 +1468,9 @@ static int mt9m114_detect(struct v4l2_subdev *sd)
   return ret;
 }
 
-
-/*
- * Store information about the video data format.  The color matrix
+/* Store information about the video data format.  The color matrix
  * is deeply tied into the format, so keep the relevant values here.
- * The magic matrix nubmers come from OmniVision.
- */
+ * The magic matrix numbers come from OmniVision.*/
 static struct mt9m114_format_struct {
   __u8 *desc;
   __u32 pixelformat;
@@ -1498,11 +1486,7 @@ static struct mt9m114_format_struct {
 };
 #define N_MT9M114_FMTS ARRAY_SIZE(mt9m114_formats)
 
-
-/*
- * Then there is the issue of window sizes.  Try to capture the info here.
- */
-
+/* Then there is the issue of window sizes.  Try to capture the info here.*/
 static struct mt9m114_win_size {
   int	width;
   int	height;
@@ -1582,7 +1566,6 @@ static struct mt9m114_win_size {
 
 #define N_WIN_SIZES (ARRAY_SIZE(mt9m114_win_sizes))
 
-
 static int mt9m114_enum_fmt(struct v4l2_subdev *sd, struct v4l2_fmtdesc *fmt)
 {
   struct mt9m114_format_struct *ofmt;
@@ -1596,7 +1579,6 @@ static int mt9m114_enum_fmt(struct v4l2_subdev *sd, struct v4l2_fmtdesc *fmt)
   fmt->pixelformat = ofmt->pixelformat;
   return 0;
 }
-
 
 static int mt9m114_try_fmt_internal(struct v4l2_subdev *sd,
     struct v4l2_format *fmt,
@@ -1619,10 +1601,8 @@ static int mt9m114_try_fmt_internal(struct v4l2_subdev *sd,
     *ret_fmt = mt9m114_formats + index;
 
   pix->field = V4L2_FIELD_NONE;
-  /*
-   * Round requested image size down to the nearest
-   * we support, but not below the smallest.
-   */
+  /* Round requested image size down to the nearest
+   * we support, but not below the smallest.*/
   for (wsize = mt9m114_win_sizes; wsize < mt9m114_win_sizes + N_WIN_SIZES;
       wsize++)
     if (pix->width >= wsize->width && pix->height >= wsize->height)
@@ -1631,9 +1611,7 @@ static int mt9m114_try_fmt_internal(struct v4l2_subdev *sd,
     wsize--;   /* Take the smallest one */
   if (ret_wsize != NULL)
     *ret_wsize = wsize;
-  /*
-   * Note the size we'll actually handle.
-   */
+  /* Note the size we'll actually handle.*/
   pix->width = wsize->width;
   pix->height = wsize->height;
   pix->bytesperline = pix->width*mt9m114_formats[index].bpp;
@@ -1646,9 +1624,7 @@ static int mt9m114_try_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
   return mt9m114_try_fmt_internal(sd, fmt, NULL, NULL);
 }
 
-/*
- * Set a format.
- */
+/* Set a format.*/
 static int mt9m114_s_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 {
   int ret;
@@ -1686,10 +1662,8 @@ static int mt9m114_s_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
   return ret;
 }
 
-/*
- * Implement G/S_PARM.  There is a variable framerate available
- * to do someday;
- */
+/* Implement G/S_PARM.
+ * There is a variable framerate available to do someday*/
 static int mt9m114_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *parms)
 {
   struct v4l2_captureparm *cp = &parms->parm.capture;
@@ -1711,7 +1685,6 @@ static int mt9m114_g_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *parms)
 
 static int mt9m114_s_parm(struct v4l2_subdev *sd, struct v4l2_streamparm *parms)
 {
-
   struct v4l2_captureparm *cp = &parms->parm.capture;
   struct v4l2_fract *tpf = &cp->timeperframe;
   int div;
@@ -1949,7 +1922,6 @@ static int mt9m114_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
   return ret;
 }
 
-
 static int mt9m114_s_auto_exposure_algorithm(struct v4l2_subdev *sd, int value)
 {
   int ret = 0;
@@ -1972,7 +1944,7 @@ static int mt9m114_g_auto_exposure_algorithm(struct v4l2_subdev *sd, __s32 *valu
   u32 v = 0;
   int ret = mt9m114_read(sd, REG_AE_ALGORITHM+1, 1, &v);
   *value = v & 0x3;
-  
+
   return ret;
 }
 
@@ -2198,10 +2170,10 @@ static int mt9m114_g_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *
   u16 addr = reg->reg & 0xffff;
   u16 size = 1;
   u32 val = 0;
-  
+
   ret = mt9m114_read(sd, addr, size, &val);
   reg->val = val;
-  
+
   dprintk(1,"MT9M114","MT9M114: mt9m114_g_register addr: 0x%x, size: %d, value: 0x%x\n", addr, size, val);
 
   return ret;
@@ -2210,11 +2182,11 @@ static int mt9m114_g_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *
 static int mt9m114_s_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
 {
   int ret = 0;
-  
+
   u16 addr = reg->reg & 0xffff;
   u16 size = 1;
   u32 val = reg->val & 0xff;
-  
+
   dprintk(1,"MT9M114","MT9M114: mt9m114_s_register addr: 0x%x, size: %d, val: 0x%x\n", addr, size, val);
   
   ret = mt9m114_write(sd, addr, size, val); 
