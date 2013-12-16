@@ -34,7 +34,7 @@
 #endif
 
 static int debug = 0;
-module_param(debug, bool, 0644);
+module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Debug level (0-1)");
 
 #define dprintk(level, name,  fmt, arg...)\

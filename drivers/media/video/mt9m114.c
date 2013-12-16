@@ -26,7 +26,7 @@ MODULE_DESCRIPTION("A low-level driver for Aptina MT9M114 sensors");
 MODULE_LICENSE("GPL");
 
 static int debug = 0;
-module_param(debug, bool, 0644);
+module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Debug level (0-1)");
 
 static int camera_sync = 0;
