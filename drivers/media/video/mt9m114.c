@@ -203,7 +203,9 @@ MODULE_PARM_DESC(camera_sync, "An integer to configure if camera are synched or 
 
 // AWB
 #define REG_AWB_AWB_MODE                          0xC909
-
+#define REG_AWB_MIN_TEMPERATURE                   0xC8EC // default 2700 Kelvin
+#define REG_AWB_MAX_TEMPERATURE                   0xC8EE // default 6500 Kelvin
+#define REG_AWB_COLOR_TEMPERATURE                 0xC8F0
 
 // UVC
 #define REG_UVC_AE_MODE                           0xCC00
@@ -2006,28 +2008,35 @@ static int mt9m114_g_exposure(struct v4l2_subdev *sd, __s32 *value)
 
 static int mt9m114_s_white_balance(struct v4l2_subdev *sd, int value)
 {
-  int ret;
+  dprintk(1,"MT9M114","set white balance to %d\n",value);
+  int ret = mt9m114_write(sd, REG_AWB_COLOR_TEMPERATURE, 2, value);
+  if (ret < 0) {
+    dprintk(2,"MT9M114","set white balance fail.\n");
+    return ret;
+  }
 
-  // format input value to range
-  value = (value+180)*45;
-
-  ret = mt9m114_write(sd, REG_UVC_WHITE_BALANCE_TEMPERATURE, 2, value);
-  mt9m114_refresh(sd);
-  return ret;
+  return mt9m114_refresh(sd);
 }
 
 static int mt9m114_g_white_balance(struct v4l2_subdev *sd, __s32 *value)
 {
-  u32 v = 0;
   int ret = 0;
 
-  mt9m114_refresh(sd);
-  ret = mt9m114_read(sd, REG_UVC_WHITE_BALANCE_TEMPERATURE, 2, &v);
+  ret = mt9m114_refresh(sd);
+  if (ret < 0) {
+    dprintk(2,"MT9M114","refresh before read white balance fail.\n");
+    return ret;
+  }
 
-  *value = (v/45)-180;
+  ret = mt9m114_read(sd, REG_AWB_COLOR_TEMPERATURE, 2, value);
+  if (ret < 0) {
+    dprintk(2,"MT9M114","read white balance fail.\n");
+    return ret;
+  }
+
+  dprintk(1,"MT9M114","white balance is %d\n",*value);
   return ret;
 }
-
 
 static int mt9m114_cropcap(struct v4l2_subdev *sd, struct v4l2_cropcap *a)
 {
@@ -2061,6 +2070,9 @@ static int mt9m114_g_crop(struct v4l2_subdev *sd, struct v4l2_crop *a)
 static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     struct v4l2_queryctrl *qc)
 {
+  int ret=0;
+  __s32 min=0, max=0;
+
   dprintk(1,"MT9M114","MT9M114 : mt9m114_queryctrl id: 0x%x\n", qc->id);
 
   /* Fill in min, max, step and default value for these controls. */
@@ -2089,7 +2101,17 @@ static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     case V4L2_CID_EXPOSURE:
       return v4l2_ctrl_query_fill(qc, 0, 512, 1, 0);
     case V4L2_CID_DO_WHITE_BALANCE:
-      return v4l2_ctrl_query_fill(qc, -180, 180, 1, -166);
+      ret = mt9m114_read(sd, REG_AWB_MIN_TEMPERATURE, 2, &min);
+      if (ret < 0) {
+        dprintk(2,"MT9M114","read white balance min fail.\n");
+        return ret;
+      }
+      ret = mt9m114_read(sd, REG_AWB_MAX_TEMPERATURE, 2, &max);
+      if (ret < 0) {
+        dprintk(2,"MT9M114","read white balance max fail.\n");
+        return ret;
+      }
+      return v4l2_ctrl_query_fill(qc, min, max, 1, 6500);
     case V4L2_CID_BACKLIGHT_COMPENSATION:
       return v4l2_ctrl_query_fill(qc, 0, 4, 1, 1);
   }
