@@ -1,7 +1,6 @@
 #ifndef UNICORN_VIDEO_H
 #define UNICORN_VIDEO_H
 
-
 #define VID_CHANNEL_NUM 2
 
 #define DMA_CONTROL_START_POS                0
@@ -48,7 +47,7 @@
 #define VIDEO_CONTROL_IN_MIRE_RESET_MASK     (1<<VIDEO_CONTROL_IN_MIRE_RESET_POS)
 #define VIDEO_CONTROL_IN_MIRE_RESET          VIDEO_CONTROL_IN_MIRE_RESET_MASK
 
-
+#include "unicorn.h"
 
 extern struct sram_channel *channel0;
 extern struct sram_channel *channel1;

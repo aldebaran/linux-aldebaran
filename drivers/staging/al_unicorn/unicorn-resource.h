@@ -1,5 +1,5 @@
 /*
-    unicorn-ioctlops.h - V4L2 driver for unicorn
+    unicorn-resource.h - V4L2 driver for unicorn
 
     Copyright (c) 2013 Aldebaran robotics
     Corentin Le Molgat <clemolgat@aldebaran-robotics.com>
@@ -19,14 +19,18 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef UNICORN_IOCTLOPS_H
-#define UNICORN_IOCTLOPS_H
+#ifndef UNICORN_RESOURCE_H
+#define UNICORN_RESOURCE_H
 
 #ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
-#include <media/v4l2-ioctl.h>
 #include "unicorn.h"
 
-extern const struct v4l2_ioctl_ops video_ioctl_ops;
+int res_check(struct unicorn_fh *fh, unsigned int bit);
+int res_locked(struct unicorn_dev *dev, unsigned int bit);
+int res_get(struct unicorn_dev *dev, struct unicorn_fh *fh, unsigned int bit);
+void res_free(struct unicorn_dev *dev, struct unicorn_fh *fh, unsigned int bits);
+
+int get_resource(struct unicorn_fh *fh, int resource);
 #endif
 
 #endif

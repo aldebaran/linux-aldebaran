@@ -32,7 +32,7 @@ void unicorn_free_buffer(struct videobuf_queue *q, struct unicorn_buffer *buf)
 {
   struct unicorn_fh *fh = q->priv_data;
   struct unicorn_dev *dev = fh->dev;
-  dprintk_video(1, dev->name, "%s()\n", __func__);
+  dprintk_video(1, dev->name, "free buffer for video device %d\n", fh->channel);
 
   BUG_ON(in_interrupt());
   videobuf_waiton(&buf->vb, 0, 0);
@@ -53,8 +53,7 @@ static void buffer_queue(struct videobuf_queue *vq, struct videobuf_buffer *vb)
   if (!list_empty(&q->queued)) {
     list_add_tail(&buf->vb.queue, &q->queued);
     buf->vb.state = VIDEOBUF_QUEUED;
-    dprintk_video(1, dev->name, "[%p/%d] buffer_queue - append to queued\n", buf,
-      buf->vb.i);
+    dprintk_video(1, dev->name, "[%p/%d] buffer_queue - append to queued\n", buf, buf->vb.i);
 
   } else if (list_empty(&q->active)) {
     list_add_tail(&buf->vb.queue, &q->active);
@@ -63,8 +62,7 @@ static void buffer_queue(struct videobuf_queue *vq, struct videobuf_buffer *vb)
     unicorn_start_video_dma(dev, buf, fh);
     buf->count = q->count++;
     mod_timer(&q->timeout, jiffies + BUFFER_TIMEOUT);
-    dprintk_video(1, dev->name,
-      "[%p/%d] buffer_queue - first active, buf cnt = %d, q->count = %d\n",
+    dprintk_video(1, dev->name, "[%p/%d] buffer_queue - first active, buf cnt = %d, q->count = %d\n",
       buf, buf->vb.i, buf->count, q->count);
   } else {
     prev =
@@ -78,8 +76,7 @@ static void buffer_queue(struct videobuf_queue *vq, struct videobuf_buffer *vb)
         buf->vb.state = VIDEOBUF_ACTIVE;
         buf->count = q->count++;
         mod_timer(&q->timeout, jiffies + BUFFER_TIMEOUT);
-        dprintk_video(1, dev->name,
-                "[%p/%d] buffer_queue - append to active, buf->count=%d\n",
+        dprintk_video(1, dev->name, "[%p/%d] buffer_queue - append to active, buf->count=%d\n",
                 buf, buf->vb.i, buf->count);
       } else {
         list_add_tail(&buf->vb.queue, &q->queued);
@@ -120,7 +117,7 @@ static int buffer_prepare(struct videobuf_queue *q, struct videobuf_buffer *vb,
   struct unicorn_dev *dev = fh->dev;
   struct unicorn_buffer *buf = container_of(vb, struct unicorn_buffer, vb);
   int rc;
-  dprintk_video(1, dev->name, "%s()\n", __func__);
+
   BUG_ON(NULL == fh->fmt);
   if (fh->width < MIN_WIDTH || fh->width > MAX_WIDTH ||
       fh->height < MIN_HEIGHT || fh->height > MAX_HEIGHT)
@@ -141,6 +138,7 @@ static int buffer_prepare(struct videobuf_queue *q, struct videobuf_buffer *vb,
   }
 
   if (VIDEOBUF_NEEDS_INIT == buf->vb.state) {
+    dprintk_video(2, dev->name, "%s() iolock on video device %d\n", __func__, fh->channel);
     rc = videobuf_iolock(q, &buf->vb, NULL);
     if (0 != rc) {
       printk(KERN_DEBUG "videobuf_iolock failed!\n");
@@ -148,7 +146,7 @@ static int buffer_prepare(struct videobuf_queue *q, struct videobuf_buffer *vb,
     }
   }
 
-  dprintk_video(1, dev->name, "[%p/%d] buffer_prep - %dx%d %dbpp \"%s\" \n",
+  dprintk_video(2, dev->name, "[%p/%d] buffer_prep - %dx%d %dbpp \"%s\" \n",
     buf, buf->vb.i, fh->width, fh->height, fh->fmt->depth,
     fh->fmt->name);
 
@@ -156,7 +154,7 @@ static int buffer_prepare(struct videobuf_queue *q, struct videobuf_buffer *vb,
 
   return 0;
 
-      fail:
+fail:
   unicorn_free_buffer(q, buf);
   return rc;
 }
@@ -166,13 +164,11 @@ void buffer_release(struct videobuf_queue *q, struct videobuf_buffer *vb)
   struct unicorn_fh *fh = q->priv_data;
   struct unicorn_dev *dev = fh->dev;
 
-  struct unicorn_buffer *buf =
-      container_of(vb, struct unicorn_buffer, vb);
-  dprintk_video(1, dev->name, "%s()\n", __func__);
+  struct unicorn_buffer *buf = container_of(vb, struct unicorn_buffer, vb);
   unicorn_free_buffer(q, buf);
 }
 
-struct videobuf_queue_ops unicorn_video_qops = {
+const struct videobuf_queue_ops unicorn_video_qops = {
   .buf_setup = buffer_setup,
   .buf_prepare = buffer_prepare,
   .buf_queue = buffer_queue,

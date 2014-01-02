@@ -1,33 +1,34 @@
 /*
-    unicorn-video.c - V4L2 driver for FPGA UNICORN
+   unicorn-video.c - V4L2 driver for FPGA UNICORN
 
-    Copyright (c) 2010 Aldebaran robotics
-    joseph pinkasfeld joseph.pinkasfeld@gmail.com
-    Ludovic SMAL <lsmal@aldebaran-robotics.com>
+   Copyright (c) 2010 Aldebaran robotics
+   joseph pinkasfeld joseph.pinkasfeld@gmail.com
+   Ludovic SMAL <lsmal@aldebaran-robotics.com>
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 2 of the License, or
+   (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+   */
 
 #define __UNICORN_VIDEO_C
 
-#include "unicorn.h"
-
-#ifdef CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
 #include "unicorn-video.h"
 
-
+#ifdef CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
+#include <linux/videodev2.h>
+#include "unicorn-mmap.h"
+#include "unicorn-ioctlops.h"
+#include "unicorn-vbuff.h"
 
 static unsigned int video_nr[] = {[0 ... (UNICORN_MAXBOARDS - 1)] = UNSET };
 module_param_array(video_nr, int, NULL, 0444);
@@ -44,8 +45,8 @@ module_param(max_subdev_per_video_bus, int, 0444);
 MODULE_PARM_DESC(max_subdev_per_video_bus, "maximal capture subdevice per physical video bus");
 
 int unicorn_start_video_dma(struct unicorn_dev *dev,
-          struct unicorn_buffer *buf,
-          struct unicorn_fh *fh)
+    struct unicorn_buffer *buf,
+    struct unicorn_fh *fh)
 {
   unsigned long addr=0;
   int size = 0;
@@ -56,32 +57,32 @@ int unicorn_start_video_dma(struct unicorn_dev *dev,
 
   dev->interrupts_controller->irq.ctrl |=
 
-   /* Init IT Channel 0 */
-   IT_DMA_CHAN_0_TX_BUFF_0_END   |
-   IT_DMA_CHAN_0_TX_BUFF_1_END   |
-   IT_DMA_CHAN_0_ERROR           |
-   IT_DMA_CHAN_0_FIFO_FULL_ERROR |
-   IT_VIDEO_CHANNEL_0_OF_TRAME   |
+    /* Init IT Channel 0 */
+    IT_DMA_CHAN_0_TX_BUFF_0_END   |
+    IT_DMA_CHAN_0_TX_BUFF_1_END   |
+    IT_DMA_CHAN_0_ERROR           |
+    IT_DMA_CHAN_0_FIFO_FULL_ERROR |
+    IT_VIDEO_CHANNEL_0_OF_TRAME   |
 
-   /* Init IT Channel 1 */
-   IT_DMA_CHAN_1_TX_BUFF_0_END   |
-   IT_DMA_CHAN_1_TX_BUFF_1_END   |
-   IT_DMA_CHAN_1_ERROR           |
-   IT_DMA_CHAN_1_FIFO_FULL_ERROR |
-   IT_VIDEO_CHANNEL_1_OF_TRAME   |
+    /* Init IT Channel 1 */
+    IT_DMA_CHAN_1_TX_BUFF_0_END   |
+    IT_DMA_CHAN_1_TX_BUFF_1_END   |
+    IT_DMA_CHAN_1_ERROR           |
+    IT_DMA_CHAN_1_FIFO_FULL_ERROR |
+    IT_VIDEO_CHANNEL_1_OF_TRAME   |
 
-   /* AHB32 Error */
-   IT_ABH32_ERROR                |
-   IT_ABH32_FIFO_RX_ERROR        |
-   IT_ABH32_FIFO_TX_ERROR        |
-   IT_RT;
+    /* AHB32 Error */
+    IT_ABH32_ERROR                |
+    IT_ABH32_FIFO_RX_ERROR        |
+    IT_ABH32_FIFO_TX_ERROR        |
+    IT_RT;
 
   dev->global_register->video_in_reset |= 0x01 << fh->input;
 
   dev->global_register->video[fh->channel].ctrl &= ~VIDEO_CONTROL_INPUT_SEL_MASK;
   dev->global_register->video[fh->channel].ctrl |= (fh->input)<<VIDEO_CONTROL_INPUT_SEL_POS;
 
-//  dev->global_register->video[fh->channel].ctrl |= VIDEO_CONTROL_TIMESTAMP_INSERT;
+  //  dev->global_register->video[fh->channel].ctrl |= VIDEO_CONTROL_TIMESTAMP_INSERT;
 
   dev->global_register->video[fh->channel].nb_lines = fh->height;
 
@@ -115,30 +116,27 @@ int unicorn_start_video_dma(struct unicorn_dev *dev,
 }
 
 int unicorn_recover_fifo_full_error(struct unicorn_dev *dev,
-                                    int channel)
+    int channel)
 {
-
   dprintk_video(1,dev->name,"%s() channel:%d",__func__, channel);
 
   spin_lock(&dev->slock);
 
-    dev->fifo_full_error |= 1<<channel;
-    dev->global_register->video[channel].ctrl &= ~VIDEO_CONTROL_ENABLE;
-    dev->global_register->video_in_reset  |=  (0x01 << (
+  dev->fifo_full_error |= 1<<channel;
+  dev->global_register->video[channel].ctrl &= ~VIDEO_CONTROL_ENABLE;
+  dev->global_register->video_in_reset  |=  (0x01 << (
         (dev->global_register->video[channel].ctrl & VIDEO_CONTROL_INPUT_SEL_MASK)>>VIDEO_CONTROL_INPUT_SEL_POS));
-    dev->pcie_dma->dma[channel].ctrl |= DMA_CONTROL_RESET;
+  dev->pcie_dma->dma[channel].ctrl |= DMA_CONTROL_RESET;
 
   spin_unlock(&dev->slock);
 
-
   return 0;
-
 }
 
 int unicorn_continue_video_dma(struct unicorn_dev *dev,
-                               struct unicorn_buffer *buf,
-                               struct unicorn_fh *fh,
-                               int buff_index)
+    struct unicorn_buffer *buf,
+    struct unicorn_fh *fh,
+    int buff_index)
 {
   unsigned long addr=0;
   int size=0;
@@ -152,8 +150,8 @@ int unicorn_continue_video_dma(struct unicorn_dev *dev,
 }
 
 int unicorn_video_dma_flipflop_buf(struct unicorn_dev *dev,
-          struct unicorn_buffer *buf,
-          struct unicorn_fh *fh)
+    struct unicorn_buffer *buf,
+    struct unicorn_fh *fh)
 {
   unsigned long addr=0;
   int size=0;
@@ -196,14 +194,13 @@ int unicorn_video_change_fps(struct unicorn_dev *dev, struct unicorn_fh *fh)
   dev->fifo_full_error |= 1<<channel;
   dev->global_register->video[channel].ctrl &= ~VIDEO_CONTROL_ENABLE;
   dev->global_register->video_in_reset  |=  (0x01 << (
-      (dev->global_register->video[channel].ctrl & VIDEO_CONTROL_INPUT_SEL_MASK)>>VIDEO_CONTROL_INPUT_SEL_POS));
+        (dev->global_register->video[channel].ctrl & VIDEO_CONTROL_INPUT_SEL_MASK)>>VIDEO_CONTROL_INPUT_SEL_POS));
   dev->pcie_dma->dma[channel].ctrl |= DMA_CONTROL_RESET;
 
   spin_unlock(&dev->slock);
 
   return 0;
 }
-
 
 struct video_device *unicorn_vdev_init(struct unicorn_dev *dev,
     struct pci_dev *pci,
@@ -214,8 +211,7 @@ struct video_device *unicorn_vdev_init(struct unicorn_dev *dev,
   dprintk_video(1, dev->name, "%s() %d\n", __func__,template->index);
 
   vfd = video_device_alloc();
-  if (NULL == vfd)
-  {
+  if (NULL == vfd) {
     return NULL;
   }
   *vfd = *template;
@@ -228,17 +224,28 @@ struct video_device *unicorn_vdev_init(struct unicorn_dev *dev,
 
 void unicorn_video_unregister(struct unicorn_dev *dev, int chan_num)
 {
+  struct unicorn_fh *fh = dev->vidq[chan_num].fh;
+  int index=0;
+
+  // Free FileHandler
+  {
+    for (index=0; index < VIDEO_MAX_FRAME; ++index) {
+      video_mmap_mapper_free(fh, index);
+    }
+    kfree(fh);
+    dev->vidq[chan_num].fh = NULL;
+  }
+
   if (dev->video_dev[chan_num]) {
     if (video_is_registered(dev->video_dev[chan_num])) {
-     video_unregister_device(dev->video_dev[chan_num]);
+      video_unregister_device(dev->video_dev[chan_num]);
     }
     else {
       video_device_release(dev->video_dev[chan_num]);
     }
 
     dev->video_dev[chan_num] = NULL;
-
-    printk(KERN_WARNING "device %d released!\n", chan_num);
+    dprintk(0, dev->name, "%s() device %d released!\n", __func__, chan_num);
   }
 }
 
@@ -321,9 +328,8 @@ void unicorn_video_timeout(unsigned long data)
   spin_unlock_irqrestore(&dev->slock, flags);
 }
 
-
 int unicorn_video_register(struct unicorn_dev *dev, int chan_num,
-         struct video_device *video_template)
+    struct video_device *video_template)
 {
   int err;
   /* init video dma queues */
@@ -338,40 +344,54 @@ int unicorn_video_register(struct unicorn_dev *dev, int chan_num,
   INIT_LIST_HEAD(&dev->vidq[chan_num].queued);
   dev->vidq[chan_num].timeout.function = unicorn_video_timeout;
   dev->vidq[chan_num].timeout.data =
-      (unsigned long)&dev->timeout_data[chan_num];
+    (unsigned long)&dev->timeout_data[chan_num];
   init_timer(&dev->vidq[chan_num].timeout);
 
   /* register v4l devices */
   dev->video_dev[chan_num] =
-      unicorn_vdev_init(dev, dev->pci, video_template, "video");
+    unicorn_vdev_init(dev, dev->pci, video_template, "video");
   err =
-      video_register_device(dev->video_dev[chan_num], VFL_TYPE_GRABBER,
-          video_nr[dev->nr]);
+    video_register_device(dev->video_dev[chan_num], VFL_TYPE_GRABBER,
+        video_nr[dev->nr]);
 
   if (err < 0) {
-    goto fail_unreg;
+    unicorn_video_unregister(dev, chan_num);
+    return err;
   }
 
-//  init_controls(dev, chan_num);
 
+  // Initialize FileHandler
+  {
+    struct unicorn_fh *fh;
+    fh = kzalloc(sizeof(*fh), GFP_KERNEL);
+    if (NULL == fh) {
+      return -ENOMEM;
+    }
+    fh->dev = dev;
+    fh->type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    fh->width = MIN_WIDTH;
+    fh->height = MIN_HEIGHT;
+
+    fh->channel = chan_num;
+    fh->input = fh->channel;
+    fh->fmt = format_by_fourcc(V4L2_PIX_FMT_YUYV);
+
+    dev->vidq[chan_num].fh = fh;
+  }
   return 0;
-
-  fail_unreg:
-    unicorn_video_unregister(dev, chan_num);
-  return err;
 }
 
-static int unicorn_probe_camera(struct unicorn_dev *dev, struct v4l2_subdev **v4l2_subdev, struct camera_to_probe_t *cam_to_probe)
-   
+static int unicorn_probe_camera(struct unicorn_dev *dev, struct v4l2_subdev **v4l2_subdev,
+    struct camera_to_probe_t *cam_to_probe)
 {
   int ret;
   struct v4l2_dbg_chip_ident chip;
 
   *v4l2_subdev = v4l2_i2c_new_subdev(&dev->v4l2_dev,
-                            cam_to_probe->i2c_adapter,
-                            cam_to_probe->name,
-                            cam_to_probe->name,
-                            cam_to_probe->i2c_addr, NULL);
+      cam_to_probe->i2c_adapter,
+      cam_to_probe->name,
+      cam_to_probe->name,
+      cam_to_probe->i2c_addr, NULL);
   chip.ident = V4L2_IDENT_NONE;
   chip.match.type = V4L2_CHIP_MATCH_I2C_ADDR;
   chip.match.addr = cam_to_probe->i2c_addr;
@@ -383,16 +403,16 @@ static int unicorn_probe_camera(struct unicorn_dev *dev, struct v4l2_subdev **v4
       dprintk_video(1, dev->name, "i2c subdev is null\n");
     if (ret == -ENOIOCTLCMD )
       printk(KERN_INFO "i2c core or chip ident is null\n");
-  	*v4l2_subdev = NULL;
-	  dprintk_video(1, dev->name, "%s : Device with ident 0x%x not found ", cam_to_probe->name,cam_to_probe->ident);
+    *v4l2_subdev = NULL;
+    dprintk_video(1, dev->name, "%s : Device with ident 0x%x not found ", cam_to_probe->name,cam_to_probe->ident);
     return 0;
   }
 
   if (chip.ident != cam_to_probe->ident)
   {
     dprintk_video(1, dev->name, "%s : Unsupported sensor type 0x%x",
-      cam_to_probe->name, chip.ident);
- 	  *v4l2_subdev = NULL;
+        cam_to_probe->name, chip.ident);
+    *v4l2_subdev = NULL;
     return 0;
   }
 
@@ -400,7 +420,7 @@ static int unicorn_probe_camera(struct unicorn_dev *dev, struct v4l2_subdev **v4
 }
 
 /* Camera subdevs supported in Aldebaran's robots
- */
+*/
 static struct {
   char name[32];
   int  ident;
@@ -408,19 +428,19 @@ static struct {
   int  found_on_i2c_adapter[MAX_I2C_ADAPTER];
 }probed_subdevs[] = {
   {  .name     = "ov5640",
-     .ident    = V4L2_IDENT_OV5640,
-     .i2c_addr = 0x3c,
-     .found_on_i2c_adapter = {0}
+    .ident    = V4L2_IDENT_OV5640,
+    .i2c_addr = 0x3c,
+    .found_on_i2c_adapter = {0}
   }
   ,{ .name     = "mt9m114",
-     .ident    = V4L2_IDENT_MT9M114,
-     .i2c_addr = 0x48,
-     .found_on_i2c_adapter = {0}
+    .ident    = V4L2_IDENT_MT9M114,
+    .i2c_addr = 0x48,
+    .found_on_i2c_adapter = {0}
   }
   ,{ .name     = "mt9m114",
-     .ident    = V4L2_IDENT_MT9M114,
-     .i2c_addr = 0x5d,
-     .found_on_i2c_adapter = {0}
+    .ident    = V4L2_IDENT_MT9M114,
+    .i2c_addr = 0x5d,
+    .found_on_i2c_adapter = {0}
   }
 };
 
@@ -480,8 +500,8 @@ int unicorn_init_video(struct unicorn_dev *dev)
   for (i = 0; i < VID_CHANNEL_NUM; i++) {
     if (unicorn_video_register(dev, i, video_template[i]) < 0) {
       printk(KERN_ERR
-             "%s() Failed to register video channel %d\n",
-             __func__, i);
+          "%s() Failed to register video channel %d\n",
+          __func__, i);
       return -1;
     }
     dev->global_register->video[i].ctrl &= ~VIDEO_CONTROL_ENABLE;

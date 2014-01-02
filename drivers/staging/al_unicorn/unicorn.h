@@ -284,6 +284,7 @@ struct unicorn_fh {
   unsigned int width, height;
 
   struct videobuf_queue vidq;
+  struct videobuf_dma_contig_memory *dma_mem[VIDEO_MAX_FRAME];
   int channel;
   int input;
 };

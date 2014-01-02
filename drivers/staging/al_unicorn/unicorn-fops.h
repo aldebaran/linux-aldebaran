@@ -1,5 +1,5 @@
 /*
-    unicorn-ioctlops.h - V4L2 driver for unicorn
+    unicorn-fops.h - V4L2 driver for unicorn
 
     Copyright (c) 2013 Aldebaran robotics
     Corentin Le Molgat <clemolgat@aldebaran-robotics.com>
@@ -19,14 +19,13 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef UNICORN_IOCTLOPS_H
-#define UNICORN_IOCTLOPS_H
+#ifndef UNICORN_FOPS_H
+#define UNICORN_FOPS_H
 
-#ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
-#include <media/v4l2-ioctl.h>
-#include "unicorn.h"
+#ifdef CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
+#include <media/v4l2-dev.h>
 
-extern const struct v4l2_ioctl_ops video_ioctl_ops;
+extern const struct v4l2_file_operations video_fops;
 #endif
 
 #endif

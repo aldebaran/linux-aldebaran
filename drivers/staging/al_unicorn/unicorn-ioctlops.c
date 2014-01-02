@@ -20,11 +20,12 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#include "unicorn.h"
+#include "unicorn-ioctlops.h"
 
 #ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
+#include "unicorn.h"
 #include "unicorn-video.h"
-
+#include "unicorn-resource.h"
 
 #define FORMAT_FLAGS_PACKED       0x01
 
@@ -86,7 +87,6 @@ static int vidioc_enum_fmt_vid_cap(struct file *file, void *priv,
 static int vidioc_try_fmt_vid_cap(struct file *file, void *priv, struct v4l2_format *f)
 {
   struct unicorn_fmt *fmt;
-  enum v4l2_field field;
   unsigned int maxw, maxh;
   unsigned int minw, minh;
 
@@ -97,7 +97,6 @@ static int vidioc_try_fmt_vid_cap(struct file *file, void *priv, struct v4l2_for
            __func__, f->fmt.pix.pixelformat);
     return -EINVAL;
   }
-  field = f->fmt.pix.field;
   maxw = MAX_WIDTH;
   maxh = MAX_HEIGHT;
   minw = MIN_WIDTH;
@@ -135,6 +134,7 @@ int vidioc_g_fmt_vid_cap(struct file *file, void *priv, struct v4l2_format *f)
 static int vidioc_reqbufs(struct file *file, void *priv, struct v4l2_requestbuffers *p)
 {
   struct unicorn_fh *fh = priv;
+  dprintk_video(1, fh->dev->name, "request %d buffers for video device %d\n", p->count, fh->channel);
   return videobuf_reqbufs(&fh->vidq, p);
 }
 
@@ -147,6 +147,7 @@ static int vidioc_querybuf(struct file *file, void *priv, struct v4l2_buffer *p)
 static int vidioc_qbuf(struct file *file, void *priv, struct v4l2_buffer *p)
 {
   struct unicorn_fh *fh = priv;
+  dprintk_video(1, fh->dev->name, "%s() queue buffer for video device %d\n", __func__, fh->channel);
   return videobuf_qbuf(&fh->vidq, p);
 }
 
@@ -415,67 +416,11 @@ static int vidioc_dqbuf(struct file *file, void *priv, struct v4l2_buffer *p)
   return ret;
 }
 
-// resource management
-int res_get(struct unicorn_dev *dev, struct unicorn_fh *fh, unsigned int bit)
-{
-  dprintk_video(1, dev->name, "%s()\n", __func__);
-  if (fh->resources & bit)
-    /* have it already allocated */
-    return 1;
-
-  /* is it free? */
-  mutex_lock(&dev->mutex);
-  if (dev->resources & bit)
-  {
-    /* no, someone else uses it */
-    mutex_unlock(&dev->mutex);
-    return 0;
-  }
-  /* it's free, grab it */
-  fh->resources |= bit;
-  dev->resources |= bit;
-  dprintk_video(1, dev->name, "res: get %d\n", bit);
-  mutex_unlock(&dev->mutex);
-  return 1;
-}
-
-int res_check(struct unicorn_fh *fh, unsigned int bit)
-{
-  return fh->resources & bit;
-}
-
-int res_locked(struct unicorn_dev *dev, unsigned int bit)
-{
-  return dev->resources & bit;
-}
-
-void res_free(struct unicorn_dev *dev, struct unicorn_fh *fh, unsigned int bits)
-{
-  BUG_ON((fh->resources & bits) != bits);
-  dprintk_video(1, dev->name, "%s()\n", __func__);
-
-  mutex_lock(&dev->mutex);
-  fh->resources &= ~bits;
-  dev->resources &= ~bits;
-  dprintk_video(1, dev->name, "res: put %d\n", bits);
-  mutex_unlock(&dev->mutex);
-}
-
-int get_resource(struct unicorn_fh *fh, int resource)
-{
-  switch (fh->type) {
-  case V4L2_BUF_TYPE_VIDEO_CAPTURE:
-    return resource;
-  default:
-    BUG();
-    return 0;
-  }
-}
-
 static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = fh->dev;
+  int err;
 
   if (unlikely(fh->type != V4L2_BUF_TYPE_VIDEO_CAPTURE))
     return -EINVAL;
@@ -486,7 +431,10 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
   if (unlikely(!res_get(dev, fh, get_resource(fh, 0x01 << fh->channel))))
     return -EBUSY;
 
-  return videobuf_streamon(&fh->vidq);
+  dprintk_video(1, fh->dev->name, "streamon video device %d ...\n", fh->channel);
+  err = videobuf_streamon(&fh->vidq);
+  dprintk_video(1, fh->dev->name, "streamon video device %d DONE\n", fh->channel);
+  return err;
 }
 
 static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
@@ -501,7 +449,9 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
     return -EINVAL;
 
   res = get_resource(fh,  0x01 << fh->channel);
+  dprintk_video(1, fh->dev->name, "streamoff for video device %d ...\n", fh->channel);
   err = videobuf_streamoff(&fh->vidq);
+  dprintk_video(1, fh->dev->name, "streamoff for video device %d DONE\n", fh->channel);
   if (err < 0)
     return err;
   res_free(dev, fh, res);

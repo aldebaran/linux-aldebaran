@@ -31,16 +31,16 @@
 #include "unicorn-i2c.h"
 
 #ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
+#include "unicorn-fops.h"
+#include "unicorn-ioctlops.h"
 #include "unicorn-video.h"
 #endif
 
 #define DRIVER_AUTHOR 					"Joseph Pinkasfeld <joseph.pinkasfeld@gmail.com>;Ludovic SMAL <lsmal@aldebaran-robotics.com>"
 #define DRIVER_DESC   					"Aldebaran Robotics Unicorn dual channel video acquisition"
 
-
 static unsigned int unicorn_devcount = 0;
 static struct unicorn_dev unicorn;
-
 
 module_param(unicorn_debug, int, 0644);
 MODULE_PARM_DESC(unicorn_debug, "enable debug messages [Unicorn core]");
@@ -189,15 +189,12 @@ static irqreturn_t unicorn_irq_handler(int irq, void *dev_id)
 }
 
 #ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
-extern const struct v4l2_ioctl_ops video_ioctl_ops;
-extern const struct v4l2_file_operations video_fops;
 struct video_device unicorn_video_template0 = {
   .name = "unicorn-video0",
   .fops = &video_fops,
   .ioctl_ops = &video_ioctl_ops,
   .index = 0,
 };
-
 
 struct video_device unicorn_video_template1 = {
   .name = "unicorn-video1",

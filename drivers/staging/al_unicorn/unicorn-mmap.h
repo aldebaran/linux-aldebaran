@@ -1,5 +1,5 @@
 /*
-    unicorn-ioctlops.h - V4L2 driver for unicorn
+    unicorn-mmap.h - V4L2 driver for unicorn
 
     Copyright (c) 2013 Aldebaran robotics
     Corentin Le Molgat <clemolgat@aldebaran-robotics.com>
@@ -19,14 +19,15 @@
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
 
-#ifndef UNICORN_IOCTLOPS_H
-#define UNICORN_IOCTLOPS_H
+#ifndef UNICORN_MMAP_H
+#define UNICORN_MMAP_H
 
 #ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
-#include <media/v4l2-ioctl.h>
+#include <linux/mm.h>
 #include "unicorn.h"
 
-extern const struct v4l2_ioctl_ops video_ioctl_ops;
+int video_mmap_mapper_alloc(struct unicorn_fh *fh, unsigned int index, struct vm_area_struct *vma);
+int video_mmap_mapper_free(struct unicorn_fh *fh, unsigned int index);
 #endif
 
 #endif
