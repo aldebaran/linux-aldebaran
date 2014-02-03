@@ -240,7 +240,7 @@ static const struct ov5640_reg configscript_common1[] = {
 	{ SC_PLL_CONTROL_1, 0x11 },
 	{ SC_PLL_CONTROL_2, 0x46 },
 	{ SC_PLL_CONTROL_3, 0x13 },
-	{ SYSTEM_ROOT_DIVIDER, 0x01},
+	{ SYSTEM_ROOT_DIVIDER, 0x12},
 	{ CCIR656_CTRL, 0x01},
 	{ CCIR656_CTRL_00, 0x03},
 	{ 0x3630, 0x2e },
@@ -1521,7 +1521,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		if (ret)
 			return ret;
 
-		if ((i == ov5640_mode_QSXGA_2560_1920) ||
+		/*if ((i == ov5640_mode_QSXGA_2560_1920) ||
 			(i == ov5640_mode_720P_1280_720) ||
 			(i == ov5640_mode_1080P_1920_1080))
 		{
@@ -1533,7 +1533,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		}
 
 		if (ret)
-		 return ret;
+		 return ret;*/
 
 		if ((i == ov5640_mode_QVGA_320_240) ||
 		    (i == ov5640_mode_VGA_640_480))
