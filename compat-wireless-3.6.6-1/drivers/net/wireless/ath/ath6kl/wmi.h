@@ -1201,7 +1201,7 @@ enum wmi_phy_mode {
 	WMI_11G_HT20	= 0x6,
 };
 
-#define WMI_MAX_CHANNELS        32
+#define WMI_MAX_CHANNELS        64
 
 /*
  *  WMI_RSSI_THRESHOLD_PARAMS_CMDID
