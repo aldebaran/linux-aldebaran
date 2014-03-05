@@ -35,7 +35,7 @@
 
 static int debug = 0;
 module_param(debug, int, 0644);
-MODULE_PARM_DESC(debug, "Debug level (0-1)");
+MODULE_PARM_DESC(debug, "Debug level (0-2)");
 
 #define dprintk(level, name,  fmt, arg...)\
   do { if (debug >= level)\
@@ -77,10 +77,10 @@ enum ov5640_mode {
 	ov5640_mode_MAX = 5
 };
 
-
 struct ov5640 {
-	struct v4l2_subdev subdev;
-	struct v4l2_format format;
+  struct v4l2_subdev subdev;
+  struct v4l2_format format;
+  int angle;
 };
 
 static inline struct ov5640 *to_ov5640(struct v4l2_subdev *sd)
@@ -1191,27 +1191,105 @@ static int ov5640_g_saturation(struct v4l2_subdev *sd, __s32 *value)
 	return 0;
 }
 
+/*import numpy as np
+t = np.arange(0, 256, 1.0) * 2.0 * np.pi / 256
+cos = np.round(np.cos(t) * 128)
+sin = np.round(np.sin(t) * 128)
+def generate(name, table):
+  s = "static char "+ name +"_lut[] = {"
+  for i in range(len(table)):
+    if 0 == i%8 : s += "\n";
+    s += `int(table[i])`
+    if i != len(table)-1: s += ", ";
+  s += "};"
+  print s
+generate("cos", cos)
+generate("sin", sin)*/
+static char cos_lut[] = {
+128, 128, 128, 128, 127, 127, 127, 126,
+126, 125, 124, 123, 122, 122, 121, 119,
+118, 117, 116, 114, 113, 111, 110, 108,
+106, 105, 103, 101, 99, 97, 95, 93,
+91, 88, 86, 84, 81, 79, 76, 74,
+71, 68, 66, 63, 60, 58, 55, 52,
+49, 46, 43, 40, 37, 34, 31, 28,
+25, 22, 19, 16, 13, 9, 6, 3,
+0, -3, -6, -9, -13, -16, -19, -22,
+-25, -28, -31, -34, -37, -40, -43, -46,
+-49, -52, -55, -58, -60, -63, -66, -68,
+-71, -74, -76, -79, -81, -84, -86, -88,
+-91, -93, -95, -97, -99, -101, -103, -105,
+-106, -108, -110, -111, -113, -114, -116, -117,
+-118, -119, -121, -122, -122, -123, -124, -125,
+-126, -126, -127, -127, -127, -128, -128, -128,
+-128, -128, -128, -128, -127, -127, -127, -126,
+-126, -125, -124, -123, -122, -122, -121, -119,
+-118, -117, -116, -114, -113, -111, -110, -108,
+-106, -105, -103, -101, -99, -97, -95, -93,
+-91, -88, -86, -84, -81, -79, -76, -74,
+-71, -68, -66, -63, -60, -58, -55, -52,
+-49, -46, -43, -40, -37, -34, -31, -28,
+-25, -22, -19, -16, -13, -9, -6, -3,
+-0, 3, 6, 9, 13, 16, 19, 22,
+25, 28, 31, 34, 37, 40, 43, 46,
+49, 52, 55, 58, 60, 63, 66, 68,
+71, 74, 76, 79, 81, 84, 86, 88,
+91, 93, 95, 97, 99, 101, 103, 105,
+106, 108, 110, 111, 113, 114, 116, 117,
+118, 119, 121, 122, 122, 123, 124, 125,
+126, 126, 127, 127, 127, 128, 128, 128};
+static char sin_lut[] = {
+0, 3, 6, 9, 13, 16, 19, 22,
+25, 28, 31, 34, 37, 40, 43, 46,
+49, 52, 55, 58, 60, 63, 66, 68,
+71, 74, 76, 79, 81, 84, 86, 88,
+91, 93, 95, 97, 99, 101, 103, 105,
+106, 108, 110, 111, 113, 114, 116, 117,
+118, 119, 121, 122, 122, 123, 124, 125,
+126, 126, 127, 127, 127, 128, 128, 128,
+128, 128, 128, 128, 127, 127, 127, 126,
+126, 125, 124, 123, 122, 122, 121, 119,
+118, 117, 116, 114, 113, 111, 110, 108,
+106, 105, 103, 101, 99, 97, 95, 93,
+91, 88, 86, 84, 81, 79, 76, 74,
+71, 68, 66, 63, 60, 58, 55, 52,
+49, 46, 43, 40, 37, 34, 31, 28,
+25, 22, 19, 16, 13, 9, 6, 3,
+0, -3, -6, -9, -13, -16, -19, -22,
+-25, -28, -31, -34, -37, -40, -43, -46,
+-49, -52, -55, -58, -60, -63, -66, -68,
+-71, -74, -76, -79, -81, -84, -86, -88,
+-91, -93, -95, -97, -99, -101, -103, -105,
+-106, -108, -110, -111, -113, -114, -116, -117,
+-118, -119, -121, -122, -122, -123, -124, -125,
+-126, -126, -127, -127, -127, -128, -128, -128,
+-128, -128, -128, -128, -127, -127, -127, -126,
+-126, -125, -124, -123, -122, -122, -121, -119,
+-118, -117, -116, -114, -113, -111, -110, -108,
+-106, -105, -103, -101, -99, -97, -95, -93,
+-91, -88, -86, -84, -81, -79, -76, -74,
+-71, -68, -66, -63, -60, -58, -55, -52,
+-49, -46, -43, -40, -37, -34, -31, -28,
+-25, -22, -19, -16, -13, -9, -6, -3};
+
 static int ov5640_s_hue(struct v4l2_subdev *sd, int value)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
+  struct i2c_client *client = v4l2_get_subdevdata(sd);
+  int ret;
 
+  dprintk(2, "OV5640", "set hue: angle: %d, cos: %d, sin: %d", value, cos_lut[value], sin_lut[value]);
+  ret = ov5640_reg_write(client, SDE_CTRL_HUE_COS, cos_lut[value]);
+  ret += ov5640_reg_write(client, SDE_CTRL_HUE_SIN, sin_lut[value]);
+  to_ov5640(sd)->angle = value;
 
-	ov5640_reg_write(client, SDE_CTRL_HUE_COS, value);
-	ov5640_reg_write(client, SDE_CTRL_HUE_SIN, value);
-
-	return 0;
+  return ret;
 }
 
 static int ov5640_g_hue(struct v4l2_subdev *sd, __s32 *value)
 {
-	u8 reg;
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
-	ov5640_reg_read(client, SDE_CTRL_HUE_COS, &reg);
-
-	*value=reg;
-
-	return 0;
+  *value = to_ov5640(sd)->angle;
+  dprintk(2, "OV5640", "get hue: angle: %d, cos: %d, sin: %d", *value, cos_lut[*value], sin_lut[*value]);
+  return 0;
 }
 
 static int ov5640_s_gain(struct v4l2_subdev *sd, int value)
@@ -1621,6 +1699,7 @@ static int ov5640_enum_fmt(struct v4l2_subdev *subdev,
 static int ov5640_init(struct v4l2_subdev *subdev, u32 val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(subdev);
+  to_ov5640(subdev)->angle = 0;
 
 	int ret = 0;
 	u8 revision = 0;
