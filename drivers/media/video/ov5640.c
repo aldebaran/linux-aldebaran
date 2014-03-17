@@ -70,6 +70,10 @@ enum ov5640_mode {
 	ov5640_mode_MAX = 5
 };
 
+/** struct ov5640 - sensor object
+ * @subdev: v4l2_subdev associated data
+ * @format: associated media bus format
+ * @angle: current hue in range [0-255]*/
 struct ov5640 {
 	struct v4l2_subdev subdev;
 	struct v4l2_format format;
@@ -81,20 +85,14 @@ static inline struct ov5640 *to_ov5640(struct v4l2_subdev *sd)
 	return container_of(sd, struct ov5640, subdev);
 }
 
-/**
- * struct ov5640_reg - ov5640 register format
- * @reg: 16-bit offset to register
- * @val: 8/16/32-bit register value
- * @length: length of the register
- *
+/** struct ov5640_reg - ov5640 register format
  * Define a structure for OV5640 register initialization values
- */
-
+ * @reg: 16-bit offset to register
+ * @val: 8-bit register value*/
 struct ov5640_reg {
-	u16	reg;
-	u8	val;
+	u16 reg;
+	u8 val;
 };
-
 
 /* SYSTEM AND I/O pad control registers */
 #define SYSTEM_RESET_02      0x3002
@@ -111,8 +109,8 @@ struct ov5640_reg {
 #define SC_PLL_CONTROL_3     0x3037
 
 /* SCCB control */
-#define SCCB_SYSTEM_CTRL_1		0x3103
-#define SYSTEM_ROOT_DIVIDER		0x3108
+#define SCCB_SYSTEM_CTRL_1  0x3103
+#define SYSTEM_ROOT_DIVIDER 0x3108
 
 /* AEC/AGC control registers */
 #define AEC_AGC_MANUAL			0x3503
@@ -123,15 +121,15 @@ struct ov5640_reg {
 #define AEC_EXPOSURE_19_16		0x3500
 #define AEC_EXPOSURE_15_8		0x3501
 #define AEC_EXPOSURE_7_0		0x3502
-#define AEC_MAX_EXPOSURE_HIGH_60HZ      0x3A01
-#define AEC_MAX_EXPOSURE_LOW_60HZ       0x3A02
-#define AEC_STABLE_RANGE_HIGH           0x3A0F
-#define AEC_STABLE_RANGE_LOW            0x3A10
-#define AEC_HYSTERESIS_RANGE_HIGH       0x3A1B
-#define AEC_HYSTERESIS_RANGE_LOW        0x3A1E
+#define AEC_MAX_EXPOSURE_HIGH_60HZ 0x3A01
+#define AEC_MAX_EXPOSURE_LOW_60HZ  0x3A02
+#define AEC_STABLE_RANGE_HIGH      0x3A0F
+#define AEC_STABLE_RANGE_LOW       0x3A10
+#define AEC_HYSTERESIS_RANGE_HIGH  0x3A1B
+#define AEC_HYSTERESIS_RANGE_LOW   0x3A1E
 
-#define AEC_MAX_EXPOSURE_HIGH_50HZ      0x3A14
-#define AEC_MAX_EXPOSURE_LOW_50HZ       0x3A15
+#define AEC_MAX_EXPOSURE_HIGH_50HZ 0x3A14
+#define AEC_MAX_EXPOSURE_LOW_50HZ  0x3A15
 
 #define AVG_READOUT    0x56A1
 
@@ -197,10 +195,10 @@ struct ov5640_reg {
 #define AWB_BLUE_GAIN_LOW		0x51A4
 
 /* SDE Control */
-#define SDE_CTRL_0            0x5580
-#define SDE_CTRL_HUE_COS      0x5581
-#define SDE_CTRL_HUE_SIN      0x5582
-#define SDE_CTRL_CONTRAST     0x5586
+#define SDE_CTRL_0        0x5580
+#define SDE_CTRL_HUE_COS  0x5581
+#define SDE_CTRL_HUE_SIN  0x5582
+#define SDE_CTRL_CONTRAST 0x5586
 #define SDE_CTRL_BRIGHTNESS   0x5587
 #define SDE_CTRL_SATURATION_U 0x5583
 #define SDE_CTRL_SATURATION_V 0x5584
@@ -224,7 +222,8 @@ struct ov5640_reg {
 #define GAMMA_YST0E     0x548F
 #define GAMMA_YST0F     0x5490
 
-
+/* OV5640 init register values
+ * /!\ HIGHLY WRONG according to "OV5640 init R2.16" /!\*/
 static const struct ov5640_reg configscript_common1[] = {
 	{ SCCB_SYSTEM_CTRL_1, 0x03 },
 	{ PAD_OUTPUT_ENABLE_01, 0x1F }, /*PCLK, D[9:6] output enable*/
@@ -371,12 +370,17 @@ static const struct ov5640_reg configscript_common2[] = {
 	{0x5303, 0x00}, {0x5304, 0x08}, {0x5305, 0x30},
 	{0x5306, 0x08}, {0x5307, 0x16}, {0x5309, 0x08},
 	{0x530a, 0x30}, {0x530b, 0x04}, {0x530c, 0x06},
+
+	/* GAMMA */
 	{GAMMA_CONTROL00, 0x01}, {GAMMA_YST00, 0x06}, {GAMMA_YST01, 0x19},
 	{GAMMA_YST02, 0x30},     {GAMMA_YST03, 0x43}, {GAMMA_YST04, 0x53},
 	{GAMMA_YST05, 0x62},     {GAMMA_YST06, 0x6F}, {GAMMA_YST07, 0x7C},
 	{GAMMA_YST08, 0x88},     {GAMMA_YST09, 0x9A}, {GAMMA_YST0A, 0xAB},
 	{GAMMA_YST0B, 0xBB},     {GAMMA_YST0C, 0xD5}, {GAMMA_YST0D, 0xEB},
-	{GAMMA_YST0E, 0xFF},     {GAMMA_YST0F, 0x0F}, {SDE_CTRL_0, 0x07},
+	{GAMMA_YST0E, 0xFF},     {GAMMA_YST0F, 0x0F},
+
+	/* SDE */
+	{SDE_CTRL_0, 0x07},
 	{0x5583, 0x40}, {0x5584, 0x10}, {0x5589, 0x10},
 	{0x558a, 0x00}, {0x558b, 0xf8}, {0x5800, 0x23},
 	{0x5801, 0x15}, {0x5802, 0x10}, {0x5803, 0x10},
@@ -400,8 +404,6 @@ static const struct ov5640_reg configscript_common2[] = {
 	{0x5837, 0x6f}, {0x5838, 0xde}, {0x5839, 0xbf},
 	{0x583a, 0x9f}, {0x583b, 0xbf}, {0x583c, 0xec},
 	{0x5025, 0x00}
-
-
 };
 
 static const struct ov5640_reg ov5640_setting_15fps_QSXGA_2592_1944[] = {
@@ -652,18 +654,14 @@ static int ov5640_find_framesize(u32 width, u32 height)
 	return i;
 }
 
-
-
-/**
- * ov5640_reg_read - Read a value from a register in an ov5640 sensor device
+/** ov5640_reg_read - Read a value from a register in an ov5640 sensor device
  * @client: i2c driver client structure
  * @reg: register address / offset
  * @val: stores the value that gets read
  *
  * Read a value from a register in an ov5640 sensor device.
  * The value is returned in 'val'.
- * Returns zero if successful, or non-zero otherwise.
- */
+ * Returns zero if successful, or non-zero otherwise.*/
 static int ov5640_reg_read(struct i2c_client *client, u16 reg, u8 *val)
 {
 	int ret;
@@ -695,13 +693,11 @@ err:
 	return ret;
 }
 
-/**
- * Write a value to a register in ov5640 sensor device.
+/** Write a value to a register in ov5640 sensor device.
  * @client: i2c driver client structure.
  * @reg: Address of the register to read value from.
  * @val: Value to be written to a specific register.
- * Returns zero if successful, or non-zero otherwise.
- */
+ * Returns zero if successful, or non-zero otherwise.*/
 static int ov5640_reg_write(struct i2c_client *client, u16 reg, u8 val)
 {
 	int ret;
@@ -721,22 +717,21 @@ static int ov5640_reg_write(struct i2c_client *client, u16 reg, u8 val)
 	return 0;
 }
 
-/**
- * Initialize a list of ov5640 registers.
+/** Initialize a list of ov5640 registers.
  * The list of registers is terminated by the pair of values
  * @client: i2c driver client structure.
- * @reglist[]: List of address of the registers to write data.
- * Returns zero if successful, or non-zero otherwise.
- */
-static int ov5640_reg_writes(struct i2c_client *client,
+ * @reglist[]: List of {address,value} of the registers to write data.
+ * @size: number of registers to write.
+ * Returns zero if successful, or non-zero otherwise.*/
+static int ov5640_reg_writes(
+		struct i2c_client *client,
 		const struct ov5640_reg reglist[],
 		int size)
 {
 	int err = 0, i;
 
 	for (i = 0; i < size; i++) {
-		err = ov5640_reg_write(client, reglist[i].reg,
-				reglist[i].val);
+		err = ov5640_reg_write(client, reglist[i].reg, reglist[i].val);
 		if (err)
 			return err;
 	}
@@ -1548,15 +1543,92 @@ static int ov5640_g_chip_ident(struct v4l2_subdev *sd,
 	return v4l2_chip_ident_i2c_client(client, chip, V4L2_IDENT_OV5640, 0);
 }
 
+static int ov5640_init(struct v4l2_subdev *sd, u32 val)
+{
+	int ret = 0;
+	u8 revision = 0;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	v4l2_dbg(1, debug, sd, "Init chip...");
+	to_ov5640(sd)->angle = 0;
+
+
+#if 0 //TODO handle power off/power on of chip
+	ret = ov5640_s_power(sd, 1);
+	if (ret < 0) {
+		dev_err(&client->dev, "OV5640 power up failed\n");
+		return ret;
+	}
+#endif
+
+	ret = ov5640_reg_read(client, CHIP_REVISION, &revision);
+	if (ret) {
+		goto out;
+	}
+	revision &= 0xF;
+	v4l2_info(sd, "Detected a OV5640 chip, revision %x\n", revision);
+
+	ret = ov5640_reg_write(client, SCCB_SYSTEM_CTRL_1, 0x11);
+	if (ret)
+		goto out;
+
+	/* SW Reset */
+	ret = ov5640_reg_set(client, SYSTEM_CTRL_0, 0x80);
+	if (ret) {
+		v4l2_err(sd, "Failed to set the soft reset\n");
+		goto out;
+	}
+
+	msleep(5); // 5ms in the init doc
+
+	ret = ov5640_reg_clr(client, SYSTEM_CTRL_0, 0x80);
+	if (ret) {
+		v4l2_err(sd, "Failed to stop the soft reset\n");
+		goto out;
+	}
+
+	/* SW Powerdown */
+	ret = ov5640_reg_set(client, SYSTEM_CTRL_0, 0x40);
+	if (ret) {
+		v4l2_err(sd, "Failed to power down the device\n");
+		goto out;
+	}
+
+	v4l2_info(sd, "Set default configuration...\n");
+	ret = ov5640_reg_writes(client, configscript_common1,
+			ARRAY_SIZE(configscript_common1));
+	if (ret) {
+		v4l2_err(sd, "Failed to set default configuration 1\n");
+		goto out;
+	}
+
+	ret = ov5640_reg_writes(client, configscript_common2,
+			ARRAY_SIZE(configscript_common2));
+	if (ret) {
+		v4l2_err(sd, "Failed to set default configuration 2\n");
+		goto out;
+	}
+	v4l2_info(sd, "Set default configuration...done\n");
+
+out:
+#if 0 //TODO handle power off/power on of chip
+	ov5640_s_power(sd, 0);
+#endif
+
+	v4l2_dbg(1, debug, sd, "Init chip...done");
+	return ret;
+}
+
 static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct ov5640 *ov5640 = to_ov5640(sd);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	u8 fmtreg = 0, fmtmuxreg = 0, tmpreg = 0;
+	int i;
 	int ret = 0;
 
 	if (enable) {
-		u8 fmtreg = 0, fmtmuxreg = 0;
-		int i;
+		v4l2_dbg(1, debug, sd, "Enable stream...");
 
 		switch ((u32)ov5640->format.fmt.pix.pixelformat) {
 			case V4L2_PIX_FMT_UYVY:
@@ -1623,7 +1695,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 			goto out;
 
 	} else {
-		u8 tmpreg = 0;
+		v4l2_dbg(1, debug, sd, "Disable stream...");
 
 		ret = ov5640_reg_read(client, SYSTEM_CTRL_0, &tmpreg);
 		if (ret)
@@ -1686,70 +1758,6 @@ static int ov5640_enum_fmt(struct v4l2_subdev *subdev,
 			break;
 	}
 	return 0;
-}
-
-static int ov5640_init(struct v4l2_subdev *subdev, u32 val)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(subdev);
-	to_ov5640(subdev)->angle = 0;
-
-	int ret = 0;
-	u8 revision = 0;
-
-#if 0 //TODO handle power off/power on of chip
-	ret = ov5640_s_power(subdev, 1);
-	if (ret < 0) {
-		dev_err(&client->dev, "OV5640 power up failed\n");
-		return ret;
-	}
-#endif
-
-	ret = ov5640_reg_read(client, CHIP_REVISION, &revision);
-	if (ret) {
-		goto out;
-	}
-
-	revision &= 0xF;
-
-	dev_info(&client->dev, "Detected a OV5640 chip, revision %x\n",
-			revision);
-
-	ret = ov5640_reg_write(client, SCCB_SYSTEM_CTRL_1, 0x11);
-	if (ret)
-		goto out;
-
-	/* SW Reset */
-	ret = ov5640_reg_set(client, SYSTEM_CTRL_0, 0x80);
-	if (ret)
-		goto out;
-
-	msleep(2);
-
-	ret = ov5640_reg_clr(client, SYSTEM_CTRL_0, 0x80);
-	if (ret)
-		goto out;
-
-	/* SW Powerdown */
-	ret = ov5640_reg_set(client, SYSTEM_CTRL_0, 0x40);
-	if (ret)
-		goto out;
-
-	ret = ov5640_reg_writes(client, configscript_common1,
-			ARRAY_SIZE(configscript_common1));
-	if (ret)
-		goto out;
-
-	ret = ov5640_reg_writes(client, configscript_common2,
-			ARRAY_SIZE(configscript_common2));
-	if (ret)
-		goto out;
-
-out:
-#if 0 //TODO handle power off/power on of chip
-	ov5640_s_power(subdev, 0);
-#endif
-
-	return ret;
 }
 
 static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
