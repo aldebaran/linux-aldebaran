@@ -37,12 +37,6 @@ static int debug = 0;
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Debug level (0-2)");
 
-#define dprintk(level, name,  fmt, arg...)\
-	do { if (debug >= level)\
-		printk(KERN_DEBUG "%s/0: " fmt, name, ## arg);\
-	} while (0)
-
-
 /* OV5640 has only one fixed colorspace per pixelcode */
 struct ov5640_datafmt {
 	enum v4l2_mbus_pixelcode	code;
@@ -65,7 +59,6 @@ struct ov5640_timing_cfg {
 	u8 v_odd_ss_inc;
 	u8 v_even_ss_inc;
 };
-
 
 enum ov5640_mode {
 	ov5640_mode_MIN = 0,
@@ -992,7 +985,7 @@ static int ov5640_g_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *r
 	u8 val = 0;
 
 	ov5640_reg_read(client, addr, &val);
-	dprintk(1,"OV5640","OV5640: ov5640_g_register addr: 0x%x, val: 0x%x\n", addr, val);
+	v4l2_dbg(1, debug, sd, "ov5640_g_register addr: 0x%x, val: 0x%x\n", addr, val);
 	reg->val = (u32)val;
 	return 0;
 }
@@ -1004,7 +997,7 @@ static int ov5640_s_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *r
 	u8 val = reg->val & 0xff;
 
 	ov5640_reg_write(client, addr, val);
-	dprintk(1,"OV5640","OV5640: ov5640_s_register addr: 0x%x, val: 0x%x\n", addr, val);
+	v4l2_dbg(1, debug, sd, "ov5640_s_register addr: 0x%x, val: 0x%x\n", addr, val);
 	return 0;
 }
 #endif
@@ -1237,6 +1230,7 @@ static char cos_lut[] = {
 	106, 108, 110, 111, 113, 114, 116, 117,
 	118, 119, 121, 122, 122, 123, 124, 125,
 	126, 126, 127, 127, 127, 128, 128, 128};
+
 static char sin_lut[] = {
 	0, 3, 6, 9, 13, 16, 19, 22,
 	25, 28, 31, 34, 37, 40, 43, 46,
@@ -1276,7 +1270,7 @@ static int ov5640_s_hue(struct v4l2_subdev *sd, int value)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret;
 
-	dprintk(2, "OV5640", "set hue: angle: %d, cos: %d, sin: %d", value, cos_lut[value], sin_lut[value]);
+	v4l2_dbg(2, debug, sd, "set hue: angle: %d, cos: %d, sin: %d", value, cos_lut[value], sin_lut[value]);
 	ret = ov5640_reg_write(client, SDE_CTRL_HUE_COS, cos_lut[value]);
 	ret += ov5640_reg_write(client, SDE_CTRL_HUE_SIN, sin_lut[value]);
 	to_ov5640(sd)->angle = value;
@@ -1287,7 +1281,7 @@ static int ov5640_s_hue(struct v4l2_subdev *sd, int value)
 static int ov5640_g_hue(struct v4l2_subdev *sd, __s32 *value)
 {
 	*value = to_ov5640(sd)->angle;
-	dprintk(2, "OV5640", "get hue: angle: %d, cos: %d, sin: %d", *value, cos_lut[*value], sin_lut[*value]);
+	v4l2_dbg(2, debug, sd, "get hue: angle: %d, cos: %d, sin: %d", *value, cos_lut[*value], sin_lut[*value]);
 	return 0;
 }
 
@@ -1573,8 +1567,7 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 				fmtreg = 0x30;
 				fmtmuxreg = 0;
 				break;
-			default:
-				// This shouldn't happen
+			default: // This shouldn't happen
 				ret = -EINVAL;
 				return ret;
 		}
@@ -1781,7 +1774,6 @@ static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
 	.g_fmt = ov5640_g_fmt,
 	.s_stream = ov5640_s_stream,
 };
-
 
 static struct v4l2_subdev_ops ov5640_subdev_ops = {
 	.core = &ov5640_subdev_core_ops,
