@@ -73,11 +73,14 @@ enum ov5640_mode {
 /** struct ov5640 - sensor object
  * @subdev: v4l2_subdev associated data
  * @format: associated media bus format
- * @angle: current hue in range [0-255]*/
+ * @angle: current hue in range [0-255]
+ * @auto_focus_enabled: keep track of auto focus state since register is
+ * reset when powerdown is performed.*/
 struct ov5640 {
 	struct v4l2_subdev subdev;
 	struct v4l2_format format;
 	int angle;
+	bool auto_focus_enabled;
 };
 
 #define to_ov5640(sd) container_of(sd, struct ov5640, subdev)
@@ -111,6 +114,13 @@ struct ov5640_reg {
 /* SCCB control */
 #define SCCB_SYSTEM_CTRL_1  0x3103
 #define SYSTEM_ROOT_DIVIDER 0x3108
+
+/* AF control registers*/
+#define AF_CTRL 0x3022
+#define AF_STATUS 0x3029
+#define AF_STATUS_IDLE 0x70
+#define AF_CONTINUE 0x04
+#define AF_RELEASE 0x08
 
 /* AEC/AGC control registers */
 #define AEC_AGC_MANUAL             0x3503
@@ -404,6 +414,11 @@ static const struct ov5640_reg configscript_common2[] = {
 	{0x5837, 0x6f}, {0x5838, 0xde}, {0x5839, 0xbf},
 	{0x583a, 0x9f}, {0x583b, 0xbf}, {0x583c, 0xec},
 	{0x5025, 0x00}
+};
+
+/* OV5640 af firmware register values */
+static const struct ov5640_reg af_firmware[] = {
+#include "ov5640_af_firmware.h"
 };
 
 static const struct ov5640_reg ov5640_setting_15fps_QSXGA_2592_1944[] = {
@@ -1048,6 +1063,29 @@ static int ov5640_s_vflip(struct v4l2_subdev *sd, int value)
 	return 0;
 }
 
+static int ov5640_s_auto_focus(struct v4l2_subdev *sd, int value)
+{
+	int ret = 0;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	if (value==1)
+		ret = ov5640_reg_write(client, AF_CTRL, AF_CONTINUE);
+	else
+		ret = ov5640_reg_write(client, AF_CTRL, AF_RELEASE);
+
+	if (ret) {
+		v4l_err(client, "Failed to set auto focus control register\n");
+	}
+	to_ov5640(sd)->auto_focus_enabled = (value == 1) ? true: false;
+	return ret;
+}
+
+static int ov5640_g_auto_focus(struct v4l2_subdev *sd, __s32 *value)
+{
+	*value = to_ov5640(sd)->auto_focus_enabled ? 1: 0;
+	return 0;
+}
+
 static int ov5640_s_auto_exposure(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1441,6 +1479,8 @@ static int ov5640_queryctrl(struct v4l2_subdev *sd,
 		case V4L2_CID_VFLIP:
 		case V4L2_CID_HFLIP:
 			return v4l2_ctrl_query_fill(qc, 0, 1, 1, 0);
+		case V4L2_CID_FOCUS_AUTO:
+			return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
 		case V4L2_CID_EXPOSURE_AUTO:
 			return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
 		case V4L2_CID_AUTO_WHITE_BALANCE:
@@ -1476,6 +1516,8 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ov5640_s_vflip(sd, ctrl->value);
 		case V4L2_CID_HFLIP:
 			return ov5640_s_hflip(sd, ctrl->value);
+		case V4L2_CID_FOCUS_AUTO:
+			return ov5640_s_auto_focus(sd, ctrl->value);
 		case V4L2_CID_EXPOSURE_AUTO:
 			return ov5640_s_auto_exposure(sd, ctrl->value);
 		case V4L2_CID_AUTO_WHITE_BALANCE:
@@ -1513,6 +1555,8 @@ static int ov5640_g_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ov5640_g_vflip(sd, &ctrl->value);
 		case V4L2_CID_HFLIP:
 			return ov5640_g_hflip(sd, &ctrl->value);
+		case V4L2_CID_FOCUS_AUTO:
+			return ov5640_g_auto_focus(sd, &ctrl->value);
 		case V4L2_CID_EXPOSURE_AUTO:
 			return ov5640_g_auto_exposure(sd, &ctrl->value);
 		case V4L2_CID_AUTO_WHITE_BALANCE:
@@ -1551,7 +1595,7 @@ static int ov5640_init(struct v4l2_subdev *sd, u32 val)
 
 	v4l2_dbg(1, debug, sd, "Init chip...");
 	to_ov5640(sd)->angle = 0;
-
+	to_ov5640(sd)->auto_focus_enabled = true; // enable auto focus by default
 
 #if 0 //TODO handle power off/power on of chip
 	ret = ov5640_s_power(sd, 1);
@@ -1616,6 +1660,35 @@ out:
 #endif
 
 	v4l2_dbg(1, debug, sd, "Init chip...done");
+
+	return ret;
+}
+
+static int ov5640_load_firmware(struct v4l2_subdev *sd)
+{
+	int ret = 0;
+	u8 status = 0;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	v4l2_info(sd, "Write auto focus firmware...\n");
+	ret = ov5640_reg_writes(client, af_firmware, ARRAY_SIZE(af_firmware));
+	if (ret) {
+		v4l2_err(sd, "Failed to load auto-focus firmware\n");
+		return ret;
+	}
+	else
+	{
+		v4l2_info(sd, "Write auto focus firmware...DONE\n");
+		// wait until the autofocus status is idle
+		status = 0;
+		while (status != AF_STATUS_IDLE) {
+			v4l2_dbg(2, debug, sd, "Read auto focus status...\n");
+			ov5640_reg_read(client, AF_STATUS, &status);
+			v4l2_dbg(2, debug, sd, "Status: %x\n", status);
+			msleep(1);
+		}
+	}
+
 	return ret;
 }
 
@@ -1694,6 +1767,18 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 		if (ret)
 			goto out;
 
+		// activate AF if needed since powerdown release focus
+		if (to_ov5640(sd)->auto_focus_enabled)
+		{
+			// Then set ov5640 to continuous focus mode
+			v4l2_dbg(1, debug, sd, "Enable auto focus...\n");
+			ret = ov5640_reg_write(client, AF_CTRL, AF_CONTINUE);
+			if (ret) {
+				v4l2_err(sd, "Failed to set continuous focus mode\n");
+				goto out;
+			}
+			v4l2_dbg(1, debug, sd, "Enable auto focus...done\n");
+		}
 	} else {
 		v4l2_dbg(1, debug, sd, "Disable stream...");
 
@@ -1815,7 +1900,10 @@ static int ov5640_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	ov5640_s_stream(&ov5640->subdev,0);
+	/* AF firmware */
+	ret = ov5640_s_stream(&ov5640->subdev, 1);
+	ret = ov5640_load_firmware(&ov5640->subdev);
+	ret = ov5640_s_stream(&ov5640->subdev,0);
 
 	return ret;
 }
