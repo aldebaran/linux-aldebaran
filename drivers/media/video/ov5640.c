@@ -92,8 +92,11 @@ struct ov5640_reg {
 };
 
 /* SYSTEM AND I/O pad control registers */
+#define SYSTEM_RESET_00      0x3000
+#define SYSTEM_RESET_01      0x3001
 #define SYSTEM_RESET_02      0x3002
 #define SYSTEM_RESET_03      0x3003
+#define CLOCK_ENABLE_00      0x3004
 #define CLOCK_ENABLE_02      0x3006
 #define SYSTEM_CTRL_0        0x3008
 #define MIPI_CONTROL_0       0x300e
@@ -110,16 +113,16 @@ struct ov5640_reg {
 #define SYSTEM_ROOT_DIVIDER 0x3108
 
 /* AEC/AGC control registers */
-#define AEC_AGC_MANUAL			0x3503
-#define AEC_MANUAL				0x01
-#define AGC_MANUAL				0x02
-#define AGC_REAL_GAIN_HIGH		0x350A
-#define AGC_REAL_GAIN_LOW		0x350B
-#define AEC_EXPOSURE_19_16		0x3500
-#define AEC_EXPOSURE_15_8		0x3501
-#define AEC_EXPOSURE_7_0		0x3502
-#define AEC_MAX_EXPOSURE_HIGH_60HZ 0x3A01
-#define AEC_MAX_EXPOSURE_LOW_60HZ  0x3A02
+#define AEC_AGC_MANUAL             0x3503
+#define AEC_MANUAL                 0x01
+#define AGC_MANUAL                 0x02
+#define AGC_REAL_GAIN_HIGH         0x350A
+#define AGC_REAL_GAIN_LOW          0x350B
+#define AEC_EXPOSURE_19_16         0x3500
+#define AEC_EXPOSURE_15_8          0x3501
+#define AEC_EXPOSURE_7_0           0x3502
+#define AEC_MAX_EXPOSURE_HIGH_60HZ 0x3A02
+#define AEC_MAX_EXPOSURE_LOW_60HZ  0x3A03
 #define AEC_STABLE_RANGE_HIGH      0x3A0F
 #define AEC_STABLE_RANGE_LOW       0x3A10
 #define AEC_HYSTERESIS_RANGE_HIGH  0x3A1B
@@ -325,11 +328,11 @@ static const struct ov5640_reg configscript_common1[] = {
 	/* VGA */
 	{ BLC_CTRL04, 0x02 },
 
-	{ 0x3000, 0x00 },
-	{ 0x3002, 0x1c },
-	{ 0x3004, 0xff },
-	{ 0x3006, 0xc3 },
-	{ 0x300e, 0x58 },
+	{ SYSTEM_RESET_00, 0x00 },
+	{ SYSTEM_RESET_02, 0x1c },
+	{ CLOCK_ENABLE_00, 0xff },
+	{ CLOCK_ENABLE_02, 0xc3 },
+	{ MIPI_CONTROL_0, 0x58 },
 	{ 0x302e, 0x00 },
 
 	/* YUYV */
@@ -377,7 +380,7 @@ static const struct ov5640_reg configscript_common2[] = {
 	{GAMMA_YST0E, 0xFF},     {GAMMA_YST0F, 0x0F},
 
 	/* SDE */
-	{SDE_CTRL_0, 0x07},
+	{SDE_CTRL_0, 0x07}, {SDE_CTRL_HUE_COS, 0x80}, {SDE_CTRL_HUE_SIN, 0x00},
 	{0x5583, 0x40}, {0x5584, 0x10}, {0x5589, 0x10},
 	{0x558a, 0x00}, {0x558b, 0xf8}, {0x5800, 0x23},
 	{0x5801, 0x15}, {0x5802, 0x10}, {0x5803, 0x10},
@@ -1795,9 +1798,11 @@ static int ov5640_probe(struct i2c_client *client,
 	if (!ov5640)
 		return -ENOMEM;
 
-	ov5640->format.fmt.pix.pixelformat = V4L2_PIX_FMT_UYVY;
+	ov5640->format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 	ov5640->format.fmt.pix.width = ov5640_mode_info_data[ov5640_mode_VGA_640_480].width;
 	ov5640->format.fmt.pix.height = ov5640_mode_info_data[ov5640_mode_VGA_640_480].height;
+	ov5640->format.fmt.pix.bytesperline = ov5640->format.fmt.pix.width*2;
+	ov5640->format.fmt.pix.sizeimage = ov5640->format.fmt.pix.height*ov5640->format.fmt.pix.bytesperline;
 	ov5640->format.fmt.pix.field = V4L2_FIELD_NONE;
 	ov5640->format.fmt.pix.colorspace = V4L2_COLORSPACE_JPEG;
 
