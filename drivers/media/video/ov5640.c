@@ -80,10 +80,7 @@ struct ov5640 {
 	int angle;
 };
 
-static inline struct ov5640 *to_ov5640(struct v4l2_subdev *sd)
-{
-	return container_of(sd, struct ov5640, subdev);
-}
+#define to_ov5640(sd) container_of(sd, struct ov5640, subdev)
 
 /** struct ov5640_reg - ov5640 register format
  * Define a structure for OV5640 register initialization values
