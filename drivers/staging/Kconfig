@@ -142,4 +142,6 @@ source "drivers/staging/dwc2/Kconfig"
 
 source "drivers/staging/al_fastserial/Kconfig"
 
+source "drivers/staging/al_unicorn/Kconfig"
+
 endif # STAGING

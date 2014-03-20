@@ -63,3 +63,4 @@ obj-$(CONFIG_ZCACHE)		+= zcache/
 obj-$(CONFIG_GOLDFISH)		+= goldfish/
 obj-$(CONFIG_USB_DWC2)		+= dwc2/
 obj-$(CONFIG_AL_FASTSERIAL)	+= al_fastserial/
+obj-$(CONFIG_AL_UNICORN)	+= al_unicorn/
