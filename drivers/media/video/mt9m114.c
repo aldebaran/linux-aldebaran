@@ -1638,6 +1638,11 @@ static int mt9m114_try_fmt_internal(struct v4l2_subdev *sd,
   return 0;
 }
 
+static int mt9m114_s_stream(struct v4l2_subdev *sd, int enable)
+{
+  return 0;
+}
+
 static int mt9m114_try_fmt(struct v4l2_subdev *sd, struct v4l2_format *fmt)
 {
   return mt9m114_try_fmt_internal(sd, fmt, NULL, NULL);
@@ -2253,6 +2258,7 @@ static const struct v4l2_subdev_video_ops mt9m114_video_ops = {
   .enum_fmt = mt9m114_enum_fmt,
   .try_fmt = mt9m114_try_fmt,
   .s_fmt = mt9m114_s_fmt,
+  .s_stream = mt9m114_s_stream,
   .cropcap = mt9m114_cropcap,
   .g_crop = mt9m114_g_crop,
   .s_parm = mt9m114_s_parm,
