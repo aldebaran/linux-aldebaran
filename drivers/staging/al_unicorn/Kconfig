@@ -21,6 +21,8 @@ config AL_UNICORN_WIDTH_VIDEO_SUPPORT
 	depends on AL_UNICORN
 	default y
 	select VIDEOBUF_DMA_CONTIG
+	select VIDEOBUF_GEN
+	select VIDEO_DEV
 	---help---
 	  Without this option unicorn create only i2c bus.
 

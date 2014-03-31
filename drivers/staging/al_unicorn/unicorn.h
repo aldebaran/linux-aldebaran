@@ -14,6 +14,7 @@
 #include <linux/i2c.h>
 #include <media/v4l2-dev.h>
 #include <media/v4l2-subdev.h>
+#include <media/v4l2-ctrls.h>
 #include <media/v4l2-common.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ioctl.h>

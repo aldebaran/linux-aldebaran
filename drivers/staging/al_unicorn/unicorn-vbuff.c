@@ -35,7 +35,7 @@ void unicorn_free_buffer(struct videobuf_queue *q, struct unicorn_buffer *buf)
   dprintk_video(1, dev->name, "free buffer for video device %d\n", fh->channel);
 
   BUG_ON(in_interrupt());
-  videobuf_waiton(&buf->vb, 0, 0);
+  videobuf_waiton(q, &buf->vb, 0, 0);
   videobuf_dma_contig_free(q, &buf->vb);
 
   buf->vb.state = VIDEOBUF_NEEDS_INIT;
@@ -161,9 +161,6 @@ fail:
 
 void buffer_release(struct videobuf_queue *q, struct videobuf_buffer *vb)
 {
-  struct unicorn_fh *fh = q->priv_data;
-  struct unicorn_dev *dev = fh->dev;
-
   struct unicorn_buffer *buf = container_of(vb, struct unicorn_buffer, vb);
   unicorn_free_buffer(q, buf);
 }

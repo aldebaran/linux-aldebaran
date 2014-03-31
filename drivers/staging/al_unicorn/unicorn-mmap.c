@@ -113,8 +113,6 @@ int video_mmap_mapper_alloc(
   map = kzalloc(sizeof(struct videobuf_mapping), GFP_KERNEL);
   if (!map)
     return -ENOMEM;
-  map->start = vma->vm_start;
-  map->end = vma->vm_end;
   map->q = q;
 
   /* Link map to video_queue buffer */
@@ -129,15 +127,15 @@ int video_mmap_mapper_alloc(
 
   // Try to use previously allocated buffer.
   if (fh->dma_mem[index]) {
-    dprintk_video(1, fh->dev->name, "use previously allocated coherent buffer %d\n", index);
+    dprintk_video(1, "unicorn-mmap", "use previously allocated coherent buffer %d\n", index);
     mem->vaddr = fh->dma_mem[index]->vaddr;
     mem->dma_handle = fh->dma_mem[index]->dma_handle;
   }
   else {
-    dprintk_video(1, fh->dev->name, "allocate new coherent buffer for buffer %d ...\n", index);
+    dprintk_video(1, "unicorn-mmap", "allocate new coherent buffer for buffer %d ...\n", index);
     mem->vaddr = dma_alloc_coherent(q->dev, mem->size, &mem->dma_handle, GFP_KERNEL);
     if (!mem->vaddr) {
-      dprintk_video(1, fh->dev->name, "DMA alloc coherent of size %ld failed\n",  mem->size);
+      dprintk_video(1, "unicorn-mmap", "DMA alloc coherent of size %ld failed\n",  mem->size);
       kfree(map);
       q->bufs[index] = NULL;
       mutex_unlock(&q->vb_lock);
@@ -150,7 +148,7 @@ int video_mmap_mapper_alloc(
     fh->dma_mem[index]->vaddr = mem->vaddr;
     fh->dma_mem[index]->dma_handle = mem->dma_handle;
     fh->dma_mem[index]->size = mem->size;
-    dprintk_video(1, fh->dev->name, "DMA Coherent allocation is at %p (%ld)\n", mem->vaddr, mem->size);
+    dprintk_video(1, "unicorn-mmap", "DMA Coherent allocation is at %p (%ld)\n", mem->vaddr, mem->size);
   }
 
   /* Try to remap memory */
@@ -160,7 +158,7 @@ int video_mmap_mapper_alloc(
   vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
   retval = remap_pfn_range(vma, vma->vm_start, mem->dma_handle >> PAGE_SHIFT, size, vma->vm_page_prot);
   if (retval) {
-    dprintk_video(1, fh->dev->name, "remap failed with error %d. ", retval);
+    dprintk_video(1, "unicorn-mmap", "remap failed with error %d. ", retval);
     kfree(fh->dma_mem[index]);
     fh->dma_mem[index] = NULL;
     dma_free_coherent(q->dev, mem->size, mem->vaddr, mem->dma_handle);
@@ -174,12 +172,11 @@ int video_mmap_mapper_alloc(
   vma->vm_flags       |= VM_DONTEXPAND;
   vma->vm_private_data = map;
 
-  dprintk_video(1, fh->dev->name, "mmap %p: q=%p %08lx-%08lx (%lx); pgoff %08lx buf %d\n",
+  dprintk_video(1, "unicorn-mmap", "mmap %p: q=%p %08lx-%08lx (%lx); pgoff %08lx buf %d\n",
       map, q, vma->vm_start, vma->vm_end, (long int) fh->vidq.bufs[index]->bsize,
       vma->vm_pgoff, index);
 
   video_vma_open(vma);
-  q->is_mmapped = 1;
   mutex_unlock(&q->vb_lock);
   return 0;
 }
@@ -196,7 +193,7 @@ int video_mmap_mapper_free(
     MAGIC_CHECK(mem->magic, MAGIC_DC_MEM);
 
     /* vfree is not atomic - can't be called with IRQ's disabled */
-    dprintk_video(1, fh->dev->name, "buf[%d] freeing %p\n", index, mem->vaddr);
+    dprintk_video(1, "unicorn-mmap", "buf[%d] freeing %p\n", index, mem->vaddr);
     dma_free_coherent(fh->vidq.dev, mem->size, mem->vaddr, mem->dma_handle);
     kfree(mem);
     fh->dma_mem[index] = NULL;

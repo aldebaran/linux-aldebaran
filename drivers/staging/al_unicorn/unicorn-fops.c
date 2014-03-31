@@ -52,7 +52,7 @@ static int video_open(struct file *file)
       &dev->pci->dev, &dev->slock,
       V4L2_BUF_TYPE_VIDEO_CAPTURE,
       V4L2_FIELD_NONE,
-      sizeof(struct unicorn_buffer), fh);
+      sizeof(struct unicorn_buffer), fh, &dev->mutex);
   dprintk_video(1, dev->name, "%s() device %d dma init DONE\n", __func__, fh->channel);
 
   mutex_unlock(&dev->mutex);
@@ -85,7 +85,7 @@ static int video_release(struct file *file)
   videobuf_mmap_free(&fh->vidq);
   dprintk_video(1, dev->name, "mmap free videobuf queue of device %d DONE\n", fh->channel);
 
-  v4l2_prio_close(&dev->prio, &fh->prio);
+  v4l2_prio_close(&dev->prio, fh->prio);
   file->private_data = NULL;
 
   dprintk_video(1, dev->name,  "release device %d DONE\n", fh->channel);
@@ -161,13 +161,13 @@ int video_mmap(struct file *file, struct vm_area_struct *vma)
       break;
   }
   if (VIDEO_MAX_FRAME == index) {
-    dprintk_video(1, fh->dev->name, "Too much buffer mmapped for device %d\n", fh->channel);
+    dprintk_video(1, "unicorn-mmap", "Too much buffer mmapped for device %d\n", fh->channel);
     return -EINVAL;
   }
 
-  dprintk_video(1, fh->dev->name, "mmap buffer %d for devide %d ...\n", index, fh->channel);
+  dprintk_video(1, "unicorn-mmap", "mmap buffer %d for devide %d ...\n", index, fh->channel);
   ret = video_mmap_mapper_alloc(fh, index, vma);
-  dprintk_video(1, fh->dev->name, "mmap buffer %d for device %d DONE\n", index, fh->channel);
+  dprintk_video(1, "unicorn-mmap", "mmap buffer %d for device %d DONE\n", index, fh->channel);
 
   return ret;
 }

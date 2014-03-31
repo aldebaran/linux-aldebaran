@@ -461,14 +461,15 @@ int writeFlash(struct unicorn_dev *dev,
 }
 
 #ifdef CONFIG_AL_UNICORN_SYSFS_FLASH
-static ssize_t flash_access_show(struct class *unicorn_class, char *buf)
+static ssize_t flash_access_show(struct class *unicorn_class, struct class_attribute *attr, char *buf)
 {
 
   return sprintf(buf, "%d\n",flash_access);
 
 }
 
-static ssize_t flash_access_store(struct class *unicorn_class, const char *buf, size_t count)
+static ssize_t flash_access_store(struct class *unicorn_class,
+		struct class_attribute *attr, const char *buf, size_t count)
 {
   int tbl[3];
   int i=0,j=0;
@@ -500,9 +501,9 @@ static struct class_attribute class_attr_flash_access = {
         .store = flash_access_store,
 };
 
-
-static ssize_t flash_data_read(struct kobject *kobj, struct bin_attribute *bin_attr,
-    char *buffer, loff_t offset, size_t count)
+static ssize_t flash_data_read(struct file *f, struct kobject *kobj,
+		struct bin_attribute *bin_attr, char *buffer, loff_t offset,
+		size_t count)
 {
    size_t ret_count=0;
    struct unicorn_dev *dev = (struct unicorn_dev *)bin_attr->private;
@@ -540,8 +541,9 @@ static ssize_t flash_data_read(struct kobject *kobj, struct bin_attribute *bin_a
    return ret_count;
 }
 
-static ssize_t flash_data_write(struct kobject *kobj, struct bin_attribute *bin_attr,
-    char *buffer, loff_t offset, size_t count)
+static ssize_t flash_data_write(struct file *f, struct kobject *kobj,
+		struct bin_attribute *bin_attr, char *buffer, loff_t offset,
+		size_t count)
 {
   size_t ret_count=0;
   struct unicorn_dev *dev = (struct unicorn_dev *)bin_attr->private;
@@ -586,13 +588,13 @@ static struct bin_attribute unicorn_attr_flash_data = {
         .write = flash_data_write,
 };
 
-static ssize_t flash_synchro_read(struct kobject *kobj, struct bin_attribute *bin_attr,
+static ssize_t flash_synchro_read(struct file *f, struct kobject *kobj, struct bin_attribute *bin_attr,
     char *buffer, loff_t offset, size_t count)
 {
   return -EPERM;
 }
 
-static ssize_t flash_synchro_write(struct kobject *kobj, struct bin_attribute *bin_attr,
+static ssize_t flash_synchro_write(struct file *f, struct kobject *kobj, struct bin_attribute *bin_attr,
     char *buffer, loff_t offset, size_t count)
 {
   size_t ret_count=0;

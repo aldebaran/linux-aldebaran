@@ -390,7 +390,6 @@ static int unicorn_probe_camera(struct unicorn_dev *dev, struct v4l2_subdev **v4
   *v4l2_subdev = v4l2_i2c_new_subdev(&dev->v4l2_dev,
       cam_to_probe->i2c_adapter,
       cam_to_probe->name,
-      cam_to_probe->name,
       cam_to_probe->i2c_addr, NULL);
   chip.ident = V4L2_IDENT_NONE;
   chip.match.type = V4L2_CHIP_MATCH_I2C_ADDR;
@@ -415,7 +414,6 @@ static int unicorn_probe_camera(struct unicorn_dev *dev, struct v4l2_subdev **v4
     *v4l2_subdev = NULL;
     return 0;
   }
-
   return 1;
 }
 

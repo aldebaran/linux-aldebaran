@@ -107,7 +107,7 @@ static int unicorn_write_comand_n_byte(struct i2c_adapter * adap,u8 command, u8 
   fpgaAddress->control = I2C_ADDR_MODE_8_BITS | I2C_BUS_SPEED_100KBITS | I2C_DIRECT_MODE_DIRECT
                          | I2C_RNW_WRITE
                          | I2C_WR_FIFO_CLEAR
-                         | (adap->id << I2C_CONTROL_SLAVE_SEL_POS)
+                         | (adap->nr << I2C_CONTROL_SLAVE_SEL_POS)
                          ;
 
 
@@ -189,7 +189,7 @@ static int unicorn_read_n_byte(struct i2c_adapter * adap,u8 size,u8 * buf)
 
   fpgaAddress->control = I2C_ADDR_MODE_8_BITS | I2C_BUS_SPEED_100KBITS | I2C_DIRECT_MODE_DIRECT
                          | I2C_RNW_READ
-                         | (adap->id << I2C_CONTROL_SLAVE_SEL_POS)
+                         | (adap->nr << I2C_CONTROL_SLAVE_SEL_POS)
                          | I2C_START;
 
 
@@ -240,12 +240,12 @@ static s32 unicorn_smbus_xfer(struct i2c_adapter * adap,
   case I2C_SMBUS_BYTE:
     if (read_write == I2C_SMBUS_WRITE) {
       ret = unicorn_write_comand_n_byte(adap,command,0,data->block);
-      dprintk(1, dev_name(&adap->dev), "smbus write byte - addr 0x%02x, "
+      dprintk(3, dev_name(&adap->dev), "smbus write byte - addr 0x%02x, "
               "wrote 0x%02x at 0x%02x.\n",
               addr, data->byte, command);
     } else {
       ret = unicorn_read_n_byte(adap,1,data->block);
-      dprintk(1, dev_name(&adap->dev), "smbus read byte - addr 0x%02x, "
+      dprintk(3, dev_name(&adap->dev), "smbus read byte - addr 0x%02x, "
                     "wrote 0x%02x at 0x%02x.\n",
                     addr, data->byte, command);
     }
@@ -254,7 +254,7 @@ static s32 unicorn_smbus_xfer(struct i2c_adapter * adap,
   case I2C_SMBUS_BYTE_DATA:
     if (read_write == I2C_SMBUS_WRITE) {
       ret = unicorn_write_comand_n_byte(adap,command,1,data->block);
-      dprintk(1, dev_name(&adap->dev), "smbus write byte data - addr 0x%02x, "
+      dprintk(3, dev_name(&adap->dev), "smbus write byte data - addr 0x%02x, "
               "wrote 0x%02x at 0x%02x.\n",
               addr, data->byte, command);
     } else {
@@ -264,22 +264,25 @@ static s32 unicorn_smbus_xfer(struct i2c_adapter * adap,
         break;
       }
       ret = unicorn_read_n_byte(adap,1,data->block);
-      dprintk(1, dev_name(&adap->dev), "smbus read byte data - addr 0x%02x, "
-              "read  0x%02x at 0x%02x.\n",
-              addr, data->byte, command);
+      if (ret)
+      {
+        dprintk(3, dev_name(&adap->dev), "smbus read byte data - addr 0x%02x, "
+            "read  0x%02x at 0x%02x. (%x)\n",
+            addr, data->byte, command, ret);
+      }
     }
     break;
 
   case I2C_SMBUS_WORD_DATA:
     if (read_write == I2C_SMBUS_WRITE) {
       //chip->words[command] = data->word;
-      dprintk(1, dev_name(&adap->dev), "write smbus word data - addr 0x%02x, "
+      dprintk(3, dev_name(&adap->dev), "write smbus word data - addr 0x%02x, "
               "wrote 0x%04x at 0x%02x. unimplemented\n",
               addr, data->word, command);
       ret = -EOPNOTSUPP;
     } else {
       //data->word = chip->words[command];
-      dprintk(1, dev_name(&adap->dev), "read smbus word data - addr 0x%02x, "
+      dprintk(3, dev_name(&adap->dev), "read smbus word data - addr 0x%02x, "
               "read  0x%04x at 0x%02x. unimplemented\n",
               addr, data->word, command);
       ret = -EOPNOTSUPP;
@@ -292,7 +295,7 @@ static s32 unicorn_smbus_xfer(struct i2c_adapter * adap,
     if (read_write == I2C_SMBUS_WRITE) {
 
       ret = unicorn_write_comand_n_byte(adap,command,datasize,data->block+1);
-      dprintk(1, dev_name(&adap->dev), "i2c smbus i2c write block data - addr 0x%02x, "
+      dprintk(3, dev_name(&adap->dev), "i2c smbus i2c write block data - addr 0x%02x, "
               "wrote %d bytes at 0x%02x.\n",
               addr, datasize, command);
     } else {
@@ -302,7 +305,7 @@ static s32 unicorn_smbus_xfer(struct i2c_adapter * adap,
         break;
       }
       ret = unicorn_read_n_byte(adap,datasize, data->block+1);
-      dprintk(1, dev_name(&adap->dev), "i2c smbus i2c read block data - addr 0x%02x, "
+      dprintk(3, dev_name(&adap->dev), "i2c smbus i2c read block data - addr 0x%02x, "
               "read  %d bytes at 0x%02x.\n",
               addr, datasize, command);
     }
@@ -311,7 +314,7 @@ static s32 unicorn_smbus_xfer(struct i2c_adapter * adap,
   case I2C_SMBUS_BLOCK_DATA:
     if (read_write == I2C_SMBUS_WRITE) {
       ret = unicorn_write_comand_n_byte(adap,command,data->block[0]+1,data->block);
-      dprintk(1, dev_name(&adap->dev), "smbus write block data - addr 0x%02x, "
+      dprintk(3, dev_name(&adap->dev), "smbus write block data - addr 0x%02x, "
               "wrote %d bytes at 0x%02x.\n",
               addr, data->block[0]+1, command);
       ret = 0;
@@ -407,7 +410,7 @@ int i2c_unicorn_register(struct unicorn_dev * dev, struct i2c_adapter * adapter)
   int ret;
 
   i2c_set_adapdata(adapter, &dev->v4l2_dev);
-  ret = i2c_add_adapter(adapter);
+  ret = i2c_add_numbered_adapter(adapter);
 
   printk(KERN_INFO "i2c successfully registered\n");
   return ret;
@@ -419,35 +422,35 @@ static struct i2c_adapter unicorn_i2c_adapters[] ={
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
   .name		= "I2C SMBUS unicorn driver 0",
-  .id     = 0,
+  .nr     = 0,
 },
 {
   .owner		= THIS_MODULE,
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
   .name		= "I2C SMBUS unicorn driver 1",
-  .id     = 1,
+  .nr     = 1,
 },
 {
   .owner		= THIS_MODULE,
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
   .name		= "I2C SMBUS unicorn driver 2",
-  .id     = 2,
+  .nr     = 2,
 },
 {
   .owner		= THIS_MODULE,
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
   .name		= "I2C SMBUS unicorn driver 3",
-  .id     = 3,
+  .nr     = 3,
 },
 {
   .owner                = THIS_MODULE,
   .class                = I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo         = &unicorn_i2c_algorithm,
   .name         = "I2C SMBUS unicorn driver multicast",
-  .id     = 4,
+  .nr     = 4,
 }
 };
 

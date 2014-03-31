@@ -221,7 +221,7 @@ static void unmap_bars(struct unicorn_dev *dev)
  * verifying their sizes respect the minimum sizes needed, given by the
  * bar_min_len[] array.
  */
-static int __devinit map_bars(struct unicorn_dev *dev)
+static int map_bars(struct unicorn_dev *dev)
 {
   int ret;
   unsigned long bar_start = pci_resource_start(dev->pci, 0);
@@ -343,7 +343,7 @@ static int unicorn_interrupt_init(void)
   return 0;
 }
 
-static int __devinit unicorn_pci_probe(struct pci_dev *pci_dev,
+static int unicorn_pci_probe(struct pci_dev *pci_dev,
                   const struct pci_device_id *pci_id)
 {
   int err=0;
@@ -422,7 +422,7 @@ fail_unregister_device :
   return err;
 }
 
-static void __devinit unicorn_pci_remove(struct pci_dev *pci_dev)
+static void unicorn_pci_remove(struct pci_dev *pci_dev)
 {
 #ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
   struct v4l2_device *v4l2_dev = pci_get_drvdata(pci_dev);

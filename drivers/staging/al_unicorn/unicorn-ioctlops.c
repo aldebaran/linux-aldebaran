@@ -203,7 +203,7 @@ static int vidioc_s_input(struct file *file, void *priv, unsigned int i)
 
   if (fh)
   {
-    err = v4l2_prio_check(&dev->prio, &fh->prio);
+    err = v4l2_prio_check(&dev->prio, fh->prio);
     if (0 != err)
       return err;
   }
@@ -224,43 +224,6 @@ static int vidioc_s_input(struct file *file, void *priv, unsigned int i)
 
   return 0;
 }
-
-static int vidioc_g_ctrl(struct file *file, void *priv, struct v4l2_control *ctl)
-{
-  struct unicorn_fh *fh = priv;
-  struct unicorn_dev *dev = (fh)->dev;
-  int i;
-  for (i=0; i<max_subdev_per_video_bus; i++)
-  {
-    if(dev->sensor[fh->input][i] !=NULL)
-      v4l2_subdev_call(dev->sensor[fh->input][i], core, g_ctrl, ctl);
-  }
-  return 0;
-}
-
-static int vidioc_s_ctrl(struct file *file, void *priv,
-       struct v4l2_control *ctl)
-{
-  struct unicorn_fh *fh = priv;
-  struct unicorn_dev *dev = fh->dev;
-  int err = 0, i;
-
-  if (fh)
-  {
-    err = v4l2_prio_check(&dev->prio, &fh->prio);
-    if (0 != err)
-      return err;
-  }
-
-  for (i=0; i<max_subdev_per_video_bus; i++)
-  {
-    if(dev->sensor[fh->input][i] !=NULL)
-      err += v4l2_subdev_call(dev->sensor[fh->input][i], core, s_ctrl, ctl);
-  }
-
-  return err;
-}
-
 
 static int vidioc_g_parm(struct file *filp, void *priv,
       struct v4l2_streamparm *parm)
@@ -299,24 +262,6 @@ static int vidioc_s_parm(struct file *filp, void *priv,
   return 0;
 }
 
-static int vidioc_queryctrl(struct file *file, void *priv,
-         struct v4l2_queryctrl *qctrl)
-{
-  struct unicorn_fh *fh = priv;
-  struct unicorn_dev *dev = fh->dev;
-  int i, err = 0;
-
-  for (i=0; i<max_subdev_per_video_bus; i++)
-  {
-   if(dev->sensor[fh->input][i] !=NULL)
-   {
-      err += v4l2_subdev_call(dev->sensor[fh->input][i], core, queryctrl, qctrl);
-   }
-  }
-
-  return err;
-}
-
 static int vidioc_g_priority(struct file *file, void * priv, enum v4l2_priority *p)
 {
   struct unicorn_fh *fh = priv;
@@ -344,7 +289,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
 
   if (fh)
   {
-    err = v4l2_prio_check(&dev->prio, &fh->prio);
+    err = v4l2_prio_check(&dev->prio, fh->prio);
     if (0 != err)
     {
         printk(KERN_INFO "%s()v4l2_prio_check fail \n", __func__);
@@ -392,7 +337,11 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
     {
       if(dev->sensor[fh->input][i] != NULL)
       {
-        err += v4l2_subdev_call(dev->sensor[fh->input][i], video, s_fmt, f);
+        struct v4l2_mbus_framefmt fmt;
+        fmt.width = f->fmt.pix.width;
+        fmt.height = f->fmt.pix.height;
+        fmt.colorspace = f->fmt.pix.colorspace;
+        err += v4l2_subdev_call(dev->sensor[fh->input][i], video, s_mbus_fmt, &fmt);
         dprintk_video(1, dev->name, "%s() width=%d height=%d field=%d err=%d\n", __func__, fh->width,
         fh->height, fh->vidq.field, err);
       }
@@ -487,9 +436,156 @@ static int vidioc_g_std(struct file *file, void *fh, v4l2_std_id *std)
   return 0;
 }
 
-int vidioc_s_std(struct file *file, void *fh, v4l2_std_id *std)
+static int vidioc_s_std(struct file *file, void *fh, v4l2_std_id std)
 {
   return 0;
+}
+
+static int vidioc_querymenu(struct file *file, void *priv, struct v4l2_querymenu *a)
+{
+  struct unicorn_fh *fh = priv;
+  struct unicorn_dev *dev = (fh)->dev;
+  int err,i;
+
+  if (fh)
+  {
+    err = v4l2_prio_check(&dev->prio, fh->prio);
+    if (0 != err)
+      return err;
+  }
+  dprintk_video(1, fh->dev->name, "%s() for input %d\n", __func__, fh->input);
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err+= v4l2_subdev_querymenu(dev->sensor[fh->input][i], a);
+  }
+  return err;
+}
+
+static int vidioc_try_ext_ctrls(struct file *file, void *priv, struct v4l2_ext_controls *a)
+{
+  struct unicorn_fh *fh = priv;
+  struct unicorn_dev *dev = (fh)->dev;
+  int err,i;
+
+  if (fh)
+  {
+    err = v4l2_prio_check(&dev->prio, fh->prio);
+    if (0 != err)
+      return err;
+  }
+  dprintk_video(1, fh->dev->name, "%s() for input %d\n", __func__, fh->input);
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err+= v4l2_subdev_try_ext_ctrls(dev->sensor[fh->input][i], a);
+  }
+  return err;
+}
+
+static int vidioc_s_ext_ctrls(struct file *file, void *priv, struct v4l2_ext_controls *a)
+{
+  struct unicorn_fh *fh = priv;
+  struct unicorn_dev *dev = (fh)->dev;
+  int err,i;
+
+  if (fh)
+  {
+    err = v4l2_prio_check(&dev->prio, fh->prio);
+    if (0 != err)
+      return err;
+  }
+  dprintk_video(1, fh->dev->name, "%s() for input %d\n", __func__, fh->input);
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err+= v4l2_subdev_s_ext_ctrls(dev->sensor[fh->input][i], a);
+  }
+  return err;
+}
+
+static int vidioc_g_ext_ctrls(struct file *file, void *priv, struct v4l2_ext_controls *a)
+{
+  struct unicorn_fh *fh = priv;
+  struct unicorn_dev *dev = (fh)->dev;
+  int err,i;
+
+  if (fh)
+  {
+    err = v4l2_prio_check(&dev->prio, fh->prio);
+    if (0 != err)
+      return err;
+  }
+  dprintk_video(1, fh->dev->name, "%s() for input %d\n", __func__, fh->input);
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err+= v4l2_subdev_g_ext_ctrls(dev->sensor[fh->input][i], a);
+  }
+  return err;
+}
+
+static int vidioc_queryctrl(struct file *file, void *priv, struct v4l2_queryctrl *a)
+{
+  struct unicorn_fh *fh = priv;
+  struct unicorn_dev *dev = (fh)->dev;
+  int err,i;
+
+  if (fh)
+  {
+    err = v4l2_prio_check(&dev->prio, fh->prio);
+    if (0 != err)
+      return err;
+  }
+  dprintk_video(1, fh->dev->name, "%s() for input %d\n", __func__, fh->input);
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err+= v4l2_subdev_queryctrl(dev->sensor[fh->input][i], a);
+  }
+  return err;
+}
+
+static int vidioc_g_ctrl(struct file *file, void *priv, struct v4l2_control *a)
+{
+  struct unicorn_fh *fh = priv;
+  struct unicorn_dev *dev = (fh)->dev;
+  int err,i;
+
+  if (fh)
+  {
+    err = v4l2_prio_check(&dev->prio, fh->prio);
+    if (0 != err)
+      return err;
+  }
+  dprintk_video(1, fh->dev->name, "%s() for input %d\n", __func__, fh->input);
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err+= v4l2_subdev_g_ctrl(dev->sensor[fh->input][i], a);
+  }
+  return err;
+}
+
+static int vidioc_s_ctrl(struct file *file, void *priv, struct v4l2_control *a)
+{
+  struct unicorn_fh *fh = priv;
+  struct unicorn_dev *dev = (fh)->dev;
+  int err,i;
+
+  if (fh)
+  {
+    err = v4l2_prio_check(&dev->prio, fh->prio);
+    if (0 != err)
+      return err;
+  }
+  dprintk_video(1, fh->dev->name, "%s() for input %d\n", __func__, fh->input);
+  for (i=0; i<max_subdev_per_video_bus; i++)
+  {
+    if(dev->sensor[fh->input][i] !=NULL)
+      err+= v4l2_subdev_s_ctrl(dev->sensor[fh->input][i], a);
+  }
+  return err;
 }
 
 #ifdef CONFIG_VIDEO_ADV_DEBUG
@@ -501,7 +597,7 @@ static int vidioc_g_register(struct file *file, void *priv, struct v4l2_dbg_regi
 
   if (fh)
   {
-    err = v4l2_prio_check(&dev->prio, &fh->prio);
+    err = v4l2_prio_check(&dev->prio, fh->prio);
     if (0 != err)
       return err;
   }
@@ -521,7 +617,7 @@ static int vidioc_s_register(struct file *file, void *priv, struct v4l2_dbg_regi
 
   if (fh)
   {
-    err = v4l2_prio_check(&dev->prio, &fh->prio);
+    err = v4l2_prio_check(&dev->prio, fh->prio);
     if (0 != err)
       return err;
   }
@@ -550,9 +646,6 @@ const struct v4l2_ioctl_ops video_ioctl_ops = {
   .vidioc_enum_input = vidioc_enum_input, /* done */
   .vidioc_g_input = vidioc_g_input, /* done */
   .vidioc_s_input = vidioc_s_input, /* done */
-  .vidioc_g_ctrl = vidioc_g_ctrl,    /* ov7670done */
-  .vidioc_s_ctrl = vidioc_s_ctrl,    /* ov7670done */
-  .vidioc_queryctrl = vidioc_queryctrl,   /* ov7670done */
   .vidioc_streamon = vidioc_streamon, /* done */
   .vidioc_streamoff = vidioc_streamoff, /* done */
   .vidioc_log_status = vidioc_log_status, /* done */
@@ -562,6 +655,13 @@ const struct v4l2_ioctl_ops video_ioctl_ops = {
   .vidioc_g_parm = vidioc_g_parm,
   .vidioc_g_std = vidioc_g_std,
   .vidioc_s_std = vidioc_s_std,
+  .vidioc_s_ctrl = vidioc_s_ctrl,
+  .vidioc_g_ctrl = vidioc_g_ctrl,
+  .vidioc_queryctrl = vidioc_queryctrl,
+  .vidioc_g_ext_ctrls = vidioc_g_ext_ctrls,
+  .vidioc_s_ext_ctrls = vidioc_s_ext_ctrls,
+  .vidioc_try_ext_ctrls = vidioc_try_ext_ctrls,
+  .vidioc_querymenu = vidioc_querymenu,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
   .vidioc_g_register = vidioc_g_register,
   .vidioc_s_register = vidioc_s_register,
