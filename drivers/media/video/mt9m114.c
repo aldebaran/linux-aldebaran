@@ -2013,8 +2013,9 @@ static int mt9m114_g_exposure(struct v4l2_subdev *sd, __s32 *value)
 
 static int mt9m114_s_white_balance(struct v4l2_subdev *sd, int value)
 {
+  int ret;
   dprintk(1,"MT9M114","set white balance to %d\n",value);
-  int ret = mt9m114_write(sd, REG_AWB_COLOR_TEMPERATURE, 2, value);
+  ret = mt9m114_write(sd, REG_AWB_COLOR_TEMPERATURE, 2, value);
   if (ret < 0) {
     dprintk(2,"MT9M114","set white balance fail.\n");
     return ret;
