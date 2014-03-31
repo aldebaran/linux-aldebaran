@@ -381,7 +381,7 @@ void init_serial_port(struct ape_dev *ape, int idx)
   }
 }
 
-static int __devinit scan_bars(struct ape_dev *ape, struct pci_dev *dev)
+static int scan_bars(struct ape_dev *ape, struct pci_dev *dev)
 {
   int i;
   for (i = 0; i < APE_BAR_NUM; i++) {
@@ -417,7 +417,7 @@ static void unmap_bars(struct ape_dev *ape, struct pci_dev *dev)
  * verifying their sizes respect the minimum sizes needed, given by the
  * bar_min_len[] array.
  */
-static int __devinit map_bars(struct ape_dev *ape, struct pci_dev *dev)
+static int map_bars(struct ape_dev *ape, struct pci_dev *dev)
 {
   int rc;
   int i;
@@ -467,7 +467,7 @@ success:
 }
 
 #if 0 /* not yet implemented fully FIXME add opcode */
-static void __devinit rcslave_test(struct ape_dev *ape, struct pci_dev *dev)
+static void rcslave_test(struct ape_dev *ape, struct pci_dev *dev)
 {
   u32 *rcslave_mem = (u32 *)ape->bar[APE_BAR_RCSLAVE];
   u32 result = 0;
@@ -567,7 +567,7 @@ static inline int compare(u32 *p, u32 *q, int len)
  * - obtain and request irq
  * - map regions into kernel address space
  */
-static int __devinit probe(struct pci_dev *dev, const struct pci_device_id *id)
+static int probe(struct pci_dev *dev, const struct pci_device_id *id)
 {
   int rc = 0;
   int portIdx=0;
@@ -754,7 +754,7 @@ end:
   return rc;
 }
 
-static void __devexit remove(struct pci_dev *dev)
+static void remove(struct pci_dev *dev)
 {
   struct ape_dev *ape = dev_get_drvdata(&dev->dev);
 
@@ -1121,7 +1121,7 @@ static struct pci_driver pci_driver = {
   .name = DRV_NAME,
   .id_table = ids,
   .probe = probe,
-  .remove = __devexit_p(remove),
+  .remove = remove,
   /* resume, suspend are optional */
 };
 
