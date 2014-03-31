@@ -1777,9 +1777,8 @@ static int mt9m114_g_hue(struct v4l2_subdev *sd, __s32 *value)
 static int mt9m114_s_brightness(struct v4l2_subdev *sd, int value)
 {
   int ret = 0;
-  ret = mt9m114_write(sd, REG_UVC_BRIGHTNESS, 2, value>>2);
-  //mt9m114_write(sd, REG_CAM_AET_TARGET_AVG_LUMA, 2, value);
-
+  //ret = mt9m114_write(sd, REG_UVC_BRIGHTNESS, 2, value);
+  ret = mt9m114_write(sd, REG_CAM_AET_TARGET_AVG_LUMA, 2, (value<<8)+0x80);
   mt9m114_refresh(sd);
   return ret;
 }
@@ -1787,9 +1786,10 @@ static int mt9m114_s_brightness(struct v4l2_subdev *sd, int value)
 static int mt9m114_g_brightness(struct v4l2_subdev *sd, __s32 *value)
 {
   u32 v = 0;
-  int ret = mt9m114_read(sd, REG_UVC_BRIGHTNESS, 2, &v);
+  //int ret = mt9m114_read(sd, REG_UVC_BRIGHTNESS, 2, &v);
+  int ret = mt9m114_read(sd, REG_CAM_AET_TARGET_AVG_LUMA, 2, &v);
 
-  *value = v<<2;
+  *value = v>>8;
   return ret;
 }
 
