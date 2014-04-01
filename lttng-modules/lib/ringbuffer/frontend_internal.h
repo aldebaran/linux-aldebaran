@@ -156,6 +156,9 @@ extern
 void lib_ring_buffer_switch_slow(struct lib_ring_buffer *buf,
 				 enum switch_mode mode);
 
+extern
+void lib_ring_buffer_switch_remote(struct lib_ring_buffer *buf);
+
 /* Buffer write helpers */
 
 static inline
@@ -287,17 +290,24 @@ int lib_ring_buffer_reserve_committed(const struct lib_ring_buffer_config *confi
 		     - (commit_count & chan->commit_count_mask) == 0);
 }
 
+/*
+ * Receive end of subbuffer TSC as parameter. It has been read in the
+ * space reservation loop of either reserve or switch, which ensures it
+ * progresses monotonically with event records in the buffer. Therefore,
+ * it ensures that the end timestamp of a subbuffer is <= begin
+ * timestamp of the following subbuffers.
+ */
 static inline
 void lib_ring_buffer_check_deliver(const struct lib_ring_buffer_config *config,
 				   struct lib_ring_buffer *buf,
 			           struct channel *chan,
 			           unsigned long offset,
 				   unsigned long commit_count,
-			           unsigned long idx)
+			           unsigned long idx,
+				   u64 tsc)
 {
 	unsigned long old_commit_count = commit_count
 					 - chan->backend.subbuf_size;
-	u64 tsc;
 
 	/* Check if all commits have been done */
 	if (unlikely((buf_trunc(offset, chan) >> chan->backend.num_subbuf_order)
@@ -328,6 +338,12 @@ void lib_ring_buffer_check_deliver(const struct lib_ring_buffer_config *config,
 		 * The subbuffer size is least 2 bytes (minimum size: 1 page).
 		 * This guarantees that old_commit_count + 1 != commit_count.
 		 */
+
+		/*
+		 * Order prior updates to reserve count prior to the
+		 * commit_cold cc_sb update.
+		 */
+		smp_wmb();
 		if (likely(v_cmpxchg(config, &buf->commit_cold[idx].cc_sb,
 					 old_commit_count, old_commit_count + 1)
 			   == old_commit_count)) {
@@ -337,7 +353,6 @@ void lib_ring_buffer_check_deliver(const struct lib_ring_buffer_config *config,
 			 * and any other writer trying to access this subbuffer
 			 * in this state is required to drop records.
 			 */
-			tsc = config->cb.ring_buffer_clock_read(chan);
 			v_add(config,
 			      subbuffer_get_records_count(config,
 							  &buf->backend, idx),
@@ -370,6 +385,11 @@ void lib_ring_buffer_check_deliver(const struct lib_ring_buffer_config *config,
 			/* End of exclusive subbuffer access */
 			v_set(config, &buf->commit_cold[idx].cc_sb,
 			      commit_count);
+			/*
+			 * Order later updates to reserve count after
+			 * the commit_cold cc_sb update.
+			 */
+			smp_wmb();
 			lib_ring_buffer_vmcore_check_deliver(config, buf,
 							 commit_count, idx);
 

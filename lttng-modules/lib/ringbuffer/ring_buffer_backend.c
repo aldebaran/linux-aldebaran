@@ -253,7 +253,7 @@ void channel_backend_reset(struct channel_backend *chanb)
  *	Returns the success/failure of the operation. (%NOTIFY_OK, %NOTIFY_BAD)
  */
 static
-int __cpuinit lib_ring_buffer_cpu_hp_callback(struct notifier_block *nb,
+int lib_ring_buffer_cpu_hp_callback(struct notifier_block *nb,
 					      unsigned long action,
 					      void *hcpu)
 {
@@ -724,8 +724,9 @@ EXPORT_SYMBOL_GPL(__lib_ring_buffer_copy_to_user);
  * @dest : destination address
  * @len : destination's length
  *
- * return string's length
+ * Return string's length, or -EINVAL on error.
  * Should be protected by get_subbuf/put_subbuf.
+ * Destination length should be at least 1 to hold '\0'.
  */
 int lib_ring_buffer_read_cstr(struct lib_ring_buffer_backend *bufb, size_t offset,
 			      void *dest, size_t len)
@@ -741,6 +742,8 @@ int lib_ring_buffer_read_cstr(struct lib_ring_buffer_backend *bufb, size_t offse
 	offset &= chanb->buf_size - 1;
 	index = (offset & (chanb->subbuf_size - 1)) >> PAGE_SHIFT;
 	orig_offset = offset;
+	if (unlikely(!len))
+		return -EINVAL;
 	for (;;) {
 		id = bufb->buf_rsb.id;
 		sb_bindex = subbuffer_id_get_index(config, id);
@@ -811,8 +814,9 @@ EXPORT_SYMBOL_GPL(lib_ring_buffer_read_get_page);
  *
  * Return the address where a given offset is located (for read).
  * Should be used to get the current subbuffer header pointer. Given we know
- * it's never on a page boundary, it's safe to write directly to this address,
- * as long as the write is never bigger than a page size.
+ * it's never on a page boundary, it's safe to read/write directly
+ * from/to this address, as long as the read/write is never bigger than a
+ * page size.
  */
 void *lib_ring_buffer_read_offset_address(struct lib_ring_buffer_backend *bufb,
 					  size_t offset)

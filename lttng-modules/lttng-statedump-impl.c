@@ -50,8 +50,11 @@
 #include "wrapper/irqdesc.h"
 #include "wrapper/spinlock.h"
 #include "wrapper/fdtable.h"
+#include "wrapper/nsproxy.h"
+#include "wrapper/irq.h"
+#include "wrapper/tracepoint.h"
 
-#ifdef CONFIG_GENERIC_HARDIRQS
+#ifdef CONFIG_LTTNG_HAS_LIST_IRQ
 #include <linux/irq.h>
 #endif
 
@@ -243,7 +246,7 @@ int lttng_enumerate_vm_maps(struct lttng_session *session)
 }
 #endif
 
-#ifdef CONFIG_GENERIC_HARDIRQS
+#ifdef CONFIG_LTTNG_HAS_LIST_IRQ
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,39))
 #define irq_desc_get_chip(desc) get_irq_desc_chip(desc)
@@ -276,7 +279,7 @@ void lttng_list_interrupts(struct lttng_session *session)
 }
 #else
 static inline
-void list_interrupts(struct lttng_session *session)
+void lttng_list_interrupts(struct lttng_session *session)
 {
 }
 #endif
@@ -295,7 +298,7 @@ void lttng_statedump_process_ns(struct lttng_session *session,
 	rcu_read_lock();
 	proxy = task_nsproxy(p);
 	if (proxy) {
-		pid_ns = proxy->pid_ns;
+		pid_ns = lttng_get_proxy_pid_ns(proxy);
 		do {
 			trace_lttng_statedump_process_state(session,
 				p, type, mode, submode, status, pid_ns);
@@ -380,7 +383,6 @@ int do_lttng_statedump(struct lttng_session *session)
 {
 	int cpu;
 
-	printk(KERN_DEBUG "LTT state dump thread start\n");
 	trace_lttng_statedump_start(session);
 	lttng_enumerate_process_states(session);
 	lttng_enumerate_file_descriptors(session);
@@ -408,7 +410,6 @@ int do_lttng_statedump(struct lttng_session *session)
 	__wait_event(statedump_wq, (atomic_read(&kernel_threads_to_run) == 0));
 	put_online_cpus();
 	/* Our work is done */
-	printk(KERN_DEBUG "LTT state dump end\n");
 	trace_lttng_statedump_end(session);
 	return 0;
 }
@@ -418,10 +419,31 @@ int do_lttng_statedump(struct lttng_session *session)
  */
 int lttng_statedump_start(struct lttng_session *session)
 {
-	printk(KERN_DEBUG "LTTng: state dump begin\n");
 	return do_lttng_statedump(session);
 }
 EXPORT_SYMBOL_GPL(lttng_statedump_start);
+
+static
+int __init lttng_statedump_init(void)
+{
+	/*
+	 * Allow module to load even if the fixup cannot be done. This
+	 * will allow seemless transition when the underlying issue fix
+	 * is merged into the Linux kernel, and when tracepoint.c
+	 * "tracepoint_module_notify" is turned into a static function.
+	 */
+	(void) wrapper_lttng_fixup_sig(THIS_MODULE);
+	return 0;
+}
+
+module_init(lttng_statedump_init);
+
+static
+void __exit lttng_statedump_exit(void)
+{
+}
+
+module_exit(lttng_statedump_exit);
 
 MODULE_LICENSE("GPL and additional rights");
 MODULE_AUTHOR("Jean-Hugues Deschenes");

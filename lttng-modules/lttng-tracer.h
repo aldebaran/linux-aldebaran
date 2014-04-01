@@ -35,16 +35,18 @@
 #include <asm/local.h>
 
 #include "wrapper/trace-clock.h"
+#include "wrapper/compiler.h"
 #include "lttng-tracer-core.h"
 #include "lttng-events.h"
 
 #define LTTNG_MODULES_MAJOR_VERSION 2
-#define LTTNG_MODULES_MINOR_VERSION 1
-#define LTTNG_MODULES_PATCHLEVEL_VERSION 1
+#define LTTNG_MODULES_MINOR_VERSION 4
+#define LTTNG_MODULES_PATCHLEVEL_VERSION 0
+#define LTTNG_MODULES_EXTRAVERSION ""
 
-#define LTTNG_VERSION_NAME		"Basse Messe"
+#define LTTNG_VERSION_NAME		"Époque Opaque"
 #define LTTNG_VERSION_DESCRIPTION	\
-	"Light coloured German ale whose style was named after the city Cologne (Koln) where it was first brewed. It is a rather simple beer with lightly fruity aromas and a delicate hoppy fragrance. The beer has a pronounced malty taste with a subtle bitter aftertaste"
+	"The Époque Opaque is a black IPA from Trou du Diable brewery. The nose is eerily reminiscent of the coffee crisp candy from of our childhood. These strong mocha accents are present on the palate, which are quickly subdued by Japanese and Australian hops leading to a final state of satisfaction enjoyable for any fan of bitter beer."
 
 #ifndef CHAR_BIT
 #define CHAR_BIT 8

@@ -121,7 +121,7 @@ void lttng_destroy_perf_counter_field(struct lttng_ctx_field *field)
  * soon).
  */
 static
-int __cpuinit lttng_perf_counter_cpu_hp_callback(struct notifier_block *nb,
+int lttng_perf_counter_cpu_hp_callback(struct notifier_block *nb,
 						 unsigned long action,
 						 void *hcpu)
 {
@@ -245,7 +245,7 @@ int lttng_add_perf_counter_to_ctx(uint32_t type,
 	field->event_field.type.atype = atype_integer;
 	field->event_field.type.u.basic.integer.size = sizeof(uint64_t) * CHAR_BIT;
 	field->event_field.type.u.basic.integer.alignment = lttng_alignof(uint64_t) * CHAR_BIT;
-	field->event_field.type.u.basic.integer.signedness = is_signed_type(uint64_t);
+	field->event_field.type.u.basic.integer.signedness = lttng_is_signed_type(uint64_t);
 	field->event_field.type.u.basic.integer.reverse_byte_order = 0;
 	field->event_field.type.u.basic.integer.base = 10;
 	field->event_field.type.u.basic.integer.encoding = lttng_encode_none;

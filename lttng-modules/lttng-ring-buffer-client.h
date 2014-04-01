@@ -32,6 +32,8 @@
 #define LTTNG_COMPACT_EVENT_BITS	5
 #define LTTNG_COMPACT_TSC_BITS		27
 
+static struct lttng_transport lttng_relay_transport;
+
 /*
  * Keep the natural field alignment for _each field_ within this structure if
  * you ever add/remove a field from this header. Packed attribute is not used
@@ -390,6 +392,82 @@ static void client_buffer_finalize(struct lib_ring_buffer *buf, void *priv, int 
 {
 }
 
+static struct packet_header *client_packet_header(
+		const struct lib_ring_buffer_config *config,
+		struct lib_ring_buffer *buf)
+{
+	return lib_ring_buffer_read_offset_address(&buf->backend, 0);
+}
+
+static int client_timestamp_begin(const struct lib_ring_buffer_config *config,
+		struct lib_ring_buffer *buf,
+		uint64_t *timestamp_begin)
+{
+	struct packet_header *header = client_packet_header(config, buf);
+	*timestamp_begin = header->ctx.timestamp_begin;
+
+	return 0;
+}
+
+static int client_timestamp_end(const struct lib_ring_buffer_config *config,
+			struct lib_ring_buffer *buf,
+			uint64_t *timestamp_end)
+{
+	struct packet_header *header = client_packet_header(config, buf);
+	*timestamp_end = header->ctx.timestamp_end;
+
+	return 0;
+}
+
+static int client_events_discarded(const struct lib_ring_buffer_config *config,
+			struct lib_ring_buffer *buf,
+			uint64_t *events_discarded)
+{
+	struct packet_header *header = client_packet_header(config, buf);
+	*events_discarded = header->ctx.events_discarded;
+
+	return 0;
+}
+
+static int client_content_size(const struct lib_ring_buffer_config *config,
+			struct lib_ring_buffer *buf,
+			uint64_t *content_size)
+{
+	struct packet_header *header = client_packet_header(config, buf);
+	*content_size = header->ctx.content_size;
+
+	return 0;
+}
+
+static int client_packet_size(const struct lib_ring_buffer_config *config,
+			struct lib_ring_buffer *buf,
+			uint64_t *packet_size)
+{
+	struct packet_header *header = client_packet_header(config, buf);
+	*packet_size = header->ctx.packet_size;
+
+	return 0;
+}
+
+static int client_stream_id(const struct lib_ring_buffer_config *config,
+			struct lib_ring_buffer *buf,
+			uint64_t *stream_id)
+{
+	struct packet_header *header = client_packet_header(config, buf);
+	*stream_id = header->stream_id;
+
+	return 0;
+}
+
+static int client_current_timestamp(const struct lib_ring_buffer_config *config,
+		struct lib_ring_buffer *bufb,
+		uint64_t *ts)
+{
+	*ts = config->cb.ring_buffer_clock_read(bufb->backend.chan);
+
+	return 0;
+}
+
 static const struct lib_ring_buffer_config client_config = {
 	.cb.ring_buffer_clock_read = client_ring_buffer_clock_read,
 	.cb.record_header_size = client_record_header_size,
@@ -411,21 +489,46 @@ static const struct lib_ring_buffer_config client_config = {
 };
 
 static
-struct channel *_channel_create(const char *name,
-				struct lttng_channel *lttng_chan, void *buf_addr,
-				size_t subbuf_size, size_t num_subbuf,
-				unsigned int switch_timer_interval,
-				unsigned int read_timer_interval)
+void release_priv_ops(void *priv_ops)
 {
-	return channel_create(&client_config, name, lttng_chan, buf_addr,
-			      subbuf_size, num_subbuf, switch_timer_interval,
-			      read_timer_interval);
+	module_put(THIS_MODULE);
 }
 
 static
 void lttng_channel_destroy(struct channel *chan)
 {
 	channel_destroy(chan);
+}
+
+static
+struct channel *_channel_create(const char *name,
+				struct lttng_channel *lttng_chan, void *buf_addr,
+				size_t subbuf_size, size_t num_subbuf,
+				unsigned int switch_timer_interval,
+				unsigned int read_timer_interval)
+{
+	struct channel *chan;
+
+	chan = channel_create(&client_config, name, lttng_chan, buf_addr,
+			      subbuf_size, num_subbuf, switch_timer_interval,
+			      read_timer_interval);
+	if (chan) {
+		/*
+		 * Ensure this module is not unloaded before we finish
+		 * using lttng_relay_transport.ops.
+		 */
+		if (!try_module_get(THIS_MODULE)) {
+			printk(KERN_WARNING "LTT : Can't lock transport module.\n");
+			goto error;
+		}
+		chan->backend.priv_ops = &lttng_relay_transport.ops;
+		chan->backend.release_priv_ops = release_priv_ops;
+	}
+	return chan;
+
+error:
+	lttng_channel_destroy(chan);
+	return NULL;
 }
 
 static
@@ -571,6 +674,13 @@ static struct lttng_transport lttng_relay_transport = {
 		.get_hp_wait_queue = lttng_get_hp_wait_queue,
 		.is_finalized = lttng_is_finalized,
 		.is_disabled = lttng_is_disabled,
+		.timestamp_begin = client_timestamp_begin,
+		.timestamp_end = client_timestamp_end,
+		.events_discarded = client_events_discarded,
+		.content_size = client_content_size,
+		.packet_size = client_packet_size,
+		.stream_id = client_stream_id,
+		.current_timestamp = client_current_timestamp,
 	},
 };
 

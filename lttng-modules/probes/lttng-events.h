@@ -33,6 +33,48 @@
  */
 
 /*
+ * LTTng name mapping macros. LTTng remaps some of the kernel events to
+ * enforce name-spacing.
+ */
+#undef TRACE_EVENT_MAP
+#define TRACE_EVENT_MAP(name, map, proto, args, tstruct, assign, print)	\
+	DECLARE_EVENT_CLASS(map,					\
+			     PARAMS(proto),				\
+			     PARAMS(args),				\
+			     PARAMS(tstruct),				\
+			     PARAMS(assign),				\
+			     PARAMS(print))				\
+	DEFINE_EVENT_MAP(map, name, map, PARAMS(proto), PARAMS(args))
+
+#undef TRACE_EVENT_MAP_NOARGS
+#define TRACE_EVENT_MAP_NOARGS(name, map, tstruct, assign, print)	\
+	DECLARE_EVENT_CLASS_NOARGS(map,					\
+			     PARAMS(tstruct),				\
+			     PARAMS(assign),				\
+			     PARAMS(print))				\
+	DEFINE_EVENT_MAP_NOARGS(map, name, map)
+
+#undef DEFINE_EVENT_PRINT_MAP
+#define DEFINE_EVENT_PRINT_MAP(template, name, map, proto, args, print)	\
+	DEFINE_EVENT_MAP(template, name, map, PARAMS(proto), PARAMS(args))
+
+/* Callbacks are meaningless to LTTng. */
+#undef TRACE_EVENT_FN_MAP
+#define TRACE_EVENT_FN_MAP(name, map, proto, args, tstruct,		\
+		assign, print, reg, unreg)				\
+	TRACE_EVENT_MAP(name, map, PARAMS(proto), PARAMS(args),		\
+		PARAMS(tstruct), PARAMS(assign), PARAMS(print))		\
+
+#undef TRACE_EVENT_CONDITION_MAP
+#define TRACE_EVENT_CONDITION_MAP(name, map, proto, args, cond, tstruct, assign, print) \
+	TRACE_EVENT_MAP(name, map,					\
+		PARAMS(proto),						\
+		PARAMS(args),						\
+		PARAMS(tstruct),					\
+		PARAMS(assign),						\
+		PARAMS(print))
+
+/*
  * DECLARE_EVENT_CLASS can be used to add a generic function
  * handlers for events. That is, if all events have the same
  * parameters and just have distinct trace points.
@@ -43,34 +85,50 @@
  */
 
 #undef TRACE_EVENT
-#define TRACE_EVENT(name, proto, args, tstruct, assign, print) \
-	DECLARE_EVENT_CLASS(name,			       \
-			     PARAMS(proto),		       \
-			     PARAMS(args),		       \
-			     PARAMS(tstruct),		       \
-			     PARAMS(assign),		       \
-			     PARAMS(print))		       \
-	DEFINE_EVENT(name, name, PARAMS(proto), PARAMS(args))
+#define TRACE_EVENT(name, proto, args, tstruct, assign, print)	\
+	TRACE_EVENT_MAP(name, name,				\
+			PARAMS(proto),				\
+			PARAMS(args),				\
+			PARAMS(tstruct),			\
+			PARAMS(assign),				\
+			PARAMS(print))
 
 #undef TRACE_EVENT_NOARGS
-#define TRACE_EVENT_NOARGS(name, tstruct, assign, print)       \
-	DECLARE_EVENT_CLASS_NOARGS(name,		       \
-			     PARAMS(tstruct),		       \
-			     PARAMS(assign),		       \
-			     PARAMS(print))		       \
-	DEFINE_EVENT_NOARGS(name, name)
-
+#define TRACE_EVENT_NOARGS(name, tstruct, assign, print)	\
+	TRACE_EVENT_MAP_NOARGS(name, name,			\
+			PARAMS(tstruct),			\
+			PARAMS(assign),				\
+			PARAMS(print))
 
 #undef DEFINE_EVENT_PRINT
 #define DEFINE_EVENT_PRINT(template, name, proto, args, print)	\
-	DEFINE_EVENT(template, name, PARAMS(proto), PARAMS(args))
+	DEFINE_EVENT_PRINT_MAP(template, name, name,		\
+			PARAMS(proto), PARAMS(args), PARAMS(print_))
 
-/* Callbacks are meaningless to LTTng. */
 #undef TRACE_EVENT_FN
 #define TRACE_EVENT_FN(name, proto, args, tstruct,			\
 		assign, print, reg, unreg)				\
-	TRACE_EVENT(name, PARAMS(proto), PARAMS(args),			\
-		PARAMS(tstruct), PARAMS(assign), PARAMS(print))		\
+	TRACE_EVENT_FN_MAP(name, name, PARAMS(proto), PARAMS(args),	\
+		PARAMS(tstruct), PARAMS(assign), PARAMS(print),		\
+		PARAMS(reg), PARAMS(unreg))				\
+
+#undef DEFINE_EVENT
+#define DEFINE_EVENT(template, name, proto, args)			\
+	DEFINE_EVENT_MAP(template, name, name, PARAMS(proto), PARAMS(args))
+
+#undef DEFINE_EVENT_NOARGS
+#define DEFINE_EVENT_NOARGS(template, name)				\
+	DEFINE_EVENT_MAP_NOARGS(template, name, name)
+
+#undef TRACE_EVENT_CONDITION
+#define TRACE_EVENT_CONDITION(name, proto, args, cond, tstruct, assign, print) \
+	TRACE_EVENT_CONDITION_MAP(name, name,				\
+		PARAMS(proto),						\
+		PARAMS(args),						\
+		PARAMS(cond),						\
+		PARAMS(tstruct),					\
+		PARAMS(assign),						\
+		PARAMS(print))
 
 /*
  * Stage 1 of the trace events.
@@ -88,12 +146,12 @@
 #undef TP_ARGS
 #define TP_ARGS(args...) args
 
-#undef DEFINE_EVENT
-#define DEFINE_EVENT(_template, _name, _proto, _args)			\
+#undef DEFINE_EVENT_MAP
+#define DEFINE_EVENT_MAP(_template, _name, _map, _proto, _args)		\
 void trace_##_name(_proto);
 
-#undef DEFINE_EVENT_NOARGS
-#define DEFINE_EVENT_NOARGS(_template, _name)				\
+#undef DEFINE_EVENT_MAP_NOARGS
+#define DEFINE_EVENT_MAP_NOARGS(_template, _name, _map)			\
 void trace_##_name(void *__data);
 
 #include TRACE_INCLUDE(TRACE_INCLUDE_FILE)
@@ -178,6 +236,10 @@ void trace_##_name(void *__data);
 		},						\
 	},
 
+#undef __dynamic_array_enc_ext_2
+#define __dynamic_array_enc_ext_2(_type, _item, _length1, _length2, _order, _base, _encoding) \
+	__dynamic_array_enc_ext(_type, _item, _length1 + _length2, _order, _base, _encoding)
+
 #undef __dynamic_array
 #define __dynamic_array(_type, _item, _length)			\
 	__dynamic_array_enc_ext(_type, _item, _length, __BYTE_ORDER, 10, none)
@@ -189,6 +251,10 @@ void trace_##_name(void *__data);
 #undef __dynamic_array_hex
 #define __dynamic_array_hex(_type, _item, _length)		\
 	__dynamic_array_enc_ext(_type, _item, _length, __BYTE_ORDER, 16, none)
+
+#undef __dynamic_array_text_2
+#define __dynamic_array_text_2(_type, _item, _length1, _length2)	\
+	__dynamic_array_enc_ext_2(_type, _item, _length1, _length2, __BYTE_ORDER, 10, UTF8)
 
 #undef __string
 #define __string(_item, _src)					\
@@ -256,19 +322,20 @@ static void __event_probe__##_name(void *__data);
 #define TP_PROBE_CB(_template)	&__event_probe__##_template
 #endif
 
-#undef DEFINE_EVENT_NOARGS
-#define DEFINE_EVENT_NOARGS(_template, _name)				\
-static const struct lttng_event_desc __event_desc___##_name = {		\
+#undef DEFINE_EVENT_MAP_NOARGS
+#define DEFINE_EVENT_MAP_NOARGS(_template, _name, _map)			\
+static const struct lttng_event_desc __event_desc___##_map = {		\
 	.fields = __event_fields___##_template,		     		\
-	.name = #_name,					     		\
+	.name = #_map,					     		\
+	.kname = #_name,				     		\
 	.probe_callback = (void *) TP_PROBE_CB(_template),   		\
 	.nr_fields = ARRAY_SIZE(__event_fields___##_template),		\
 	.owner = THIS_MODULE,				     		\
 };
 
-#undef DEFINE_EVENT
-#define DEFINE_EVENT(_template, _name, _proto, _args)			\
-	DEFINE_EVENT_NOARGS(_template, _name)
+#undef DEFINE_EVENT_MAP
+#define DEFINE_EVENT_MAP(_template, _name, _map, _proto, _args)		\
+	DEFINE_EVENT_MAP_NOARGS(_template, _name, _map)
 
 #include TRACE_INCLUDE(TRACE_INCLUDE_FILE)
 
@@ -283,13 +350,13 @@ static const struct lttng_event_desc __event_desc___##_name = {		\
 
 #include "lttng-events-reset.h"	/* Reset all macros within TRACE_EVENT */
 
-#undef DEFINE_EVENT_NOARGS
-#define DEFINE_EVENT_NOARGS(_template, _name)				       \
-		&__event_desc___##_name,
+#undef DEFINE_EVENT_MAP_NOARGS
+#define DEFINE_EVENT_MAP_NOARGS(_template, _name, _map)			       \
+		&__event_desc___##_map,
 
-#undef DEFINE_EVENT
-#define DEFINE_EVENT(_template, _name, _proto, _args)			       \
-	DEFINE_EVENT_NOARGS(_template, _name)
+#undef DEFINE_EVENT_MAP
+#define DEFINE_EVENT_MAP(_template, _name, _map, _proto, _args)		       \
+	DEFINE_EVENT_MAP_NOARGS(_template, _name, _map)
 
 #define TP_ID1(_token, _system)	_token##_system
 #define TP_ID(_token, _system)	TP_ID1(_token, _system)
@@ -346,6 +413,18 @@ static __used struct lttng_probe_desc TP_ID(__probe_desc___, TRACE_SYSTEM) = {
 	__event_len += sizeof(u32);					       \
 	__event_len += lib_ring_buffer_align(__event_len, lttng_alignof(_type)); \
 	__dynamic_len[__dynamic_len_idx] = (_length);			       \
+	__event_len += sizeof(_type) * __dynamic_len[__dynamic_len_idx];       \
+	__dynamic_len_idx++;
+
+#undef __dynamic_array_enc_ext_2
+#define __dynamic_array_enc_ext_2(_type, _item, _length1, _length2, _order, _base, _encoding)\
+	__event_len += lib_ring_buffer_align(__event_len, lttng_alignof(u32));   \
+	__event_len += sizeof(u32);					       \
+	__event_len += lib_ring_buffer_align(__event_len, lttng_alignof(_type)); \
+	__dynamic_len[__dynamic_len_idx] = (_length1);			       \
+	__event_len += sizeof(_type) * __dynamic_len[__dynamic_len_idx];       \
+	__dynamic_len_idx++;						       \
+	__dynamic_len[__dynamic_len_idx] = (_length2);			       \
 	__event_len += sizeof(_type) * __dynamic_len[__dynamic_len_idx];       \
 	__dynamic_len_idx++;
 
@@ -406,6 +485,10 @@ static inline size_t __event_get_size__##_name(size_t *__dynamic_len, _proto) \
 	__event_align = max_t(size_t, __event_align, lttng_alignof(u32));	  \
 	__event_align = max_t(size_t, __event_align, lttng_alignof(_type));
 
+#undef __dynamic_array_enc_ext_2
+#define __dynamic_array_enc_ext_2(_type, _item, _length1, _length2, _order, _base, _encoding)\
+	__dynamic_array_enc_ext(_type, _item, _length1 + _length2, _order, _base, _encoding)
+
 #undef __string
 #define __string(_item, _src)
 
@@ -451,6 +534,10 @@ static inline size_t __event_get_align__##_name(_proto)			      \
 #undef __dynamic_array_enc_ext
 #define __dynamic_array_enc_ext(_type, _item, _length, _order, _base, _encoding)\
 	_type	_item;
+
+#undef __dynamic_array_enc_ext_2
+#define __dynamic_array_enc_ext_2(_type, _item, _length1, _length2, _order, _base, _encoding)\
+	__dynamic_array_enc_ext(_type, _item, _length1 + _length2, _order, _base, _encoding)
 
 #undef __string
 #define __string(_item, _src)			char _item;
@@ -500,6 +587,15 @@ __end_field_##_item:
 __end_field_##_item##_1:						\
 	goto __assign_##_item##_2;					\
 __end_field_##_item##_2:
+
+#undef __dynamic_array_enc_ext_2
+#define __dynamic_array_enc_ext_2(_type, _item, _length1, _length2, _order, _base, _encoding)\
+	goto __assign_##_item##_1;					\
+__end_field_##_item##_1:						\
+	goto __assign_##_item##_2;					\
+__end_field_##_item##_2:						\
+	goto __assign_##_item##_3;					\
+__end_field_##_item##_3:
 
 #undef __string
 #define __string(_item, _src)						\
@@ -558,9 +654,33 @@ __assign_##dest##_2:							\
 		sizeof(__typemap.dest) * __get_dynamic_array_len(dest));\
 	goto __end_field_##dest##_2;
 
+#undef tp_memcpy_dyn_gen_2
+#define tp_memcpy_dyn_gen_2(write_ops, dest, src1, src2)		\
+__assign_##dest##_1:							\
+	{								\
+		u32 __tmpl = __dynamic_len[__dynamic_len_idx]		\
+			+ __dynamic_len[__dynamic_len_idx + 1];		\
+		lib_ring_buffer_align_ctx(&__ctx, lttng_alignof(u32));	\
+		__chan->ops->event_write(&__ctx, &__tmpl, sizeof(u32));	\
+	}								\
+	goto __end_field_##dest##_1;					\
+__assign_##dest##_2:							\
+	lib_ring_buffer_align_ctx(&__ctx, lttng_alignof(__typemap.dest));	\
+	__chan->ops->write_ops(&__ctx, src1,				\
+		sizeof(__typemap.dest) * __get_dynamic_array_len(dest));\
+	goto __end_field_##dest##_2;					\
+__assign_##dest##_3:							\
+	__chan->ops->write_ops(&__ctx, src2,				\
+		sizeof(__typemap.dest) * __get_dynamic_array_len(dest));\
+	goto __end_field_##dest##_3;
+
 #undef tp_memcpy_dyn
 #define tp_memcpy_dyn(dest, src)					\
 	tp_memcpy_dyn_gen(event_write, dest, src)
+
+#undef tp_memcpy_dyn_2
+#define tp_memcpy_dyn_2(dest, src1, src2)				\
+	tp_memcpy_dyn_gen_2(event_write, dest, src1, src2)
 
 #undef tp_memcpy_dyn_from_user
 #define tp_memcpy_dyn_from_user(dest, src)				\
@@ -625,6 +745,11 @@ __assign_##dest##_2:							\
 #define _TP_SESSION_CHECK(session, csession)	1
 #endif /* TP_SESSION_CHECK */
 
+/*
+ * __dynamic_len array length is twice the number of fields due to
+ * __dynamic_array_enc_ext_2() and tp_memcpy_dyn_2(), which are the
+ * worse case, needing 2 entries per field.
+ */
 #undef DECLARE_EVENT_CLASS
 #define DECLARE_EVENT_CLASS(_name, _proto, _args, _tstruct, _assign, _print)  \
 static void __event_probe__##_name(void *__data, _proto)		      \
@@ -634,7 +759,7 @@ static void __event_probe__##_name(void *__data, _proto)		      \
 	struct lib_ring_buffer_ctx __ctx;				      \
 	size_t __event_len, __event_align;				      \
 	size_t __dynamic_len_idx = 0;					      \
-	size_t __dynamic_len[ARRAY_SIZE(__event_fields___##_name)];	      \
+	size_t __dynamic_len[2 * ARRAY_SIZE(__event_fields___##_name)];	      \
 	struct __event_typemap__##_name __typemap;			      \
 	int __ret;							      \
 									      \
