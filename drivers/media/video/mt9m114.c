@@ -2086,7 +2086,7 @@ static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     case V4L2_CID_BRIGHTNESS:
       return v4l2_ctrl_query_fill(qc, 0, 255, 1, 55);
     case V4L2_CID_CONTRAST:
-      return v4l2_ctrl_query_fill(qc, 0, 127, 1, 32);
+      return v4l2_ctrl_query_fill(qc, 16, 64, 1, 32);
     case V4L2_CID_SATURATION:
       return v4l2_ctrl_query_fill(qc, 0, 255, 1, 128);
     case V4L2_CID_HUE:
