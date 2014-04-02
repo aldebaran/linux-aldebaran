@@ -1993,7 +1993,19 @@ static int mt9m114_g_gain(struct v4l2_subdev *sd, __s32 *value)
 
 static int mt9m114_s_exposure(struct v4l2_subdev *sd, int value)
 {
-  int ret = mt9m114_write(sd, REG_UVC_EXPOSURE_TIME, 4, value<<2);
+  u32 v = 0;
+  int ret;
+
+  // Acquisition time don't go down unless you activate auto exposure before
+  mt9m114_read(sd, REG_UVC_EXPOSURE_TIME, 4, &v);
+  if (value < v)
+  {
+    mt9m114_s_auto_exposure(sd, 1);
+    msleep(2*v/10); // wait two vblanking
+    mt9m114_s_auto_exposure(sd, 0);
+  }
+
+  ret = mt9m114_write(sd, REG_UVC_EXPOSURE_TIME, 4, value);
   mt9m114_refresh(sd);
   return ret;
 }
@@ -2003,7 +2015,7 @@ static int mt9m114_g_exposure(struct v4l2_subdev *sd, __s32 *value)
   u32 v = 0;
   int ret = mt9m114_read(sd, REG_UVC_EXPOSURE_TIME, 4, &v);
 
-  *value = v>>2;
+  *value = v;
 
   dprintk(1,"MT9M114","MT9M114 : mt9m114_g_exposure_time 0x%x\n",v);
 
@@ -2105,7 +2117,7 @@ static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     case V4L2_CID_GAIN:
       return v4l2_ctrl_query_fill(qc, 0, 255, 1, 32);
     case V4L2_CID_EXPOSURE:
-      return v4l2_ctrl_query_fill(qc, 0, 512, 1, 0);
+      return v4l2_ctrl_query_fill(qc, 1, 2500, 1, 333);
     case V4L2_CID_DO_WHITE_BALANCE:
       ret = mt9m114_read(sd, REG_AWB_MIN_TEMPERATURE, 2, &min);
       if (ret < 0) {
