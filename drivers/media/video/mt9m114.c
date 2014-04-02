@@ -1846,10 +1846,19 @@ static int mt9m114_s_vflip(struct v4l2_subdev *sd, int value)
   return 0;
 }
 
-
+/* RR_E p96
+ * The actual sharpness value used is limited to the range 0 to +7.
+ * To ensure no sharpening is applied, set UVC sharpness to -7.
+ * note: in order to have continous range -7 is "mapped on" -1 value.*/
 static int mt9m114_s_sharpness(struct v4l2_subdev *sd, int value)
 {
-  int ret = mt9m114_write(sd, REG_UVC_SHARPNESS, 2, value);
+  int ret;
+  u32 val;
+  if (-1 == value)
+    val = (u32)-7;
+  else
+    val = value;
+  ret = mt9m114_write(sd, REG_UVC_SHARPNESS, 2, val);
   mt9m114_refresh(sd);
   return ret;
 }
@@ -1859,7 +1868,11 @@ static int mt9m114_g_sharpness(struct v4l2_subdev *sd, __s32 *value)
   u32 v = 0;
   int ret = mt9m114_read(sd, REG_UVC_SHARPNESS, 2, &v);
 
-  *value = v;
+  if ((u16)-7 == v)
+    *value = -1;
+  else
+    *value = v;
+
   return ret;
 }
 
@@ -2107,7 +2120,7 @@ static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     case V4L2_CID_HFLIP:
       return v4l2_ctrl_query_fill(qc, 0, 1, 1, 0);
     case V4L2_CID_SHARPNESS:
-      return v4l2_ctrl_query_fill(qc, -7, 7, 1, 0);
+      return v4l2_ctrl_query_fill(qc, -1, 7, 1, 0);
     case V4L2_CID_EXPOSURE_AUTO:
       return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
     case V4L2_CID_EXPOSURE_ALGORITHM:
