@@ -1407,17 +1407,6 @@ static int ov5640_g_exposure(struct v4l2_subdev *sd, __s32 *value)
 	ov5640_reg_read(client, AEC_EXPOSURE_7_0, &reg_7_0);
 
 	*value=(u32)reg_7_0|(u32)(reg_15_8)<<8|(u32)(reg_19_16)<<16;
-
-	return 0;
-}
-
-
-static int ov5640_s_luminance(struct v4l2_subdev *sd, int value)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
-	ov5640_reg_write(client, AVG_READOUT, (value&0xF));
-
 	return 0;
 }
 
@@ -1461,6 +1450,8 @@ static int ov5640_queryctrl(struct v4l2_subdev *sd,
 			return v4l2_ctrl_query_fill(qc, 0, 1024, 1, 32);
 		case V4L2_CID_EXPOSURE:
 			return v4l2_ctrl_query_fill(qc, 0, 1048576, 1, 0);
+		case V4L2_CID_BG_COLOR: // read only
+			return v4l2_ctrl_query_fill(qc, 0, 255, 1, 0);
 		case V4L2_CID_GREEN_BALANCE: // read only
 			return v4l2_ctrl_query_fill(qc, 0, 4096, 1, 2048);
 		case V4L2_CID_BLUE_BALANCE: // read only
@@ -1498,8 +1489,6 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ov5640_s_gain(sd, ctrl->value);
 		case V4L2_CID_EXPOSURE:
 			return ov5640_s_exposure(sd, ctrl->value);
-		case V4L2_CID_BG_COLOR:
-			return ov5640_s_luminance(sd, ctrl->value);
 	}
 	return -EINVAL;
 }
