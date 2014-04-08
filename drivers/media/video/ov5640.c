@@ -936,6 +936,7 @@ static int ov5640_try_fmt_internal(struct v4l2_subdev *sd,
 	}
 
 	pix->field = V4L2_FIELD_NONE;
+	pix->colorspace = V4L2_COLORSPACE_JPEG;
 	/*
 	 * Round requested image size down to the nearest
 	 * we support, but not below the smallest.
@@ -1796,7 +1797,6 @@ static int ov5640_g_fmt(struct v4l2_subdev *sd,
 		struct v4l2_format *format)
 {
 	struct ov5640 *ov5640 = to_ov5640(sd);
-
 	memcpy(format,&ov5640->format,sizeof(struct v4l2_format));
 
 	return 0;
@@ -1811,15 +1811,10 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 		struct v4l2_format *fmt)
 {
 	struct ov5640 *ov5640 = to_ov5640(sd);
-
 	ov5640_try_fmt_internal(sd, fmt);
-
 	memcpy(&ov5640->format,fmt,sizeof(struct v4l2_format));
 
-	ov5640_s_stream(sd,1);
-
 	return 0;
-
 }
 
 static int ov5640_enum_fmt(struct v4l2_subdev *subdev,
