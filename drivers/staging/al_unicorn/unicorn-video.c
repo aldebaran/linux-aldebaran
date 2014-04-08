@@ -188,6 +188,7 @@ int unicorn_video_dma_flipflop_buf(struct unicorn_dev *dev,
 int unicorn_video_change_fps(struct unicorn_dev *dev, struct unicorn_fh *fh)
 {
   int channel = fh->channel;
+  dprintk_video(1, dev->name, "%s() channel %d change fps on the fly...\n", __func__, fh->channel);
 
   spin_lock(&dev->slock);
 
