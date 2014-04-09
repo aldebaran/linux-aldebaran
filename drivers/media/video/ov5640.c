@@ -1667,6 +1667,7 @@ out:
 static int ov5640_load_firmware(struct v4l2_subdev *sd)
 {
 	int ret = 0;
+	int timeout = 1000;
 	u8 status = 0;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
@@ -1681,12 +1682,16 @@ static int ov5640_load_firmware(struct v4l2_subdev *sd)
 		v4l2_info(sd, "Write auto focus firmware...DONE\n");
 		// wait until the autofocus status is idle
 		status = 0;
-		while (status != AF_STATUS_IDLE) {
+		while (status != AF_STATUS_IDLE && timeout >= 0) {
 			v4l2_dbg(2, debug, sd, "Read auto focus status...\n");
 			ov5640_reg_read(client, AF_STATUS, &status);
 			v4l2_dbg(2, debug, sd, "Status: %x\n", status);
 			msleep(1);
+			timeout--;
 		}
+
+		if (timeout < 0)
+			v4l2_err(sd, "Failed to setup focus firmware: timeout\n");
 	}
 
 	return ret;
