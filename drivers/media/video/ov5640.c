@@ -174,6 +174,7 @@ struct ov5640_reg {
 
 /* BLC control */
 #define BLC_CTRL04				0x4004
+#define BLC_CTRL05				0x4005
 
 /* VFIFO control */
 #define VFIFO_CTRL_0C			0x460C
@@ -239,10 +240,10 @@ static const struct ov5640_reg configscript_common1[] = {
 	{ PAD_OUTPUT_ENABLE_01, 0x1F }, /*PCLK, D[9:6] output enable*/
 	{ PAD_OUTPUT_ENABLE_02, 0xF0 }, /*D[5:0] output enable */
 	{ SC_PLL_CONTROL_0, 0x1A },
-	{ SC_PLL_CONTROL_1, 0x11 },
-	{ SC_PLL_CONTROL_2, 0x46 },
+	{ SC_PLL_CONTROL_1, 0x12 },
+	{ SC_PLL_CONTROL_2, 0x38 },
 	{ SC_PLL_CONTROL_3, 0x13 },
-	{ SYSTEM_ROOT_DIVIDER, 0x12},
+	{ SYSTEM_ROOT_DIVIDER, 0x01}, // default 1 lane
 	{ CCIR656_CTRL, 0x01},
 	{ CCIR656_CTRL_00, 0x03},
 	{ 0x3630, 0x2e },
@@ -421,6 +422,37 @@ static const struct ov5640_reg af_firmware[] = {
 #include "ov5640_af_firmware.h"
 };
 
+static const struct ov5640_reg ov5640_setting_7_5fps_QSXGA_2592_1944[] = {
+	{SYSTEM_ROOT_DIVIDER, 0x16}, // 0x3108 02
+	{SC_PLL_CONTROL_1, 0x11}, // 0x3035 11
+	{SC_PLL_CONTROL_2, 0x54}, // 0x3036 54
+	{ LIGHT_METER1_THRES_LOW, 0x07 }, // 0x3c07
+
+	{0x3618, 0x04},
+	{0x3612, 0x2b},
+	{0x3708, 0x21},
+	{0x3709, 0x12},
+	{0x370c, 0x00},
+	// banding Filter
+	{AEC_MAX_EXPOSURE_HIGH_60HZ, 0x07}, // 0x3a02
+	{AEC_MAX_EXPOSURE_LOW_60HZ, 0xb0}, // 0x3a03
+	{0x3a08, 0x01}, // B50 high
+	{0x3a09, 0x27}, // B50 low
+	{0x3a0a, 0x00}, // B60 high
+	{0x3a0b, 0xf6}, // B60 low
+	{0x3a0e, 0x06}, // B50 max
+	{0x3a0d, 0x08}, // B60 max
+	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x07}, // 0x3a14
+	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xb0}, // 0x3a15
+
+	{BLC_CTRL04, 0x06}, // 0x4004
+	{BLC_CTRL05, 0x1a}, // 0x4005
+	{JPG_MODE_SELECT, 0x02}, // 0x4713
+	{0x460b, 0x35},
+	{VFIFO_CTRL_0C, 0x22}, // 0x460c 22
+	{0x3824, 0x01}, // 01
+};
+
 static const struct ov5640_reg ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{ LIGHT_METER1_THRES_LOW, 0x07 },
 	{0x3618, 0x04},
@@ -446,6 +478,9 @@ static const struct ov5640_reg ov5640_setting_15fps_QSXGA_2592_1944[] = {
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_VGA_640_480[] = {
+	{SYSTEM_ROOT_DIVIDER, 0x01}, // 0x3108
+	{SC_PLL_CONTROL_1, 0x12}, // 0x3035
+	{SC_PLL_CONTROL_2, 0x38}, // 0x3036
 	{ LIGHT_METER1_THRES_LOW, 0x08 },
 	{0x3618, 0x00},
 	{0x3612, 0x29},
@@ -470,6 +505,9 @@ static const struct ov5640_reg ov5640_setting_30fps_VGA_640_480[] = {
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_QVGA_320_240[] = {
+	{SYSTEM_ROOT_DIVIDER, 0x01}, // 0x3108
+	{SC_PLL_CONTROL_1, 0x12}, // 0x3035
+	{SC_PLL_CONTROL_2, 0x38}, // 0x3036
 	{ LIGHT_METER1_THRES_LOW, 0x08 },
 	{0x3618, 0x00},
 	{0x3612, 0x29},
@@ -494,6 +532,9 @@ static const struct ov5640_reg ov5640_setting_30fps_QVGA_320_240[] = {
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_720P_1280_720[] = {
+	{SYSTEM_ROOT_DIVIDER, 0x02}, // 0x3108
+	{SC_PLL_CONTROL_1, 0x21}, // 0x3035
+	{SC_PLL_CONTROL_2, 0x54}, // 0x3036
 	{ LIGHT_METER1_THRES_LOW, 0x07 },
 	{0x3618, 0x00},
 	{0x3612, 0x29},
@@ -518,6 +559,9 @@ static const struct ov5640_reg ov5640_setting_30fps_720P_1280_720[] = {
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_1080P_1920_1080[] = {
+	{SYSTEM_ROOT_DIVIDER, 0x02}, // 0x3108
+	{SC_PLL_CONTROL_1, 0x21}, // 0x3035
+	{SC_PLL_CONTROL_2, 0x54}, // 0x3036
 	{ LIGHT_METER1_THRES_LOW, 0x07 },
 	{0x3618, 0x04},
 	{0x3612, 0x2b},
@@ -563,8 +607,9 @@ static struct ov5640_mode_info ov5640_mode_info_data[ov5640_mode_MAX] = {
 		ov5640_setting_30fps_1080P_1920_1080,
 		ARRAY_SIZE(ov5640_setting_30fps_1080P_1920_1080)},
 	{ov5640_mode_QSXGA_2560_1920, 2560, 1920,
-		ov5640_setting_15fps_QSXGA_2592_1944,
-		ARRAY_SIZE(ov5640_setting_15fps_QSXGA_2592_1944)},
+		//ov5640_setting_15fps_QSXGA_2592_1944,
+		ov5640_setting_7_5fps_QSXGA_2592_1944,
+		ARRAY_SIZE(ov5640_setting_7_5fps_QSXGA_2592_1944)},
 };
 
 
@@ -1894,8 +1939,20 @@ static int ov5640_probe(struct i2c_client *client,
 
 	/* AF firmware */
 	ret = ov5640_s_stream(&ov5640->subdev, 1);
+	if (ret < 0)
+	{
+		v4l2_err(&ov5640->subdev, "Can't start streaming during probe");
+	}
 	ret = ov5640_load_firmware(&ov5640->subdev);
+	if (ret < 0)
+	{
+		v4l2_err(&ov5640->subdev, "Can't load autofocus firmware");
+	}
 	ret = ov5640_s_stream(&ov5640->subdev,0);
+	if (ret < 0)
+	{
+		v4l2_err(&ov5640->subdev, "Can't stop streaming during probe");
+	}
 
 	return ret;
 }
