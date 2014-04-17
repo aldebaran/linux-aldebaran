@@ -2128,7 +2128,7 @@ static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     case V4L2_CID_AUTO_WHITE_BALANCE:
       return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
     case V4L2_CID_GAIN:
-      return v4l2_ctrl_query_fill(qc, 0, 255, 1, 32);
+      return v4l2_ctrl_query_fill(qc, 32, 255, 1, 32);
     case V4L2_CID_EXPOSURE:
       return v4l2_ctrl_query_fill(qc, 1, 2500, 1, 333);
     case V4L2_CID_DO_WHITE_BALANCE:
