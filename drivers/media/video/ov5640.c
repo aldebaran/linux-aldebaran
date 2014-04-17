@@ -423,10 +423,10 @@ static const struct ov5640_reg af_firmware[] = {
 };
 
 static const struct ov5640_reg ov5640_setting_7_5fps_QSXGA_2592_1944[] = {
-	{SYSTEM_ROOT_DIVIDER, 0x16}, // 0x3108 02
-	{SC_PLL_CONTROL_1, 0x11}, // 0x3035 11
-	{SC_PLL_CONTROL_2, 0x54}, // 0x3036 54
-	{ LIGHT_METER1_THRES_LOW, 0x07 }, // 0x3c07
+	{SYSTEM_ROOT_DIVIDER, 0x16}, // 0x3108
+	{SC_PLL_CONTROL_1, 0x11}, // 0x3035
+	{SC_PLL_CONTROL_2, 0x50}, // 0x3036
+	{ LIGHT_METER1_THRES_LOW, 0x07}, // 0x3c07
 
 	{0x3618, 0x04},
 	{0x3612, 0x2b},
@@ -449,8 +449,8 @@ static const struct ov5640_reg ov5640_setting_7_5fps_QSXGA_2592_1944[] = {
 	{BLC_CTRL05, 0x1a}, // 0x4005
 	{JPG_MODE_SELECT, 0x02}, // 0x4713
 	{0x460b, 0x35},
-	{VFIFO_CTRL_0C, 0x22}, // 0x460c 22
-	{0x3824, 0x01}, // 01
+	{VFIFO_CTRL_0C, 0x22}, // 0x460c
+	{0x3824, 0x01},
 };
 
 static const struct ov5640_reg ov5640_setting_15fps_QSXGA_2592_1944[] = {
