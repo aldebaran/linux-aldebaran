@@ -471,17 +471,17 @@ static const struct ov5640_reg ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x07},
 	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xb0},
 	{BLC_CTRL04, 0x06},
-	{ JPG_MODE_SELECT, 0x02 },
-	{ VFIFO_CTRL_0C, 0x20 },
-	{ 0x3824, 0x04 },
-	{ 0x460b, 0x37 },
+	{JPG_MODE_SELECT, 0x02},
+	{VFIFO_CTRL_0C, 0x20},
+	{0x3824, 0x04},
+	{0x460b, 0x37},
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_VGA_640_480[] = {
 	{SYSTEM_ROOT_DIVIDER, 0x01}, // 0x3108
 	{SC_PLL_CONTROL_1, 0x12}, // 0x3035
 	{SC_PLL_CONTROL_2, 0x38}, // 0x3036
-	{ LIGHT_METER1_THRES_LOW, 0x08 },
+	{LIGHT_METER1_THRES_LOW, 0x08},
 	{0x3618, 0x00},
 	{0x3612, 0x29},
 	{0x3708, 0x62},
@@ -498,10 +498,10 @@ static const struct ov5640_reg ov5640_setting_30fps_VGA_640_480[] = {
 	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x03},
 	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xd8},
 	{BLC_CTRL04, 0x02},
-	{ JPG_MODE_SELECT, 0x03 },
-	{ VFIFO_CTRL_0C, 0x22 },
-	{ 0x3824, 0x02 },
-	{ 0x460b, 0x35 },
+	{JPG_MODE_SELECT, 0x03},
+	{VFIFO_CTRL_0C, 0x22},
+	{0x3824, 0x02},
+	{0x460b, 0x35},
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_QVGA_320_240[] = {
@@ -525,17 +525,17 @@ static const struct ov5640_reg ov5640_setting_30fps_QVGA_320_240[] = {
 	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x03},
 	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xd8},
 	{BLC_CTRL04, 0x02},
-	{ JPG_MODE_SELECT, 0x03 },
-	{ VFIFO_CTRL_0C, 0x22 },
-	{ 0x3824, 0x02 },
-	{ 0x460b, 0x35 },
+	{JPG_MODE_SELECT, 0x03},
+	{VFIFO_CTRL_0C, 0x22},
+	{0x3824, 0x02},
+	{0x460b, 0x35},
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_720P_1280_720[] = {
 	{SYSTEM_ROOT_DIVIDER, 0x02}, // 0x3108
 	{SC_PLL_CONTROL_1, 0x21}, // 0x3035
 	{SC_PLL_CONTROL_2, 0x54}, // 0x3036
-	{ LIGHT_METER1_THRES_LOW, 0x07 },
+	{LIGHT_METER1_THRES_LOW, 0x07},
 	{0x3618, 0x00},
 	{0x3612, 0x29},
 	{0x3708, 0x62},
@@ -552,17 +552,17 @@ static const struct ov5640_reg ov5640_setting_30fps_720P_1280_720[] = {
 	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x02},
 	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xe4},
 	{BLC_CTRL04, 0x02},
-	{ JPG_MODE_SELECT, 0x02 },
-	{ VFIFO_CTRL_0C, 0x20 },
-	{ 0x3824, 0x04 },
-	{ 0x460b, 0x37},
+	{JPG_MODE_SELECT, 0x02},
+	{VFIFO_CTRL_0C, 0x20},
+	{0x3824, 0x04},
+	{0x460b, 0x37},
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_1080P_1920_1080[] = {
 	{SYSTEM_ROOT_DIVIDER, 0x02}, // 0x3108
 	{SC_PLL_CONTROL_1, 0x21}, // 0x3035
 	{SC_PLL_CONTROL_2, 0x54}, // 0x3036
-	{ LIGHT_METER1_THRES_LOW, 0x07 },
+	{LIGHT_METER1_THRES_LOW, 0x07},
 	{0x3618, 0x04},
 	{0x3612, 0x2b},
 	{0x3708, 0x62},
@@ -579,10 +579,10 @@ static const struct ov5640_reg ov5640_setting_30fps_1080P_1920_1080[] = {
 	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x04},
 	{AEC_MAX_EXPOSURE_LOW_50HZ, 0x60},
 	{BLC_CTRL04, 0x06},
-	{ JPG_MODE_SELECT, 0x02 },
-	{ VFIFO_CTRL_0C, 0x20 },
-	{ 0x3824, 0x04 },
-	{ 0x460b, 0x37 },
+	{JPG_MODE_SELECT, 0x02},
+	{VFIFO_CTRL_0C, 0x20},
+	{0x3824, 0x04},
+	{0x460b, 0x37},
 };
 
 struct ov5640_mode_info {
