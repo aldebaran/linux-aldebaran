@@ -6,6 +6,11 @@
 
 #include <linux/version.h>
 #include <linux/module.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,33)
+#include <linux/autoconf.h>
+#else
+#include <generated/autoconf.h>
+#endif
 
 #include <linux/fs.h>
 #include <linux/errno.h>
@@ -14,10 +19,7 @@
 
 #include <asm/uaccess.h>
 #include <linux/miscdevice.h>
-#include <linux/nls.h>
-
-#include <cgos/Cgos.h>
-#include <cgos/CgosIobd.h>
+#include "CgosIobd.h"
 
 #define cgos_cdecl __attribute__((regparm(0)))
 #include "DrvUla.h"
@@ -33,16 +35,16 @@ static inline int devfs_mk_cdev(dev_t dev, umode_t mode, const char *fmt, ...)
   }
 #endif
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,5,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)
+#define MAJOR_DEV_NO 99
+static int cgos_major=MAJOR_DEV_NO;
+#else
 typedef void *devfs_handle_t;
 #endif
 
 //***************************************************************************
 
-#define MAJOR_DEV_NO 99
 #define DEVICE_NAME "cgos"
-
-static int cgos_major=MAJOR_DEV_NO;
 
 //***************************************************************************
 
@@ -81,7 +83,12 @@ int cgos_release(struct inode *_inode, struct file *f)
 
 #define return_ioctl(ret) { if (pbuf!=buf) kfree(pbuf); return ret; }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,35)
+#define ioctl unlocked_ioctl
+long cgos_ioctl(struct file *f, unsigned int command, unsigned long arg)
+#else
 int cgos_ioctl(struct inode *_inode, struct file *f, unsigned int command, unsigned long arg)
+#endif
   {
   IOCTL_BUF_DESC iobd;
   unsigned char buf[512];
@@ -130,7 +137,7 @@ static struct file_operations cgos_fops={
 
 static int __init cgos_init(void)
   {
-  dev_t dev;
+
   int error=0;
 
   memset(&osDrvVars,0,sizeof(osDrvVars));
@@ -210,8 +217,6 @@ MODULE_PARM(cgos_major,"i");
 
 // These lines are just present to allow you to suppress the tainted kernel
 // messages when the module is loaded and they imply absolutely nothing else.
-
-#define NO_TAINTED_KERNEL
 
 #ifdef NO_TAINTED_KERNEL
 MODULE_LICENSE("GPL"); // Great Polar Lights

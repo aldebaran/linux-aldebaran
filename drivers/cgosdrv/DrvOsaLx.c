@@ -4,7 +4,7 @@
 
 //***************************************************************************
 
-//#include <linux/version.h>
+#include <linux/version.h>
 #include <linux/slab.h>
 #include <linux/sched.h>
 //#include <linux/delay.h>
@@ -12,12 +12,18 @@
 #include <linux/vmalloc.h>
 #include <asm/pgtable.h>
 
-#undef PAGE_KERNEL_EXEC
-#define PAGE_KERNEL_EXEC __pgprot(__PAGE_KERNEL & ~_PAGE_NX)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,25)
+#define cgos_ioremap ioremap
+#else
+#define cgos_ioremap ioremap_cache
+#endif
+
+#ifndef PAGE_KERNEL_EXEC
+#define PAGE_KERNEL_EXEC PAGE_KERNEL
+#endif
 
 #define cgos_cdecl __attribute__((regparm(0)))
 #include "DrvOsa.h"
-
 
 //***************************************************************************
 
@@ -31,7 +37,7 @@ cgos_cdecl void OsaSleepms(void *ctx, unsigned long ms)
 
 cgos_cdecl void *OsaMapAddress(unsigned long addr, unsigned long len)
   {
-    return ioremap(addr,len);
+    return cgos_ioremap(addr,len);
   }
 
 cgos_cdecl void OsaUnMapAddress(void *base, unsigned long len)
