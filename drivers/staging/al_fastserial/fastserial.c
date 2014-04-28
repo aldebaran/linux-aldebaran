@@ -98,13 +98,6 @@
 #define APE_CHDMA_MAX_TRANSFER_LEN (253 * PAGE_SIZE)
 
 
-struct irq_info {
-  struct			hlist_node node;
-  int			irq;
-  spinlock_t		lock;	/* Protects list not the hash */
-  struct list_head	*head;
-};
-
 /**
  * Specifies those BARs to be mapped and the length of each mapping.
  *
@@ -279,36 +272,6 @@ static void sg_exit(struct ape_dev *ape);
 
 
 
-/**
- * fastserial() - Interrupt handler
- *
- */
-#define OX_GLOBAL_IRQ_STATUS (8)
-#define UART_16C950_ISR      (0x02)
-static irqreturn_t fastserial_isr(int irq, void *dev_id)
-{
-  struct irq_info *i = dev_id;
-  struct ape_dev *ape = (struct ape_dev *)dev_id;
-  u8 __iomem *p;
-  unsigned char irq_status=0;
-  if (!ape)
-    return IRQ_NONE;
-
-  DEBUG_INTR("fastSerial_interrupt(%d)...\n", irq);
-  //spin_lock(&i->lock);
-  int idx=0;
-  for (idx=0;idx<4;idx++)
-  {
-    p=ape->bar[0]+ (unsigned int)idx * 0x100 * 2 + 0x1000;
-    irq_status = ioread8(p + UART_16C950_ISR );
-    DEBUG_INTR("U%dS(%d)...\n",idx,irq_status);
-  }
-  ape->irq_count++;
-  //spin_unlock(&i->lock);
-  DEBUG_INTR("end.\n");
-  return IRQ_HANDLED;
-}
-
 #define UART_16C950_DLL       (0x00)
 #define UART_16C950_DLM       (0x01)
 #define UART_16C950_FCR       (0x02)
@@ -373,7 +336,7 @@ void init_serial_port(struct ape_dev *ape, int idx)
   iowrite8(0x0F,p + UART_16C950_MDM);
   /* Disable all interupts*/
   iowrite8(0x00,p + UART_16C950_IER);
-  printk(KERN_DEBUG "fastSerial : port %d initialised at %u \n",ioread8(p+UART_16C950_PIDX),p);
+  printk(KERN_DEBUG "fastSerial : port %d initialised at %p \n",ioread8(p+UART_16C950_PIDX),p);
   if(ape->buffer_bus)
   {
     iowrite32(ape->buffer_bus, p + UART_16C950_DMA_ADDRESS);
@@ -465,38 +428,6 @@ fail:
 success:
   return rc;
 }
-
-#if 0 /* not yet implemented fully FIXME add opcode */
-static void rcslave_test(struct ape_dev *ape, struct pci_dev *dev)
-{
-  u32 *rcslave_mem = (u32 *)ape->bar[APE_BAR_RCSLAVE];
-  u32 result = 0;
-  /** this number is assumed to be different each time this test runs */
-  u32 seed = (u32)jiffies;
-  u32 value = seed;
-  int i;
-
-  /* write loop */
-  value = seed;
-  for (i = 1024; i < 32768 / 4 ; i++) {
-    printk(KERN_DEBUG "Writing 0x%08x to 0x%p.\n",
-      (u32)value, (void *)rcslave_mem + i);
-    iowrite32(value, rcslave_mem + i);
-    value++;
-  }
-  /* read-back loop */
-  value = seed;
-  for (i = 1024; i < 32768 / 4; i++) {
-    result = ioread32(rcslave_mem + i);
-    if (result != value) {
-      printk(KERN_DEBUG "Wrote 0x%08x to 0x%p, but read back 0x%08x.\n",
-        (u32)value, (void *)rcslave_mem + i, (u32)result);
-      break;
-    }
-    value++;
-  }
-}
-#endif
 
 /* obtain the 32 most significant (high) bits of a 32-bit or 64-bit address */
 #define pci_dma_h(addr) ((addr >> 16) >> 16)
@@ -683,13 +614,6 @@ static int probe(struct pci_dev *dev, const struct pci_device_id *id)
   printk(KERN_DEBUG "IRQ line #%d.\n", irq_line);
 #if 1
   irq_line = dev->irq;
-  /* @see LDD3, page 259 */
-  //rc = request_irq(irq_line, fastserial_isr, IRQF_SHARED, DRV_NAME, (void *)ape);
-  if (rc) {
-    printk(KERN_DEBUG "Could not request IRQ #%d, error %d\n", irq_line, rc);
-    ape->irq_line = -1;
-    goto err_irq;
-  }
   /* remember which irq we allocated */
   ape->irq_line = (int)irq_line;
   printk(KERN_DEBUG "Succesfully requested IRQ #%d with dev_id 0x%p\n", irq_line, ape);
@@ -863,7 +787,7 @@ const unsigned short int CCITTtable[] = {
 0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0
 };
 
-u16 crcCCITT (u16 crc_init, u8 data[], u16 size)
+u16 crcCCITT (u16 crc_init, const u8 data[], u16 size)
 {
   u16 i = 0;
 
@@ -902,7 +826,7 @@ static ssize_t sg_read(struct file *file, char __user *buf, size_t count, loff_t
   u8 __iomem *p;
   static int cycle = 0;
   int totalSize = 0;
-  int i,j,k,l;
+  int i,j,k;
   int length=0;
   char * rxbuf;
   char * dmabuf;
@@ -916,7 +840,8 @@ static ssize_t sg_read(struct file *file, char __user *buf, size_t count, loff_t
   ape = (struct ape_dev *)file->private_data;
   for (i=0; i< 8; i++) {
     p = ape->bar[0] + (unsigned int)i * 0x100 *2 + 0x1000;
-    if (length = ioread8(p + UART_16C950_RFL)) {
+    length = ioread8(p + UART_16C950_RFL);
+    if (length) {
       if(0x01 & ioread8(p + UART_16C950_DMA_STATUS)) {
         printk(KERN_ERR DRV_NAME "_sg_read DMA ERROR\n");
         iowrite8(0,p + UART_16C950_DMA_STATUS);
@@ -980,7 +905,7 @@ static ssize_t sg_write(struct file *file, const char __user *buf, size_t count,
   int i,j;
   u16 crc;
   int length=0;
-  char * txbuf;
+  const u8 * txbuf;
   // skip 8 first byte with length of each buffer
   int txbuffposition=8;
   struct ape_dev *ape;
@@ -1011,26 +936,6 @@ static ssize_t sg_write(struct file *file, const char __user *buf, size_t count,
     if(length)
     {
       txbuf = buf + txbuffposition ;
-      /*for(j=0;j<length;j++)
-      {
-          //fill the buffer before sending to DMA
-          *(ape->buffer_virt + j) =  txbuf[j];
-      }
-      //add CRC
-      crc = crcCCITT(crc,txbuf,length);
-      *(ape->buffer_virt + j++) =  crc & 0xFF;
-      *(ape->buffer_virt + j) =  (crc >> 8) & 0xFF;
-      //check to know if the DMA operations worked well
-      for (j=0;j<100;j++)
-      {
-        if(ioread8(p + UART_16C950_DMA_STATE) & 0x04)
-        {
-          if (j>10) {
-            printk("wait %d cycle before transmitting\n",j);
-          }
-          break;
-        }
-      }*/
       for(j=0;j<length/4;j++)
       {
           iowrite32(((u32*)(txbuf))[j],p + UART_16C950_THR);
@@ -1055,12 +960,9 @@ static const struct file_operations sg_fops = {
   .write = sg_write,
 };
 
-/* sg_init() - Initialize character device
- *
- * XXX Should ideally be tied to the device, on device probe, not module init.
+/**
+ * sg_init() - Initialize character device
  */
-
-
 static int sg_init(struct ape_dev *ape)
 {
   int rc;
@@ -1102,7 +1004,6 @@ fail_alloc:
  *
  * XXX Should ideally be tied to the device, on device remove, not module exit.
  */
-
 static void sg_exit(struct ape_dev *ape)
 {
   printk(KERN_DEBUG DRV_NAME " sg_exit()\n");
