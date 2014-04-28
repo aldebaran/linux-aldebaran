@@ -1777,9 +1777,8 @@ static int mt9m114_g_hue(struct v4l2_subdev *sd, __s32 *value)
 static int mt9m114_s_brightness(struct v4l2_subdev *sd, int value)
 {
   int ret = 0;
-  ret = mt9m114_write(sd, REG_UVC_BRIGHTNESS, 2, value>>2);
-  //mt9m114_write(sd, REG_CAM_AET_TARGET_AVG_LUMA, 2, value);
-
+  //ret = mt9m114_write(sd, REG_UVC_BRIGHTNESS, 2, value);
+  ret = mt9m114_write(sd, REG_CAM_AET_TARGET_AVG_LUMA, 2, (value<<8)+0x80);
   mt9m114_refresh(sd);
   return ret;
 }
@@ -1787,9 +1786,10 @@ static int mt9m114_s_brightness(struct v4l2_subdev *sd, int value)
 static int mt9m114_g_brightness(struct v4l2_subdev *sd, __s32 *value)
 {
   u32 v = 0;
-  int ret = mt9m114_read(sd, REG_UVC_BRIGHTNESS, 2, &v);
+  //int ret = mt9m114_read(sd, REG_UVC_BRIGHTNESS, 2, &v);
+  int ret = mt9m114_read(sd, REG_CAM_AET_TARGET_AVG_LUMA, 2, &v);
 
-  *value = v<<2;
+  *value = v>>8;
   return ret;
 }
 
@@ -1846,10 +1846,19 @@ static int mt9m114_s_vflip(struct v4l2_subdev *sd, int value)
   return 0;
 }
 
-
+/* RR_E p96
+ * The actual sharpness value used is limited to the range 0 to +7.
+ * To ensure no sharpening is applied, set UVC sharpness to -7.
+ * note: in order to have continous range -7 is "mapped on" -1 value.*/
 static int mt9m114_s_sharpness(struct v4l2_subdev *sd, int value)
 {
-  int ret = mt9m114_write(sd, REG_UVC_SHARPNESS, 2, value);
+  int ret;
+  u32 val;
+  if (-1 == value)
+    val = (u32)-7;
+  else
+    val = value;
+  ret = mt9m114_write(sd, REG_UVC_SHARPNESS, 2, val);
   mt9m114_refresh(sd);
   return ret;
 }
@@ -1859,7 +1868,11 @@ static int mt9m114_g_sharpness(struct v4l2_subdev *sd, __s32 *value)
   u32 v = 0;
   int ret = mt9m114_read(sd, REG_UVC_SHARPNESS, 2, &v);
 
-  *value = v;
+  if ((u16)-7 == v)
+    *value = -1;
+  else
+    *value = v;
+
   return ret;
 }
 
@@ -1993,7 +2006,19 @@ static int mt9m114_g_gain(struct v4l2_subdev *sd, __s32 *value)
 
 static int mt9m114_s_exposure(struct v4l2_subdev *sd, int value)
 {
-  int ret = mt9m114_write(sd, REG_UVC_EXPOSURE_TIME, 4, value<<2);
+  u32 v = 0;
+  int ret;
+
+  // Acquisition time don't go down unless you activate auto exposure before
+  mt9m114_read(sd, REG_UVC_EXPOSURE_TIME, 4, &v);
+  if (value < v)
+  {
+    mt9m114_s_auto_exposure(sd, 1);
+    msleep(2*v/10); // wait two vblanking
+    mt9m114_s_auto_exposure(sd, 0);
+  }
+
+  ret = mt9m114_write(sd, REG_UVC_EXPOSURE_TIME, 4, value);
   mt9m114_refresh(sd);
   return ret;
 }
@@ -2003,7 +2028,7 @@ static int mt9m114_g_exposure(struct v4l2_subdev *sd, __s32 *value)
   u32 v = 0;
   int ret = mt9m114_read(sd, REG_UVC_EXPOSURE_TIME, 4, &v);
 
-  *value = v>>2;
+  *value = v;
 
   dprintk(1,"MT9M114","MT9M114 : mt9m114_g_exposure_time 0x%x\n",v);
 
@@ -2013,8 +2038,9 @@ static int mt9m114_g_exposure(struct v4l2_subdev *sd, __s32 *value)
 
 static int mt9m114_s_white_balance(struct v4l2_subdev *sd, int value)
 {
+  int ret;
   dprintk(1,"MT9M114","set white balance to %d\n",value);
-  int ret = mt9m114_write(sd, REG_AWB_COLOR_TEMPERATURE, 2, value);
+  ret = mt9m114_write(sd, REG_AWB_COLOR_TEMPERATURE, 2, value);
   if (ret < 0) {
     dprintk(2,"MT9M114","set white balance fail.\n");
     return ret;
@@ -2085,7 +2111,7 @@ static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     case V4L2_CID_BRIGHTNESS:
       return v4l2_ctrl_query_fill(qc, 0, 255, 1, 55);
     case V4L2_CID_CONTRAST:
-      return v4l2_ctrl_query_fill(qc, 0, 127, 1, 32);
+      return v4l2_ctrl_query_fill(qc, 16, 64, 1, 32);
     case V4L2_CID_SATURATION:
       return v4l2_ctrl_query_fill(qc, 0, 255, 1, 128);
     case V4L2_CID_HUE:
@@ -2094,7 +2120,7 @@ static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     case V4L2_CID_HFLIP:
       return v4l2_ctrl_query_fill(qc, 0, 1, 1, 0);
     case V4L2_CID_SHARPNESS:
-      return v4l2_ctrl_query_fill(qc, -7, 7, 1, 0);
+      return v4l2_ctrl_query_fill(qc, -1, 7, 1, 0);
     case V4L2_CID_EXPOSURE_AUTO:
       return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
     case V4L2_CID_EXPOSURE_ALGORITHM:
@@ -2102,9 +2128,9 @@ static int mt9m114_queryctrl(struct v4l2_subdev *sd,
     case V4L2_CID_AUTO_WHITE_BALANCE:
       return v4l2_ctrl_query_fill(qc, 0, 1, 1, 1);
     case V4L2_CID_GAIN:
-      return v4l2_ctrl_query_fill(qc, 0, 255, 1, 32);
+      return v4l2_ctrl_query_fill(qc, 32, 255, 1, 32);
     case V4L2_CID_EXPOSURE:
-      return v4l2_ctrl_query_fill(qc, 0, 512, 1, 0);
+      return v4l2_ctrl_query_fill(qc, 1, 2500, 1, 333);
     case V4L2_CID_DO_WHITE_BALANCE:
       ret = mt9m114_read(sd, REG_AWB_MIN_TEMPERATURE, 2, &min);
       if (ret < 0) {

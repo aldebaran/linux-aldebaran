@@ -174,6 +174,7 @@ struct ov5640_reg {
 
 /* BLC control */
 #define BLC_CTRL04				0x4004
+#define BLC_CTRL05				0x4005
 
 /* VFIFO control */
 #define VFIFO_CTRL_0C			0x460C
@@ -239,10 +240,10 @@ static const struct ov5640_reg configscript_common1[] = {
 	{ PAD_OUTPUT_ENABLE_01, 0x1F }, /*PCLK, D[9:6] output enable*/
 	{ PAD_OUTPUT_ENABLE_02, 0xF0 }, /*D[5:0] output enable */
 	{ SC_PLL_CONTROL_0, 0x1A },
-	{ SC_PLL_CONTROL_1, 0x11 },
-	{ SC_PLL_CONTROL_2, 0x46 },
+	{ SC_PLL_CONTROL_1, 0x12 },
+	{ SC_PLL_CONTROL_2, 0x38 },
 	{ SC_PLL_CONTROL_3, 0x13 },
-	{ SYSTEM_ROOT_DIVIDER, 0x12},
+	{ SYSTEM_ROOT_DIVIDER, 0x01}, // default 1 lane
 	{ CCIR656_CTRL, 0x01},
 	{ CCIR656_CTRL_00, 0x03},
 	{ 0x3630, 0x2e },
@@ -421,6 +422,37 @@ static const struct ov5640_reg af_firmware[] = {
 #include "ov5640_af_firmware.h"
 };
 
+static const struct ov5640_reg ov5640_setting_7_5fps_QSXGA_2592_1944[] = {
+	{SYSTEM_ROOT_DIVIDER, 0x16}, // 0x3108
+	{SC_PLL_CONTROL_1, 0x11}, // 0x3035
+	{SC_PLL_CONTROL_2, 0x50}, // 0x3036
+	{ LIGHT_METER1_THRES_LOW, 0x07}, // 0x3c07
+
+	{0x3618, 0x04},
+	{0x3612, 0x2b},
+	{0x3708, 0x21},
+	{0x3709, 0x12},
+	{0x370c, 0x00},
+	// banding Filter
+	{AEC_MAX_EXPOSURE_HIGH_60HZ, 0x07}, // 0x3a02
+	{AEC_MAX_EXPOSURE_LOW_60HZ, 0xb0}, // 0x3a03
+	{0x3a08, 0x01}, // B50 high
+	{0x3a09, 0x27}, // B50 low
+	{0x3a0a, 0x00}, // B60 high
+	{0x3a0b, 0xf6}, // B60 low
+	{0x3a0e, 0x06}, // B50 max
+	{0x3a0d, 0x08}, // B60 max
+	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x07}, // 0x3a14
+	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xb0}, // 0x3a15
+
+	{BLC_CTRL04, 0x06}, // 0x4004
+	{BLC_CTRL05, 0x1a}, // 0x4005
+	{JPG_MODE_SELECT, 0x02}, // 0x4713
+	{0x460b, 0x35},
+	{VFIFO_CTRL_0C, 0x22}, // 0x460c
+	{0x3824, 0x01},
+};
+
 static const struct ov5640_reg ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{ LIGHT_METER1_THRES_LOW, 0x07 },
 	{0x3618, 0x04},
@@ -439,14 +471,17 @@ static const struct ov5640_reg ov5640_setting_15fps_QSXGA_2592_1944[] = {
 	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x07},
 	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xb0},
 	{BLC_CTRL04, 0x06},
-	{ JPG_MODE_SELECT, 0x02 },
-	{ VFIFO_CTRL_0C, 0x20 },
-	{ 0x3824, 0x04 },
-	{ 0x460b, 0x37 },
+	{JPG_MODE_SELECT, 0x02},
+	{VFIFO_CTRL_0C, 0x20},
+	{0x3824, 0x04},
+	{0x460b, 0x37},
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_VGA_640_480[] = {
-	{ LIGHT_METER1_THRES_LOW, 0x08 },
+	{SYSTEM_ROOT_DIVIDER, 0x01}, // 0x3108
+	{SC_PLL_CONTROL_1, 0x12}, // 0x3035
+	{SC_PLL_CONTROL_2, 0x38}, // 0x3036
+	{LIGHT_METER1_THRES_LOW, 0x08},
 	{0x3618, 0x00},
 	{0x3612, 0x29},
 	{0x3708, 0x62},
@@ -463,13 +498,16 @@ static const struct ov5640_reg ov5640_setting_30fps_VGA_640_480[] = {
 	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x03},
 	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xd8},
 	{BLC_CTRL04, 0x02},
-	{ JPG_MODE_SELECT, 0x03 },
-	{ VFIFO_CTRL_0C, 0x22 },
-	{ 0x3824, 0x02 },
-	{ 0x460b, 0x35 },
+	{JPG_MODE_SELECT, 0x03},
+	{VFIFO_CTRL_0C, 0x22},
+	{0x3824, 0x02},
+	{0x460b, 0x35},
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_QVGA_320_240[] = {
+	{SYSTEM_ROOT_DIVIDER, 0x01}, // 0x3108
+	{SC_PLL_CONTROL_1, 0x12}, // 0x3035
+	{SC_PLL_CONTROL_2, 0x38}, // 0x3036
 	{ LIGHT_METER1_THRES_LOW, 0x08 },
 	{0x3618, 0x00},
 	{0x3612, 0x29},
@@ -487,14 +525,17 @@ static const struct ov5640_reg ov5640_setting_30fps_QVGA_320_240[] = {
 	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x03},
 	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xd8},
 	{BLC_CTRL04, 0x02},
-	{ JPG_MODE_SELECT, 0x03 },
-	{ VFIFO_CTRL_0C, 0x22 },
-	{ 0x3824, 0x02 },
-	{ 0x460b, 0x35 },
+	{JPG_MODE_SELECT, 0x03},
+	{VFIFO_CTRL_0C, 0x22},
+	{0x3824, 0x02},
+	{0x460b, 0x35},
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_720P_1280_720[] = {
-	{ LIGHT_METER1_THRES_LOW, 0x07 },
+	{SYSTEM_ROOT_DIVIDER, 0x02}, // 0x3108
+	{SC_PLL_CONTROL_1, 0x21}, // 0x3035
+	{SC_PLL_CONTROL_2, 0x54}, // 0x3036
+	{LIGHT_METER1_THRES_LOW, 0x07},
 	{0x3618, 0x00},
 	{0x3612, 0x29},
 	{0x3708, 0x62},
@@ -511,14 +552,17 @@ static const struct ov5640_reg ov5640_setting_30fps_720P_1280_720[] = {
 	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x02},
 	{AEC_MAX_EXPOSURE_LOW_50HZ, 0xe4},
 	{BLC_CTRL04, 0x02},
-	{ JPG_MODE_SELECT, 0x02 },
-	{ VFIFO_CTRL_0C, 0x20 },
-	{ 0x3824, 0x04 },
-	{ 0x460b, 0x37},
+	{JPG_MODE_SELECT, 0x02},
+	{VFIFO_CTRL_0C, 0x20},
+	{0x3824, 0x04},
+	{0x460b, 0x37},
 };
 
 static const struct ov5640_reg ov5640_setting_30fps_1080P_1920_1080[] = {
-	{ LIGHT_METER1_THRES_LOW, 0x07 },
+	{SYSTEM_ROOT_DIVIDER, 0x02}, // 0x3108
+	{SC_PLL_CONTROL_1, 0x21}, // 0x3035
+	{SC_PLL_CONTROL_2, 0x54}, // 0x3036
+	{LIGHT_METER1_THRES_LOW, 0x07},
 	{0x3618, 0x04},
 	{0x3612, 0x2b},
 	{0x3708, 0x62},
@@ -535,10 +579,10 @@ static const struct ov5640_reg ov5640_setting_30fps_1080P_1920_1080[] = {
 	{AEC_MAX_EXPOSURE_HIGH_50HZ, 0x04},
 	{AEC_MAX_EXPOSURE_LOW_50HZ, 0x60},
 	{BLC_CTRL04, 0x06},
-	{ JPG_MODE_SELECT, 0x02 },
-	{ VFIFO_CTRL_0C, 0x20 },
-	{ 0x3824, 0x04 },
-	{ 0x460b, 0x37 },
+	{JPG_MODE_SELECT, 0x02},
+	{VFIFO_CTRL_0C, 0x20},
+	{0x3824, 0x04},
+	{0x460b, 0x37},
 };
 
 struct ov5640_mode_info {
@@ -563,8 +607,9 @@ static struct ov5640_mode_info ov5640_mode_info_data[ov5640_mode_MAX] = {
 		ov5640_setting_30fps_1080P_1920_1080,
 		ARRAY_SIZE(ov5640_setting_30fps_1080P_1920_1080)},
 	{ov5640_mode_QSXGA_2560_1920, 2560, 1920,
-		ov5640_setting_15fps_QSXGA_2592_1944,
-		ARRAY_SIZE(ov5640_setting_15fps_QSXGA_2592_1944)},
+		//ov5640_setting_15fps_QSXGA_2592_1944,
+		ov5640_setting_7_5fps_QSXGA_2592_1944,
+		ARRAY_SIZE(ov5640_setting_7_5fps_QSXGA_2592_1944)},
 };
 
 
@@ -936,6 +981,7 @@ static int ov5640_try_fmt_internal(struct v4l2_subdev *sd,
 	}
 
 	pix->field = V4L2_FIELD_NONE;
+	pix->colorspace = V4L2_COLORSPACE_JPEG;
 	/*
 	 * Round requested image size down to the nearest
 	 * we support, but not below the smallest.
@@ -1216,96 +1262,129 @@ static int ov5640_g_saturation(struct v4l2_subdev *sd, __s32 *value)
 	return 0;
 }
 
-/*import numpy as np
-	t = np.arange(0, 256, 1.0) * 2.0 * np.pi / 256
-	cos = np.round(np.cos(t) * 128)
-	sin = np.round(np.sin(t) * 128)
-	def generate(name, table):
-	s = "static char "+ name +"_lut[] = {"
-	for i in range(len(table)):
-	if 0 == i%8 : s += "\n";
-	s += `int(table[i])`
-	if i != len(table)-1: s += ", ";
-	s += "};"
-	print s
-	generate("cos", cos)
-	generate("sin", sin)*/
-static char cos_lut[] = {
-	128, 128, 128, 128, 127, 127, 127, 126,
-	126, 125, 124, 123, 122, 122, 121, 119,
-	118, 117, 116, 114, 113, 111, 110, 108,
-	106, 105, 103, 101, 99, 97, 95, 93,
-	91, 88, 86, 84, 81, 79, 76, 74,
-	71, 68, 66, 63, 60, 58, 55, 52,
-	49, 46, 43, 40, 37, 34, 31, 28,
-	25, 22, 19, 16, 13, 9, 6, 3,
-	0, -3, -6, -9, -13, -16, -19, -22,
-	-25, -28, -31, -34, -37, -40, -43, -46,
-	-49, -52, -55, -58, -60, -63, -66, -68,
-	-71, -74, -76, -79, -81, -84, -86, -88,
-	-91, -93, -95, -97, -99, -101, -103, -105,
-	-106, -108, -110, -111, -113, -114, -116, -117,
-	-118, -119, -121, -122, -122, -123, -124, -125,
-	-126, -126, -127, -127, -127, -128, -128, -128,
-	-128, -128, -128, -128, -127, -127, -127, -126,
-	-126, -125, -124, -123, -122, -122, -121, -119,
-	-118, -117, -116, -114, -113, -111, -110, -108,
-	-106, -105, -103, -101, -99, -97, -95, -93,
-	-91, -88, -86, -84, -81, -79, -76, -74,
-	-71, -68, -66, -63, -60, -58, -55, -52,
-	-49, -46, -43, -40, -37, -34, -31, -28,
-	-25, -22, -19, -16, -13, -9, -6, -3,
-	-0, 3, 6, 9, 13, 16, 19, 22,
-	25, 28, 31, 34, 37, 40, 43, 46,
-	49, 52, 55, 58, 60, 63, 66, 68,
-	71, 74, 76, 79, 81, 84, 86, 88,
-	91, 93, 95, 97, 99, 101, 103, 105,
-	106, 108, 110, 111, 113, 114, 116, 117,
-	118, 119, 121, 122, 122, 123, 124, 125,
-	126, 126, 127, 127, 127, 128, 128, 128};
+/*
+#!/usr/bin/env python
+import numpy as np
+t = np.arange(-180, 181, 1.0) * np.pi / 180
+cos = np.round(np.cos(t) * 128)
+sin = np.round(np.sin(t) * 128)
 
-static char sin_lut[] = {
-	0, 3, 6, 9, 13, 16, 19, 22,
-	25, 28, 31, 34, 37, 40, 43, 46,
-	49, 52, 55, 58, 60, 63, 66, 68,
-	71, 74, 76, 79, 81, 84, 86, 88,
-	91, 93, 95, 97, 99, 101, 103, 105,
-	106, 108, 110, 111, 113, 114, 116, 117,
-	118, 119, 121, 122, 122, 123, 124, 125,
-	126, 126, 127, 127, 127, 128, 128, 128,
-	128, 128, 128, 128, 127, 127, 127, 126,
-	126, 125, 124, 123, 122, 122, 121, 119,
-	118, 117, 116, 114, 113, 111, 110, 108,
-	106, 105, 103, 101, 99, 97, 95, 93,
-	91, 88, 86, 84, 81, 79, 76, 74,
-	71, 68, 66, 63, 60, 58, 55, 52,
-	49, 46, 43, 40, 37, 34, 31, 28,
-	25, 22, 19, 16, 13, 9, 6, 3,
-	0, -3, -6, -9, -13, -16, -19, -22,
-	-25, -28, -31, -34, -37, -40, -43, -46,
-	-49, -52, -55, -58, -60, -63, -66, -68,
-	-71, -74, -76, -79, -81, -84, -86, -88,
-	-91, -93, -95, -97, -99, -101, -103, -105,
-	-106, -108, -110, -111, -113, -114, -116, -117,
-	-118, -119, -121, -122, -122, -123, -124, -125,
-	-126, -126, -127, -127, -127, -128, -128, -128,
-	-128, -128, -128, -128, -127, -127, -127, -126,
-	-126, -125, -124, -123, -122, -122, -121, -119,
-	-118, -117, -116, -114, -113, -111, -110, -108,
-	-106, -105, -103, -101, -99, -97, -95, -93,
-	-91, -88, -86, -84, -81, -79, -76, -74,
-	-71, -68, -66, -63, -60, -58, -55, -52,
-	-49, -46, -43, -40, -37, -34, -31, -28,
-	-25, -22, -19, -16, -13, -9, -6, -3};
+def generate(name, table):
+  s = "static char "+ name +"_lut[] = {"
+  for i in range(len(table)):
+    if 0 == i%8 : s += "\n";
+    s += `int(table[i])`
+    if i != len(table)-1: s += ", ";
+  s += "};"
+  print s
+generate("cos", cos)
+print ""
+generate("sin", sin)
+*/
+static unsigned char cos_lut[] = {
+-128, -128, -128, -128, -128, -128, -127, -127,
+-127, -126, -126, -126, -125, -125, -124, -124,
+-123, -122, -122, -121, -120, -119, -119, -118,
+-117, -116, -115, -114, -113, -112, -111, -110,
+-109, -107, -106, -105, -104, -102, -101, -99,
+-98, -97, -95, -94, -92, -91, -89, -87,
+-86, -84, -82, -81, -79, -77, -75, -73,
+-72, -70, -68, -66, -64, -62, -60, -58,
+-56, -54, -52, -50, -48, -46, -44, -42,
+-40, -37, -35, -33, -31, -29, -27, -24,
+-22, -20, -18, -16, -13, -11, -9, -7,
+-4, -2, 0, 2, 4, 7, 9, 11,
+13, 16, 18, 20, 22, 24, 27, 29,
+31, 33, 35, 37, 40, 42, 44, 46,
+48, 50, 52, 54, 56, 58, 60, 62,
+64, 66, 68, 70, 72, 73, 75, 77,
+79, 81, 82, 84, 86, 87, 89, 91,
+92, 94, 95, 97, 98, 99, 101, 102,
+104, 105, 106, 107, 109, 110, 111, 112,
+113, 114, 115, 116, 117, 118, 119, 119,
+120, 121, 122, 122, 123, 124, 124, 125,
+125, 126, 126, 126, 127, 127, 127, 128,
+128, 128, 128, 128, 128, 128, 128, 128,
+128, 128, 127, 127, 127, 126, 126, 126,
+125, 125, 124, 124, 123, 122, 122, 121,
+120, 119, 119, 118, 117, 116, 115, 114,
+113, 112, 111, 110, 109, 107, 106, 105,
+104, 102, 101, 99, 98, 97, 95, 94,
+92, 91, 89, 87, 86, 84, 82, 81,
+79, 77, 75, 73, 72, 70, 68, 66,
+64, 62, 60, 58, 56, 54, 52, 50,
+48, 46, 44, 42, 40, 37, 35, 33,
+31, 29, 27, 24, 22, 20, 18, 16,
+13, 11, 9, 7, 4, 2, 0, -2,
+-4, -7, -9, -11, -13, -16, -18, -20,
+-22, -24, -27, -29, -31, -33, -35, -37,
+-40, -42, -44, -46, -48, -50, -52, -54,
+-56, -58, -60, -62, -64, -66, -68, -70,
+-72, -73, -75, -77, -79, -81, -82, -84,
+-86, -87, -89, -91, -92, -94, -95, -97,
+-98, -99, -101, -102, -104, -105, -106, -107,
+-109, -110, -111, -112, -113, -114, -115, -116,
+-117, -118, -119, -119, -120, -121, -122, -122,
+-123, -124, -124, -125, -125, -126, -126, -126,
+-127, -127, -127, -128, -128, -128, -128, -128, -128};
+
+static unsigned char sin_lut[] = {
+0, -2, -4, -7, -9, -11, -13, -16,
+-18, -20, -22, -24, -27, -29, -31, -33,
+-35, -37, -40, -42, -44, -46, -48, -50,
+-52, -54, -56, -58, -60, -62, -64, -66,
+-68, -70, -72, -73, -75, -77, -79, -81,
+-82, -84, -86, -87, -89, -91, -92, -94,
+-95, -97, -98, -99, -101, -102, -104, -105,
+-106, -107, -109, -110, -111, -112, -113, -114,
+-115, -116, -117, -118, -119, -119, -120, -121,
+-122, -122, -123, -124, -124, -125, -125, -126,
+-126, -126, -127, -127, -127, -128, -128, -128,
+-128, -128, -128, -128, -128, -128, -128, -128,
+-127, -127, -127, -126, -126, -126, -125, -125,
+-124, -124, -123, -122, -122, -121, -120, -119,
+-119, -118, -117, -116, -115, -114, -113, -112,
+-111, -110, -109, -107, -106, -105, -104, -102,
+-101, -99, -98, -97, -95, -94, -92, -91,
+-89, -87, -86, -84, -82, -81, -79, -77,
+-75, -73, -72, -70, -68, -66, -64, -62,
+-60, -58, -56, -54, -52, -50, -48, -46,
+-44, -42, -40, -37, -35, -33, -31, -29,
+-27, -24, -22, -20, -18, -16, -13, -11,
+-9, -7, -4, -2, 0, 2, 4, 7,
+9, 11, 13, 16, 18, 20, 22, 24,
+27, 29, 31, 33, 35, 37, 40, 42,
+44, 46, 48, 50, 52, 54, 56, 58,
+60, 62, 64, 66, 68, 70, 72, 73,
+75, 77, 79, 81, 82, 84, 86, 87,
+89, 91, 92, 94, 95, 97, 98, 99,
+101, 102, 104, 105, 106, 107, 109, 110,
+111, 112, 113, 114, 115, 116, 117, 118,
+119, 119, 120, 121, 122, 122, 123, 124,
+124, 125, 125, 126, 126, 126, 127, 127,
+127, 128, 128, 128, 128, 128, 128, 128,
+128, 128, 128, 128, 127, 127, 127, 126,
+126, 126, 125, 125, 124, 124, 123, 122,
+122, 121, 120, 119, 119, 118, 117, 116,
+115, 114, 113, 112, 111, 110, 109, 107,
+106, 105, 104, 102, 101, 99, 98, 97,
+95, 94, 92, 91, 89, 87, 86, 84,
+82, 81, 79, 77, 75, 73, 72, 70,
+68, 66, 64, 62, 60, 58, 56, 54,
+52, 50, 48, 46, 44, 42, 40, 37,
+35, 33, 31, 29, 27, 24, 22, 20,
+18, 16, 13, 11, 9, 7, 4, 2, 0};
 
 static int ov5640_s_hue(struct v4l2_subdev *sd, int value)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	u8 cos = cos_lut[value+180];
+	u8 sin = sin_lut[value+180];
 
-	v4l2_dbg(2, debug, sd, "set hue: angle: %d, cos: %d, sin: %d", value, cos_lut[value], sin_lut[value]);
-	ret = ov5640_reg_write(client, SDE_CTRL_HUE_COS, cos_lut[value]);
-	ret += ov5640_reg_write(client, SDE_CTRL_HUE_SIN, sin_lut[value]);
+	v4l2_dbg(2, debug, sd, "set hue: angle: %d, cos: %d, sin: %d", value, cos, sin);
+	ret = ov5640_reg_write(client, SDE_CTRL_HUE_COS, cos);
+	ret += ov5640_reg_write(client, SDE_CTRL_HUE_SIN, sin);
 	to_ov5640(sd)->angle = value;
 
 	return ret;
@@ -1313,8 +1392,14 @@ static int ov5640_s_hue(struct v4l2_subdev *sd, int value)
 
 static int ov5640_g_hue(struct v4l2_subdev *sd, __s32 *value)
 {
+	u8 reg_cos, reg_sin;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+
+	ov5640_reg_read(client, SDE_CTRL_HUE_COS, &reg_cos);
+	ov5640_reg_read(client, SDE_CTRL_HUE_SIN, &reg_sin);
+
 	*value = to_ov5640(sd)->angle;
-	v4l2_dbg(2, debug, sd, "get hue: angle: %d, cos: %d, sin: %d", *value, cos_lut[*value], sin_lut[*value]);
+	v4l2_dbg(2, debug, sd, "get hue: angle: %d, cos: %d, sin: %d", *value, reg_cos, reg_sin);
 	return 0;
 }
 
@@ -1342,16 +1427,6 @@ static int ov5640_g_gain(struct v4l2_subdev *sd, __s32 *value)
 	return 0;
 }
 
-static int ov5640_s_red_balance(struct v4l2_subdev *sd, int value)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
-	ov5640_reg_write(client, AWB_RED_GAIN_HIGH, (value&0xF00)>>8);
-	ov5640_reg_write(client, AWB_RED_GAIN_LOW, (value&0xFF));
-
-	return 0;
-}
-
 static int ov5640_g_red_balance(struct v4l2_subdev *sd, __s32 *value)
 {
 	u8 reg_high;
@@ -1366,16 +1441,6 @@ static int ov5640_g_red_balance(struct v4l2_subdev *sd, __s32 *value)
 	return 0;
 }
 
-static int ov5640_s_green_balance(struct v4l2_subdev *sd, int value)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
-	ov5640_reg_write(client, AWB_GREEN_GAIN_HIGH, (value&0xF00)>>8);
-	ov5640_reg_write(client, AWB_GREEN_GAIN_LOW, (value&0xFF));
-
-	return 0;
-}
-
 static int ov5640_g_green_balance(struct v4l2_subdev *sd, __s32 *value)
 {
 	u8 reg_high;
@@ -1386,16 +1451,6 @@ static int ov5640_g_green_balance(struct v4l2_subdev *sd, __s32 *value)
 	ov5640_reg_read(client, AWB_GREEN_GAIN_LOW, &reg_low);
 
 	*value=(((u32)reg_high)<<8)|((u32)reg_low);
-
-	return 0;
-}
-
-static int ov5640_s_blue_balance(struct v4l2_subdev *sd, int value)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
-	ov5640_reg_write(client, AWB_BLUE_GAIN_HIGH, (value&0xF00)>>8);
-	ov5640_reg_write(client, AWB_BLUE_GAIN_LOW, (value&0xFF));
 
 	return 0;
 }
@@ -1418,6 +1473,7 @@ static int ov5640_s_exposure(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	value = value << 4;
 	ov5640_reg_write(client, AEC_EXPOSURE_19_16, (value&0xF0000)>>16);
 	ov5640_reg_write(client, AEC_EXPOSURE_15_8, (value&0xFF00)>>8);
 	ov5640_reg_write(client, AEC_EXPOSURE_7_0, (value&0xF0));
@@ -1437,17 +1493,7 @@ static int ov5640_g_exposure(struct v4l2_subdev *sd, __s32 *value)
 	ov5640_reg_read(client, AEC_EXPOSURE_7_0, &reg_7_0);
 
 	*value=(u32)reg_7_0|(u32)(reg_15_8)<<8|(u32)(reg_19_16)<<16;
-
-	return 0;
-}
-
-
-static int ov5640_s_luminance(struct v4l2_subdev *sd, int value)
-{
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
-	ov5640_reg_write(client, AVG_READOUT, (value&0xF));
-
+	*value = *value >> 4;
 	return 0;
 }
 
@@ -1469,13 +1515,13 @@ static int ov5640_queryctrl(struct v4l2_subdev *sd,
 	/* Fill in min, max, step and default value for these controls. */
 	switch (qc->id) {
 		case V4L2_CID_BRIGHTNESS:
-			return v4l2_ctrl_query_fill(qc, 0, 255, 1, 55);
+			return v4l2_ctrl_query_fill(qc, 0, 255, 1, 0x0);
 		case V4L2_CID_CONTRAST:
-			return v4l2_ctrl_query_fill(qc, 0, 255, 1, 32);
+			return v4l2_ctrl_query_fill(qc, 0, 255, 1, 0x20);
 		case V4L2_CID_SATURATION:
-			return v4l2_ctrl_query_fill(qc, 0, 255, 1, 128);
+			return v4l2_ctrl_query_fill(qc, 0, 255, 1, 0x40);
 		case V4L2_CID_HUE:
-			return v4l2_ctrl_query_fill(qc, 0, 255, 1, 0);
+			return v4l2_ctrl_query_fill(qc, -180, 180, 1, 0);
 		case V4L2_CID_VFLIP:
 		case V4L2_CID_HFLIP:
 			return v4l2_ctrl_query_fill(qc, 0, 1, 1, 0);
@@ -1490,12 +1536,14 @@ static int ov5640_queryctrl(struct v4l2_subdev *sd,
 		case V4L2_CID_GAIN:
 			return v4l2_ctrl_query_fill(qc, 0, 1024, 1, 32);
 		case V4L2_CID_EXPOSURE:
-			return v4l2_ctrl_query_fill(qc, 0, 1048576, 1, 0);
-		case V4L2_CID_GREEN_BALANCE:
+			return v4l2_ctrl_query_fill(qc, 0, 0xffff, 1, 0);
+		case V4L2_CID_BG_COLOR: // read only
+			return v4l2_ctrl_query_fill(qc, 0, 255, 1, 0);
+		case V4L2_CID_GREEN_BALANCE: // read only
 			return v4l2_ctrl_query_fill(qc, 0, 4096, 1, 2048);
-		case V4L2_CID_BLUE_BALANCE:
+		case V4L2_CID_BLUE_BALANCE: // read only
 			return v4l2_ctrl_query_fill(qc, 0, 4096, 1, 2048);
-		case V4L2_CID_RED_BALANCE:
+		case V4L2_CID_RED_BALANCE: // read only
 			return v4l2_ctrl_query_fill(qc, 0, 4096, 1, 2048);
 	}
 	return -EINVAL;
@@ -1528,14 +1576,6 @@ static int ov5640_s_ctrl(struct v4l2_subdev *sd, struct v4l2_control *ctrl)
 			return ov5640_s_gain(sd, ctrl->value);
 		case V4L2_CID_EXPOSURE:
 			return ov5640_s_exposure(sd, ctrl->value);
-		case V4L2_CID_BG_COLOR:
-			return ov5640_s_luminance(sd, ctrl->value);
-		case V4L2_CID_GREEN_BALANCE:
-			return ov5640_s_green_balance(sd, ctrl->value);
-		case V4L2_CID_RED_BALANCE:
-			return ov5640_s_red_balance(sd, ctrl->value);
-		case V4L2_CID_BLUE_BALANCE:
-			return ov5640_s_blue_balance(sd, ctrl->value);
 	}
 	return -EINVAL;
 }
@@ -1804,7 +1844,6 @@ static int ov5640_g_fmt(struct v4l2_subdev *sd,
 		struct v4l2_format *format)
 {
 	struct ov5640 *ov5640 = to_ov5640(sd);
-
 	memcpy(format,&ov5640->format,sizeof(struct v4l2_format));
 
 	return 0;
@@ -1819,15 +1858,10 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 		struct v4l2_format *fmt)
 {
 	struct ov5640 *ov5640 = to_ov5640(sd);
-
 	ov5640_try_fmt_internal(sd, fmt);
-
 	memcpy(&ov5640->format,fmt,sizeof(struct v4l2_format));
 
-	ov5640_s_stream(sd,1);
-
 	return 0;
-
 }
 
 static int ov5640_enum_fmt(struct v4l2_subdev *subdev,
@@ -1907,8 +1941,20 @@ static int ov5640_probe(struct i2c_client *client,
 
 	/* AF firmware */
 	ret = ov5640_s_stream(&ov5640->subdev, 1);
+	if (ret < 0)
+	{
+		v4l2_err(&ov5640->subdev, "Can't start streaming during probe");
+	}
 	ret = ov5640_load_firmware(&ov5640->subdev);
+	if (ret < 0)
+	{
+		v4l2_err(&ov5640->subdev, "Can't load autofocus firmware");
+	}
 	ret = ov5640_s_stream(&ov5640->subdev,0);
+	if (ret < 0)
+	{
+		v4l2_err(&ov5640->subdev, "Can't stop streaming during probe");
+	}
 
 	return ret;
 }

@@ -472,6 +472,9 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
   if (err < 0)
     return err;
 
+  dev->global_register->video[fh->channel].ctrl &= ~VIDEO_CONTROL_ENABLE;
+  dev->pcie_dma->dma[fh->channel].ctrl |= DMA_CONTROL_RESET;
+
   res_free(dev, fh, res);
   dprintk_video(1, fh->dev->name, "streamoff for video device %d DONE\n", fh->channel);
   return 0;
