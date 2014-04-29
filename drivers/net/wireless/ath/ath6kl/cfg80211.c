@@ -932,9 +932,6 @@ static int ath6kl_set_probed_ssids(struct ath6kl *ar,
 			ssid_list[i].flag = SPECIFIC_SSID_FLAG;
 		else
 			ssid_list[i].flag = ANY_SSID_FLAG;
-
-		if (n_match_ssid == 0)
-			ssid_list[i].flag |= MATCH_SSID_FLAG;
 	}
 
 	index_to_add = i;
@@ -948,7 +945,6 @@ static int ath6kl_set_probed_ssids(struct ath6kl *ar,
 			    (!memcmp(ssid_list[j].ssid.ssid,
 				     match_set[i].ssid.ssid,
 				     match_set[i].ssid.ssid_len))) {
-				ssid_list[j].flag |= MATCH_SSID_FLAG;
 				ssid_found = true;
 				break;
 			}
@@ -965,7 +961,6 @@ static int ath6kl_set_probed_ssids(struct ath6kl *ar,
 		memcpy(ssid_list[index_to_add].ssid.ssid,
 		       match_set[i].ssid.ssid,
 		       match_set[i].ssid.ssid_len);
-		ssid_list[index_to_add].flag |= MATCH_SSID_FLAG;
 		index_to_add++;
 	}
 
