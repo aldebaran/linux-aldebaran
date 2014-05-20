@@ -52,11 +52,11 @@ extern __printf(2, 3)
 int ath6kl_printk(const char *level, const char *fmt, ...);
 
 #define ath6kl_info(fmt, ...)				\
-	ath6kl_printk(KERN_INFO, fmt, ##__VA_ARGS__)
+	printk(KERN_INFO" ath6kl: " fmt, ##__VA_ARGS__)
 #define ath6kl_err(fmt, ...)					\
-	ath6kl_printk(KERN_ERR, fmt, ##__VA_ARGS__)
+	printk(KERN_ERR" ath6kl:" fmt, ##__VA_ARGS__)
 #define ath6kl_warn(fmt, ...)					\
-	ath6kl_printk(KERN_WARNING, fmt, ##__VA_ARGS__)
+	printk(KERN_WARNING" ath6kl:" fmt, ##__VA_ARGS__)
 
 enum ath6kl_war {
 	ATH6KL_WAR_INVALID_RATE,
