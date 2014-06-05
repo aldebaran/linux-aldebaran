@@ -1,5 +1,5 @@
 # obj-$(CONFIG_ATH5K)		+= ath5k/
-obj-$(CONFIG_ATH9K_HW)		+= ath9k/
+# obj-$(CONFIG_ATH9K_HW)		+= ath9k/
 # obj-$(CONFIG_CARL9170)		+= carl9170/
 obj-$(CONFIG_ATH6KL)		+= ath6kl/
 
