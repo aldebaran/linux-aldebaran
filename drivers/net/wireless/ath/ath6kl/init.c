@@ -1549,6 +1549,48 @@ static const char *ath6kl_init_get_hif_name(enum ath6kl_hif_type type)
 	return NULL;
 }
 
+int ath6kl_fw_watchdog_enable(struct ath6kl *ar)
+{
+	u32 param;
+	int ret;
+
+	ret = ath6kl_diag_read32(ar,
+		ath6kl_get_hi_item_addr(ar, HI_ITEM(hi_option_flag2)),
+		(u32 *)&param);
+
+	if (ret != 0)
+		return ret;
+
+	param |= HI_OPTION_FW_WATCHDOG_ENABLE;
+
+	ret = ath6kl_diag_write32(ar,
+		ath6kl_get_hi_item_addr(ar, HI_ITEM(hi_option_flag2)),
+		param);
+
+	return ret;
+}
+
+int ath6kl_fw_crash_cold_reset_enable(struct ath6kl *ar)
+{
+	u32 param;
+	int ret;
+
+	ret = ath6kl_diag_read32(ar,
+		ath6kl_get_hi_item_addr(ar, HI_ITEM(hi_option_flag2)),
+		(u32 *)&param);
+
+	if (ret != 0)
+		return ret;
+
+	param |= HI_OPTION_FW_CRASH_COLD_RESET;
+
+	ret = ath6kl_diag_write32(ar,
+		ath6kl_get_hi_item_addr(ar, HI_ITEM(hi_option_flag2)),
+		param);
+
+	return ret;
+}
+
 
 static const struct fw_capa_str_map {
 	int id;
