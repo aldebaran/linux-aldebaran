@@ -1122,6 +1122,7 @@ static int ov5640_g_hflip(struct v4l2_subdev *sd, __s32 *value)
 
 	*value=(reg&0x04)>>2;
 
+	v4l2_dbg(2, debug, sd, "get horizontal flip: %d", *value);
 	return 0;
 }
 
@@ -1129,6 +1130,7 @@ static int ov5640_s_hflip(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set horizontal flip: %d", value);
 	if(value==0)
 		ov5640_reg_clr(client, TIMING_TC_HFLIP, 0x06);
 	else
@@ -1146,6 +1148,7 @@ static int ov5640_g_vflip(struct v4l2_subdev *sd, __s32 *value)
 
 	*value=(reg&0x04)>>2;
 
+	v4l2_dbg(2, debug, sd, "get vertical flip: %d", *value);
 	return 0;
 }
 
@@ -1153,6 +1156,7 @@ static int ov5640_s_vflip(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set vertical flip: %d", value);
 	if(value==0)
 		ov5640_reg_clr(client, TIMING_TC_VFLIP, 0x06);
 	else
@@ -1165,6 +1169,7 @@ static int ov5640_s_auto_focus(struct v4l2_subdev *sd, int value)
 	int ret = 0;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set auto focus: %d", value);
 	if (value==1)
 		ret = ov5640_reg_write(client, AF_CTRL, AF_CONTINUE);
 	else
@@ -1180,6 +1185,7 @@ static int ov5640_s_auto_focus(struct v4l2_subdev *sd, int value)
 static int ov5640_g_auto_focus(struct v4l2_subdev *sd, __s32 *value)
 {
 	*value = to_ov5640(sd)->auto_focus_enabled ? 1: 0;
+	v4l2_dbg(2, debug, sd, "get auto focus: %d", *value);
 	return 0;
 }
 
@@ -1187,6 +1193,7 @@ static int ov5640_s_auto_exposure(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set auto exposure: %d", value);
 	if(value==1)
 		ov5640_reg_clr(client, AEC_AGC_MANUAL, AEC_MANUAL);
 	else
@@ -1202,6 +1209,7 @@ static int ov5640_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
 	ov5640_reg_read(client, AEC_AGC_MANUAL, &reg);
 
 	*value=!(reg&AEC_MANUAL);
+	v4l2_dbg(2, debug, sd, "get auto exposure: %d", *value);
 	return 0;
 }
 
@@ -1209,6 +1217,7 @@ static int ov5640_s_auto_white_balance(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set auto white balance: %d", value);
 	if(value==0)
 		ov5640_reg_clr(client, ISP_CONTROL_1, ISP_CTRL_AWB);
 	else
@@ -1224,6 +1233,7 @@ static int ov5640_g_auto_white_balance(struct v4l2_subdev *sd, __s32 *value)
 	ov5640_reg_read(client, ISP_CONTROL_1, &reg);
 
 	*value=(reg&ISP_CTRL_AWB);
+	v4l2_dbg(2, debug, sd, "get auto white balance: %d", *value);
 	return 0;
 }
 
@@ -1231,6 +1241,7 @@ static int ov5640_s_auto_gain(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set auto gain: %d", value);
 	if(value==1)
 		ov5640_reg_clr(client, AEC_AGC_MANUAL, AGC_MANUAL);
 	else
@@ -1246,6 +1257,7 @@ static int ov5640_g_auto_gain(struct v4l2_subdev *sd, __s32 *value)
 	ov5640_reg_read(client, AEC_AGC_MANUAL, &reg);
 
 	*value=!((reg&AGC_MANUAL)>>1);
+	v4l2_dbg(2, debug, sd, "get auto gain: %d", *value);
 	return 0;
 }
 
@@ -1253,6 +1265,7 @@ static int ov5640_s_brightness(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set brightness: %d", value);
 	ov5640_reg_write(client, SDE_CTRL_BRIGHTNESS, value);
 
 	return 0;
@@ -1266,7 +1279,7 @@ static int ov5640_g_brightness(struct v4l2_subdev *sd, __s32 *value)
 	ov5640_reg_read(client, SDE_CTRL_BRIGHTNESS, &reg);
 
 	*value=reg;
-
+	v4l2_dbg(2, debug, sd, "get brightness: %d", *value);
 	return 0;
 }
 
@@ -1274,6 +1287,7 @@ static int ov5640_s_contrast(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set contrast: %d", value);
 	ov5640_reg_write(client, SDE_CTRL_CONTRAST, value);
 
 	return 0;
@@ -1287,7 +1301,7 @@ static int ov5640_g_contrast(struct v4l2_subdev *sd, __s32 *value)
 	ov5640_reg_read(client, SDE_CTRL_CONTRAST, &reg);
 
 	*value=reg;
-
+	v4l2_dbg(2, debug, sd, "get contrast: %d", *value);
 	return 0;
 }
 
@@ -1295,6 +1309,7 @@ static int ov5640_s_saturation(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set saturation: %d", value);
 	ov5640_reg_write(client, SDE_CTRL_SATURATION_U, value);
 	ov5640_reg_write(client, SDE_CTRL_SATURATION_V, value);
 
@@ -1309,7 +1324,7 @@ static int ov5640_g_saturation(struct v4l2_subdev *sd, __s32 *value)
 	ov5640_reg_read(client, SDE_CTRL_SATURATION_U, &reg);
 
 	*value=reg;
-
+	v4l2_dbg(2, debug, sd, "get saturation: %d", *value);
 	return 0;
 }
 
@@ -1459,6 +1474,7 @@ static int ov5640_s_gain(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set gain: %d", value);
 	ov5640_reg_write(client, AGC_REAL_GAIN_HIGH, (value&0x300)>>8);
 	ov5640_reg_write(client, AGC_REAL_GAIN_LOW, (value&0xFF));
 
@@ -1476,6 +1492,7 @@ static int ov5640_g_gain(struct v4l2_subdev *sd, __s32 *value)
 
 	*value=(((u32)reg_high)<<8)|((u32)reg_low);
 
+	v4l2_dbg(2, debug, sd, "get gain: %d", *value);
 	return 0;
 }
 
@@ -1490,6 +1507,7 @@ static int ov5640_g_red_balance(struct v4l2_subdev *sd, __s32 *value)
 
 	*value=(((u32)reg_high)<<8)|((u32)reg_low);
 
+	v4l2_dbg(2, debug, sd, "get red balance: %d", *value);
 	return 0;
 }
 
@@ -1504,6 +1522,7 @@ static int ov5640_g_green_balance(struct v4l2_subdev *sd, __s32 *value)
 
 	*value=(((u32)reg_high)<<8)|((u32)reg_low);
 
+	v4l2_dbg(2, debug, sd, "get green balance: %d", *value);
 	return 0;
 }
 
@@ -1518,6 +1537,7 @@ static int ov5640_g_blue_balance(struct v4l2_subdev *sd, __s32 *value)
 
 	*value=(((u32)reg_high)<<8)|((u32)reg_low);
 
+	v4l2_dbg(2, debug, sd, "get blue balance: %d", *value);
 	return 0;
 }
 
@@ -1525,6 +1545,7 @@ static int ov5640_s_exposure(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
+	v4l2_dbg(2, debug, sd, "set exposure: %d", value);
 	value = value << 4;
 	ov5640_reg_write(client, AEC_EXPOSURE_19_16, (value&0xF0000)>>16);
 	ov5640_reg_write(client, AEC_EXPOSURE_15_8, (value&0xFF00)>>8);
@@ -1546,6 +1567,7 @@ static int ov5640_g_exposure(struct v4l2_subdev *sd, __s32 *value)
 
 	*value=(u32)reg_7_0|(u32)(reg_15_8)<<8|(u32)(reg_19_16)<<16;
 	*value = *value >> 4;
+	v4l2_dbg(2, debug, sd, "get exposure: %d", *value);
 	return 0;
 }
 
@@ -1557,6 +1579,7 @@ static int ov5640_g_luminance(struct v4l2_subdev *sd, __s32 *value)
 	ov5640_reg_read(client, AVG_READOUT, &reg);
 	*value=(u32)reg;
 
+	v4l2_dbg(2, debug, sd, "get luminance: %d", *value);
 	return 0;
 }
 
