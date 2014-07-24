@@ -129,7 +129,7 @@ int cgos_ioctl(struct inode *_inode, struct file *f, unsigned int command, unsig
 //***************************************************************************
 static struct file_operations cgos_fops={
   owner: THIS_MODULE,
-  compat_ioctl: cgos_ioctl,
+  unlocked_ioctl: cgos_ioctl,
   open: cgos_open,
   release: cgos_release,
   };
