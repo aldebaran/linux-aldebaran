@@ -1648,8 +1648,8 @@ static const struct control_params ov5640_ctrl[] = {
   .id = V4L2_CID_EXPOSURE_AUTO,
   .is_menu = true,
   .max = 1,
-  .s.step = 1,
-  .def = 1,
+  .s.mask = ~((1 << V4L2_EXPOSURE_AUTO) | (1 << V4L2_EXPOSURE_MANUAL)),
+  .def = V4L2_EXPOSURE_AUTO,
 },
 {
   .id = V4L2_CID_AUTO_WHITE_BALANCE,
