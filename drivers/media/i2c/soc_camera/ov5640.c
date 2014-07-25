@@ -137,7 +137,7 @@ struct ov5640_reg {
 #define CLOCK_ENABLE_00			0x3004
 #define CLOCK_ENABLE_02			0x3006
 #define SYSTEM_CTRL_0			0x3008
-#define MIPI_CONTROL_0 			0x300e
+#define MIPI_CONTROL_0			0x300e
 #define PAD_OUTPUT_ENABLE_01		0x3017
 #define PAD_OUTPUT_ENABLE_02		0x3018
 #define CHIP_REVISION			0x302A
@@ -153,7 +153,11 @@ struct ov5640_reg {
 /* AF control registers*/
 #define AF_CTRL				0x3022
 #define AF_STATUS			0x3029
-#define AF_STATUS_IDLE			0x70
+#define AF_STATUS_FOCUSING		0x00
+#define AF_STATUS_FOCUSED		0x10
+#define AF_STATUS_IDLE			0x70 /* focus released */
+#define AF_STATUS_STARTUP		0x7e /* focus fw is initializing */
+#define AF_STATUS_FIRMWARE		0x7f /* focus fw downloaded and not run */
 #define AF_CONTINUE			0x04
 #define AF_RELEASE			0x08
 
@@ -226,7 +230,7 @@ struct ov5640_reg {
 #define FORMAT_CONTROL_0		0x4300
 
 /* ISP top control */
-#define ISP_CONTROL_0 			0x5000
+#define ISP_CONTROL_0			0x5000
 #define ISP_CONTROL_1			0x5001
 #define ISP_CTRL_AWB			0x01
 
@@ -1899,7 +1903,8 @@ static int ov5640_load_firmware(struct v4l2_subdev *sd)
 		}
 
 		if (timeout < 0)
-			v4l2_err(sd, "Failed to setup focus firmware: timeout\n");
+			v4l2_err(sd, "Autofocus setup failed: timeout (0x%2x)\n",
+					status);
 	}
 
 	return ret;
@@ -2149,29 +2154,35 @@ static int ov5640_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	ret = ov5640_s_stream(sd,0);
+	ret = ov5640_s_stream(sd, 1);
 	if (ret < 0)
 	{
-		kfree(ov5640);
-		return -ENODEV;
+		v4l2_err(sd, "Can't start streaming during probe");
 	}
+
 	ret = ov5640_load_firmware(sd);
 	if (ret < 0)
 	{
 		v4l2_err(sd, "Can't load autofocus firmware");
 	}
 
+	ret = ov5640_s_stream(sd, 0);
+	if (ret < 0)
+	{
+		v4l2_err(sd, "Can't stop streaming during probe");
+	}
+
 	ret = v4l2_ctrl_handler_init(&ov5640->ctrl_handler,
 			ARRAY_SIZE(ov5640_ctrl));
 	if (ret)
 	{
-		v4l2_dbg(1, debug, sd, "fail to init ctrl handler for V4L2 sub device\n");
+		v4l2_err(sd, "fail to init ctrl handler for V4L2 sub device\n");
 		kfree(ov5640);
 		return -ENODEV;
 	}
 	ret = ov5640_register_controls(sd, &ov5640->ctrl_handler);
 	if (ret) {
-		v4l2_dbg(1, debug, sd, "fail to add standard controls for V4L2 sub device\n");
+		v4l2_err(sd, "fail to add standard controls for V4L2 sub device\n");
 		v4l2_ctrl_handler_free(&ov5640->ctrl_handler);
 		kfree(ov5640);
 		return ret;
