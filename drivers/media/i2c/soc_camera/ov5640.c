@@ -651,8 +651,8 @@ const struct ov5640_mode_info ov5640_mode_info_data[ov5640_mode_MAX] = {
 	},
 	[ov5640_mode_QSXGA_2560_1920]{
 		ov5640_mode_QSXGA_2560_1920, 2560, 1920,
-		ov5640_setting_15fps_QSXGA_2592_1944,
-		ARRAY_SIZE(ov5640_setting_15fps_QSXGA_2592_1944),
+		ov5640_setting_7_5fps_QSXGA_2592_1944,
+		ARRAY_SIZE(ov5640_setting_7_5fps_QSXGA_2592_1944),
 	},
 };
 
