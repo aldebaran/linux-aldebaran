@@ -2233,7 +2233,7 @@ struct control_params ctrl_list[NSTD_CTRLS] = {
   .def = 0
 },
 [STD_WHITE_BALANCE] = {
-  .id = V4L2_CID_WHITE_BALANCE_TEMPERATURE,
+  .id = V4L2_CID_DO_WHITE_BALANCE,
   .min = 0, /* initialize with mt9m114_set_white_balance_range() */
   .max = 6500, /* initialize with mt9m114_set_white_balance_range() */
   .step = 1,
