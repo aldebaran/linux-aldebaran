@@ -1677,6 +1677,22 @@ static int __ath6kl_init_hw_start(struct ath6kl *ar)
 
 	ath6kl_dbg(ATH6KL_DBG_BOOT, "hw start\n");
 
+	ath6kl_info("Firmware recovery mode cold\n");
+
+	ret = ath6kl_fw_watchdog_enable(ar);
+	if (ret != 0) {
+		ath6kl_err("Failed enable fw watchdog%d\n",
+			ret);
+		return ret;
+	}
+
+	ret = ath6kl_fw_crash_cold_reset_enable(ar);
+	if (ret != 0) {
+		ath6kl_err("Failed enable fw code reset %d\n",
+			ret);
+		return ret;
+	}
+
 	ret = ath6kl_hif_power_on(ar);
 	if (ret)
 		return ret;
