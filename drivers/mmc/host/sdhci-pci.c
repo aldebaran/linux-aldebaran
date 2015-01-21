@@ -332,6 +332,7 @@ static const struct sdhci_pci_fixes sdhci_intel_byt_sdio = {
 };
 
 static const struct sdhci_pci_fixes sdhci_intel_byt_sd = {
+	.quirks2	= SDHCI_QUIRK2_NO_1_8_V,
 };
 
 /* O2Micro extra registers */
