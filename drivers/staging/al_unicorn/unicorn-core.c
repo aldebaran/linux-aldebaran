@@ -66,7 +66,7 @@ void unicorn_video_wakeup(struct unicorn_dev *dev, struct unicorn_dmaqueue *q, i
   if(!list_empty(&q->active))
   {
     buf = list_entry(q->active.next, struct unicorn_buffer, vb.queue);
-    do_gettimeofday(&buf->vb.ts);
+    v4l2_get_timestamp(&buf->vb.ts);
     buf->vb.state = VIDEOBUF_DONE;
     list_del(&buf->vb.queue);
     wake_up(&buf->vb.done);
