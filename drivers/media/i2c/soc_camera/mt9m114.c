@@ -2130,12 +2130,14 @@ static int mt9m114_g_backlight_compensation(struct v4l2_subdev *sd, __s32 *value
 static int mt9m114_s_auto_exposure(struct v4l2_subdev *sd, int value)
 {
 	int ret = 0;
-	if (value == 0x01) {
+	if (value == V4L2_EXPOSURE_AUTO) {
 		ret = mt9m114_write(sd, REG_UVC_MANUAL_EXPOSURE, 1, 0x00);
 		ret += mt9m114_write(sd, REG_UVC_AE_MODE, 1, 0x02);
-	} else {
+	} else if (value == V4L2_EXPOSURE_MANUAL) {
 		ret = mt9m114_write(sd, REG_UVC_AE_MODE, 1, 0x01);
 		ret += mt9m114_write(sd, REG_UVC_MANUAL_EXPOSURE, 1, 0x01);
+	} else {
+		return -EINVAL;
 	}
 
 	mt9m114_refresh(sd);
@@ -2148,11 +2150,10 @@ static int mt9m114_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
 	int ret = mt9m114_read(sd, REG_UVC_AE_MODE, 1, &v);
 
 	if (v == 0x02) {
-		*value = 0x01;
+		*value = V4L2_EXPOSURE_AUTO;
 	} else {
-		*value = 0x00;
+		*value = V4L2_EXPOSURE_MANUAL;
 	}
-
 	return ret;
 }
 
