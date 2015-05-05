@@ -1706,6 +1706,13 @@ static const struct control_params ov5640_ctrl[] = {
   .s.step = 1,
   .def = 2048,
 },
+{
+  .id = V4L2_CID_BG_COLOR,
+  .is_menu = false,
+  .max = 65536,
+  .s.step = 1,
+  .def = 0,
+}
 };
 
 static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
