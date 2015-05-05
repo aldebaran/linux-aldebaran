@@ -1200,10 +1200,12 @@ static int ov5640_s_auto_exposure(struct v4l2_subdev *sd, int value)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	v4l2_dbg(2, debug, sd, "set auto exposure: %d", value);
-	if(value==1)
+	if (value == V4L2_EXPOSURE_AUTO)
 		ov5640_reg_clr(client, AEC_AGC_MANUAL, AEC_MANUAL);
-	else
+	else if (value == V4L2_EXPOSURE_MANUAL)
 		ov5640_reg_set(client, AEC_AGC_MANUAL, AEC_MANUAL);
+	else
+		return -EINVAL;
 	return 0;
 }
 
@@ -1214,7 +1216,12 @@ static int ov5640_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
 
 	ov5640_reg_read(client, AEC_AGC_MANUAL, &reg);
 
-	*value=!(reg&AEC_MANUAL);
+	if (reg&AEC_MANUAL) {
+		*value = V4L2_EXPOSURE_MANUAL;
+	} else {
+		*value = V4L2_EXPOSURE_AUTO;
+	}
+
 	v4l2_dbg(2, debug, sd, "get auto exposure: %d", *value);
 	return 0;
 }
