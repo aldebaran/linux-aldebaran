@@ -1598,128 +1598,178 @@ static int ov5640_g_luminance(struct v4l2_subdev *sd, __s32 *value)
 
 struct control_params {
 	u32 id;
+	s32 min;
 	s32 max;
-	s32 def;
-	bool is_menu;
 	union {
 		s32 mask; // if is_menu
 		u32 step; // else
 	} s;
+	s32 def;
+	bool is_menu;
+	bool is_volatile;
+	bool is_read_only;
 };
 
 static const struct control_params ov5640_ctrl[] = {
 {
   .id = V4L2_CID_FOCUS_AUTO,
-  .is_menu = false,
+	.min = 0,
   .max = 1,
   .s.step = 1,
   .def = 1,
+  .is_menu = false,
+  .is_volatile = false,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_BRIGHTNESS,
-  .is_menu = false,
+	.min = 0,
   .max = 255,
   .s.step = 1,
   .def = 0,
+  .is_menu = false,
+  .is_volatile = false,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_CONTRAST,
-  .is_menu = false,
+	.min = 0,
   .max = 255,
   .s.step = 1,
   .def = 32,
+  .is_menu = false,
+  .is_volatile = true,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_SATURATION,
-  .is_menu = false,
+	.min = 0,
   .max = 255,
   .s.step = 1,
   .def = 64,
+  .is_menu = false,
+  .is_volatile = false,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_HUE,
-  .is_menu = false,
-  .max = 255,
+	.min = -180,
+  .max = 180,
   .s.step = 1,
   .def = 0,
+  .is_menu = false,
+  .is_volatile = false,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_VFLIP,
-  .is_menu = false,
+	.min = 0,
   .max = 1,
   .s.step = 1,
   .def = 0,
+  .is_menu = false,
+  .is_volatile = false,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_HFLIP,
-  .is_menu = false,
+	.min = 0,
   .max = 1,
   .s.step = 1,
   .def = 0,
+  .is_menu = false,
+  .is_volatile = false,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_EXPOSURE_AUTO,
-  .is_menu = true,
   .max = 1,
   .s.mask = ~((1 << V4L2_EXPOSURE_AUTO) | (1 << V4L2_EXPOSURE_MANUAL)),
   .def = V4L2_EXPOSURE_AUTO,
+  .is_menu = true,
+  .is_volatile = false,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_AUTO_WHITE_BALANCE,
-  .is_menu = false,
+	.min = 0,
   .max = 1,
   .s.step = 1,
   .def = 1,
+  .is_menu = false,
+  .is_volatile = false,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_AUTOGAIN,
-  .is_menu = false,
+	.min = 0,
   .max = 1,
   .s.step = 1,
   .def = 1,
+  .is_menu = false,
+  .is_volatile = false,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_GAIN,
-  .is_menu = false,
+	.min = 0,
   .max = 1024,
   .s.step = 1,
   .def = 32,
+  .is_menu = false,
+  .is_volatile = true,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_EXPOSURE,
-  .is_menu = false,
+	.min = 0,
   .max = 65535,
   .s.step = 1,
   .def = 0,
+  .is_menu = false,
+  .is_volatile = true,
+  .is_read_only = false,
 },
 {
   .id = V4L2_CID_GREEN_BALANCE,
-  .is_menu = false,
+	.min = 0,
   .max = 4096,
   .s.step = 1,
   .def = 2048,
+  .is_menu = false,
+  .is_volatile = true,
+  .is_read_only = true,
 },
 {
   .id = V4L2_CID_BLUE_BALANCE,
-  .is_menu = false,
+	.min = 0,
   .max = 4096,
   .s.step = 1,
   .def = 2048,
+  .is_menu = false,
+  .is_volatile = true,
+  .is_read_only = true,
 },
 {
   .id = V4L2_CID_RED_BALANCE,
-  .is_menu = false,
+	.min = 0,
   .max = 4096,
   .s.step = 1,
   .def = 2048,
+  .is_menu = false,
+  .is_volatile = true,
+  .is_read_only = true,
 },
 {
   .id = V4L2_CID_BG_COLOR,
-  .is_menu = false,
-  .max = 65536,
+	.min = 0,
+  .max = 0xffffff,
   .s.step = 1,
   .def = 0,
-}
+  .is_menu = false,
+  .is_volatile = true,
+  .is_read_only = true,
+},
 };
 
 static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
@@ -1932,13 +1982,19 @@ static struct v4l2_ctrl* ov5640_register_ctrl(struct v4l2_subdev *sd,
 		ctrl = v4l2_ctrl_new_std_menu(hl, &ov5640_ctrl_ops,
 				std->id, std->max, std->s.mask, std->def);
 	} else {
-		ctrl = v4l2_ctrl_new_std(hl, &ov5640_ctrl_ops, std->id, 0,
+		ctrl = v4l2_ctrl_new_std(hl, &ov5640_ctrl_ops, std->id, std->min,
 				std->max, std->s.step, std->def);
 	}
 	if (ctrl == NULL) {
 		int err = hl->error;
 		v4l2_warn(sd, "std id 0x%x error: %x\n", std->id, err);
 		return NULL;
+	}
+	if (std->is_volatile) {
+		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+	}
+	if (std->is_read_only) {
+		ctrl->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 	}
 	return ctrl;
 }
