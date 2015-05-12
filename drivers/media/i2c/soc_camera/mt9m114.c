@@ -2564,8 +2564,10 @@ struct control_params {
 	u32 id;
 	s32 min;
 	s32 max;
-	u32 step;
-	s32 mask;
+	union {
+		s32 mask; // if is_menu
+		u32 step; // else
+	} s;
 	s32 def;
 	bool is_menu;
 	bool is_volatile;
@@ -2575,7 +2577,7 @@ struct control_params ctrl_list[] = {
 	[CTRL_EXPOSURE_AUTO] = {
 		.id = V4L2_CID_EXPOSURE_AUTO,
 		.max = V4L2_EXPOSURE_MANUAL,
-		.mask = ~((1 << V4L2_EXPOSURE_AUTO) | (1 << V4L2_EXPOSURE_MANUAL)),
+		.s.mask = ~((1 << V4L2_EXPOSURE_AUTO) | (1 << V4L2_EXPOSURE_MANUAL)),
 		.def = V4L2_EXPOSURE_AUTO,
 		.is_menu = true,
 		.is_volatile = false,
@@ -2583,7 +2585,7 @@ struct control_params ctrl_list[] = {
 	[CTRL_EXPOSURE_METERING] = {
 		.id = V4L2_CID_EXPOSURE_METERING,
 		.max = V4L2_EXPOSURE_METERING_MATRIX,
-		.mask = ~((1 << V4L2_EXPOSURE_METERING_AVERAGE) |
+		.s.mask = ~((1 << V4L2_EXPOSURE_METERING_AVERAGE) |
 			  (1 << V4L2_EXPOSURE_METERING_CENTER_WEIGHTED) |
 			  (1 << V4L2_EXPOSURE_METERING_SPOT) |
 			  (1 << V4L2_EXPOSURE_METERING_MATRIX)),
@@ -2594,7 +2596,7 @@ struct control_params ctrl_list[] = {
 	[CTRL_EXPOSURE_ALGO] = { // deprecated: use V4L2_CID_EXPOSURE_METERING
 		.id = V4L2_CID_EXPOSURE_ALGORITHM,
 		.max = V4L2_EXPOSURE_METERING_MATRIX,
-		.mask = ~((1 << V4L2_EXPOSURE_METERING_AVERAGE) |
+		.s.mask = ~((1 << V4L2_EXPOSURE_METERING_AVERAGE) |
 			  (1 << V4L2_EXPOSURE_METERING_CENTER_WEIGHTED) |
 			  (1 << V4L2_EXPOSURE_METERING_SPOT) |
 			  (1 << V4L2_EXPOSURE_METERING_MATRIX)),
@@ -2606,7 +2608,7 @@ struct control_params ctrl_list[] = {
 		.id = V4L2_CID_BRIGHTNESS,
 		.min = 0,
 		.max = 255,
-		.step = 1,
+		.s.step = 1,
 		.def = 55,
 		.is_menu = false,
 		.is_volatile = false,
@@ -2615,7 +2617,7 @@ struct control_params ctrl_list[] = {
 		.id = V4L2_CID_CONTRAST,
 		.min = 0,
 		.max = 127,
-		.step = 1,
+		.s.step = 1,
 		.def = 32,
 		.is_menu = false,
 		.is_volatile = false,
@@ -2624,7 +2626,7 @@ struct control_params ctrl_list[] = {
 		.id = V4L2_CID_SATURATION,
 		.min = 0,
 		.max = 255,
-		.step = 1,
+		.s.step = 1,
 		.def = 128,
 		.is_menu = false,
 		.is_volatile = false,
@@ -2633,7 +2635,7 @@ struct control_params ctrl_list[] = {
 		.id = V4L2_CID_HUE,
 		.min = -180,
 		.max = 180,
-		.step = 1,
+		.s.step = 1,
 		.def = 0,
 		.is_menu = false,
 		.is_volatile = false,
@@ -2642,7 +2644,7 @@ struct control_params ctrl_list[] = {
 		.id = V4L2_CID_VFLIP,
 		.min = 0,
 		.max = 1,
-		.step = 1,
+		.s.step = 1,
 		.def = 0,
 		.is_menu = false,
 		.is_volatile = false,
@@ -2651,7 +2653,7 @@ struct control_params ctrl_list[] = {
 		.id = V4L2_CID_HFLIP,
 		.min = 0,
 		.max = 1,
-		.step = 1,
+		.s.step = 1,
 		.def = 0,
 		.is_menu = false,
 		.is_volatile = false,
@@ -2660,7 +2662,7 @@ struct control_params ctrl_list[] = {
 		.id = V4L2_CID_SHARPNESS,
 		.min = 0, /* -7 is to ensure no sharpness */
 		.max = 7,
-		.step = 1,
+		.s.step = 1,
 		.def = 0,
 		.is_menu = false,
 		.is_volatile = false,
@@ -2669,7 +2671,7 @@ struct control_params ctrl_list[] = {
 		.id = V4L2_CID_AUTO_WHITE_BALANCE,
 		.min = 0,
 		.max = 1,
-		.step = 1,
+		.s.step = 1,
 		.def = 1,
 		.is_menu = false,
 		.is_volatile = false,
@@ -2678,25 +2680,25 @@ struct control_params ctrl_list[] = {
 		.id = V4L2_CID_GAIN,
 		.min = 32,
 		.max = 255,
-		.step = 1,
+		.s.step = 1,
 		.def = 32,
 		.is_menu = false,
-		.is_volatile = false,
+		.is_volatile = true,
 	},
 	[CTRL_EXPOSURE] = {
 		.id = V4L2_CID_EXPOSURE,
 		.min = 0,
 		.max = 512,
-		.step = 1,
+		.s.step = 1,
 		.def = 0,
 		.is_menu = false,
-		.is_volatile = false,
+		.is_volatile = true, // could be clamped
 	},
 	[CTRL_WHITE_BALANCE] = {
 		.id = V4L2_CID_DO_WHITE_BALANCE,
 		.min = 0, /* initialize with mt9m114_set_white_balance_range() */
 		.max = 6500, /* initialize with mt9m114_set_white_balance_range() */
-		.step = 1,
+		.s.step = 1,
 		.def = 6500,
 		.is_menu = false,
 		.is_volatile = true,
@@ -2705,7 +2707,7 @@ struct control_params ctrl_list[] = {
 		.id = V4L2_CID_BACKLIGHT_COMPENSATION,
 		.min = 0,
 		.max = 4,
-		.step = 1,
+		.s.step = 1,
 		.def = 1,
 		.is_menu = false,
 		.is_volatile = false,
@@ -2714,7 +2716,7 @@ struct control_params ctrl_list[] = {
 		.id = CID_STEREO,
 		.min = 0,
 		.max = 1,
-		.step = 1,
+		.s.step = 1,
 		.def = 0,
 		.is_menu = false,
 		.is_volatile = false,
@@ -2844,10 +2846,10 @@ static int mt9m114_register_ctrl(struct v4l2_ctrl_handler *hl,
 	if (control->is_menu) {
 		ctrl = v4l2_ctrl_new_std_menu(hl, &mt9m114_ctrl_ops,
 					      control->id, control->max,
-					      control->mask, control->def);
+					      control->s.mask, control->def);
 	} else {
 		ctrl = v4l2_ctrl_new_std(hl, &mt9m114_ctrl_ops, control->id,
-					 control->min, control->max, control->step,
+					 control->min, control->max, control->s.step,
 					 control->def);
 	}
 	if (ctrl == NULL) {
