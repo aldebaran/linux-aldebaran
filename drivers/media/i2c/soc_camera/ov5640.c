@@ -2253,6 +2253,14 @@ static int ov5640_probe(struct i2c_client *client,
 		kfree(ov5640);
 		return ret;
 	}
+	v4l2_ctrl_handler_setup(&ov5640->ctrl_handler);
+	if (ov5640->ctrl_handler.error) {
+		int err = ov5640->ctrl_handler.error;
+		v4l2_err(sd, "fail to setup control handler for V4L2 sub device\n");
+		v4l2_ctrl_handler_free(&ov5640->ctrl_handler);
+		kfree(ov5640);
+		return err;
+	}
 	ov5640->subdev.ctrl_handler = &ov5640->ctrl_handler;
 
 	v4l2_dbg(1, debug, sd, "%s find device\n", __func__);
