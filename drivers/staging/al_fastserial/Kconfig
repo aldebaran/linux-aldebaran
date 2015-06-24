@@ -1,0 +1,6 @@
+config AL_FASTSERIAL
+	tristate "Aldebaran Robotics OXPCIe fastserial driver"
+	depends on PCI
+	default n
+	---help---
+	  Add support for OXPCIe PCI/uart interface using a 9bits protocole
