@@ -128,6 +128,8 @@ enum v4l2_colorfx {
 
 #define V4L2_CID_ROTATE				(V4L2_CID_BASE+34)
 #define V4L2_CID_BG_COLOR			(V4L2_CID_BASE+35)
+/* deprecated: Aldebaran compat */
+#define V4L2_CID_AEC_ALGORITHM			(V4L2_CID_BASE+35)
 
 #define V4L2_CID_CHROMA_GAIN                    (V4L2_CID_BASE+36)
 
@@ -678,6 +680,13 @@ enum  v4l2_exposure_auto_type {
 
 #define V4L2_CID_PRIVACY			(V4L2_CID_CAMERA_CLASS_BASE+16)
 
+/* For Aldebaran backward compatibility:
+ * override V4L2_CID_IRIS_ABSOLUTE with V4L2_CID_EXPOSURE_ALGORITHM
+ * use of V4L2_CID_EXPOSURE_ALGORITHM is deprecated, shall use
+ * V4L2_CID_EXPOSURE_METERING instead.
+ * V4L2_CID_EXPOSURE_ALGORITHM will be removed in the future.
+ * */
+#define V4L2_CID_EXPOSURE_ALGORITHM		(V4L2_CID_CAMERA_CLASS_BASE+17)
 #define V4L2_CID_IRIS_ABSOLUTE			(V4L2_CID_CAMERA_CLASS_BASE+17)
 #define V4L2_CID_IRIS_RELATIVE			(V4L2_CID_CAMERA_CLASS_BASE+18)
 
