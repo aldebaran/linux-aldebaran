@@ -12,13 +12,15 @@
  * This file may be distributed under the terms of the GNU General
  * Public License, version 2.
  */
-
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/i2c.h>
 #include <linux/delay.h>
 #include <linux/videodev2.h>
+
+#include <media/v4l2-mediabus.h>
+
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
 
@@ -41,7 +43,7 @@ module_param(camera_sync, int, 0);
 MODULE_PARM_DESC(camera_sync, "Delay the camera initialization (use on Romeo to wait the faceboard)");
 
 static int ext_clock = 24;
-module_param(ext_clock, int, 24);
+module_param(ext_clock, int, 0644);
 MODULE_PARM_DESC(ext_clock, "Frequency of the external clock in MHz (possible values: 12, 24, 48; default is 24)");
 
 #ifndef V4L2_CID_CAM_INIT
@@ -1487,12 +1489,12 @@ static int mt9m114_features(struct v4l2_subdev *sd)
  * is deeply tied into the format, so keep the relevant values here.
  * The magic matrix numbers come from OmniVision.*/
 static struct mt9m114_format_struct {
-	enum v4l2_mbus_pixelcode pixelcode;
+	u32 pixelcode;
 	enum v4l2_colorspace colorspace;
 	struct regval_list *regs;
 } mt9m114_formats[] = {
 	{
-		.pixelcode	= V4L2_MBUS_FMT_YUYV8_2X8,
+		.pixelcode	= MEDIA_BUS_FMT_YUYV8_2X8,
 		.colorspace = V4L2_COLORSPACE_JPEG,
 		.regs	= mt9m114_fmt_yuv422,
 	},
@@ -1667,7 +1669,7 @@ static int mt9m114_detect(struct v4l2_subdev *sd)
 }
 
 static int mt9m114_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
-			    enum v4l2_mbus_pixelcode *code) {
+			    u32 *code) {
 	if (index >= ARRAY_SIZE(mt9m114_formats))
 		return -EINVAL;
 
@@ -1676,8 +1678,7 @@ static int mt9m114_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 }
 
 /* Find a data format by a pixel code */
-static struct mt9m114_format_struct *mt9m114_find_datafmt(
-							  enum v4l2_mbus_pixelcode code) {
+static struct mt9m114_format_struct *mt9m114_find_datafmt(u32 code) {
 	int index;
 	for (index = 0; index < ARRAY_SIZE(mt9m114_formats); index++)
 		if (mt9m114_formats[index].pixelcode == code)
