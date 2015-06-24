@@ -15,6 +15,7 @@
  * GNU General Public License for more details.
  */
 
+
 #include <linux/videodev2.h>
 #include <linux/slab.h>
 #include <linux/i2c.h>
@@ -26,8 +27,10 @@
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
 
+#include <media/v4l2-mediabus.h>
 #include <media/v4l2-device.h>
 #include <media/v4l2-ctrls.h>
+
 
 #ifndef V4L2_CID_GREEN_BALANCE
 #define V4L2_CID_GREEN_BALANCE V4L2_CID_DO_WHITE_BALANCE
@@ -65,7 +68,7 @@ enum ov5640_mode {
 };
 
 struct ov5640_format {
-	enum v4l2_mbus_pixelcode code;
+	u32 code;
 	enum v4l2_colorspace colorspace;
 	u8 fmtreg;
 	u8 fmtmuxreg;
@@ -80,13 +83,13 @@ enum ov5640_format_name {
 /* supported pixel formats */
 static const struct ov5640_format ov5640_formats[] = {
 	[ov5640_format_YUYV] = {
-		.code		= V4L2_MBUS_FMT_YUYV8_2X8,
+		.code		= MEDIA_BUS_FMT_YUYV8_2X8,
 		.colorspace	= V4L2_COLORSPACE_JPEG,
 		.fmtreg		= 0x30,
 		.fmtmuxreg	= 0,
 	},
 	[ov5640_format_UYVY] = {
-		.code		= V4L2_MBUS_FMT_UYVY8_2X8,
+		.code		= MEDIA_BUS_FMT_UYVY8_2X8,
 		.colorspace	= V4L2_COLORSPACE_JPEG,
 		.fmtreg		= 0x32,
 		.fmtmuxreg	= 0,
@@ -2081,7 +2084,7 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 }
 
 static int ov5640_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
-			      enum v4l2_mbus_pixelcode *code)
+				u32 *code)
 {
 	if (!code || index >= ARRAY_SIZE(ov5640_formats))
 		return -EINVAL;
