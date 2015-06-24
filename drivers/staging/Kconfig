@@ -110,4 +110,6 @@ source "drivers/staging/i2o/Kconfig"
 
 source "drivers/staging/al_fastserial/Kconfig"
 
+source "drivers/staging/al_unicorn/Kconfig"
+
 endif # STAGING

@@ -47,3 +47,4 @@ obj-$(CONFIG_COMMON_CLK_XLNX_CLKWZRD)	+= clocking-wizard/
 obj-$(CONFIG_FB_TFT)		+= fbtft/
 obj-$(CONFIG_I2O)		+= i2o/
 obj-$(CONFIG_AL_FASTSERIAL)	+= al_fastserial/
+obj-$(CONFIG_AL_UNICORN)	+= al_unicorn/
