@@ -65,8 +65,9 @@ static int vidioc_querycap(struct file *file, void *priv, struct v4l2_capability
   strlcpy(cap->card, dev->name, sizeof(cap->card));
   sprintf(cap->bus_info, "PCIe:%s", pci_name(dev->pci));
   cap->version = UNICORN_VERSION_CODE;
-  cap->capabilities =
-      V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_READWRITE | V4L2_CAP_STREAMING;
+  cap->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_READWRITE |
+      V4L2_CAP_STREAMING;
+  cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS;
 
   return 0;
 }
