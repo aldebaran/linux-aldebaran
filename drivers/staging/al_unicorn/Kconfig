@@ -1,0 +1,41 @@
+
+config AL_UNICORN
+	tristate "Aldebaran Robotics Unicorn i2c/video acquisition chip"
+	default n
+	select I2C
+	select I2C_CHARDEV
+	select I2C_ALGOBIT
+	---help---
+	  Video acquisition chip based on a Xilinx Spartan 6 FPGA, ables to
+	  drive two BT656 streams among 4 muxed inputs and 4 I2C bus.
+
+config AL_UNICORN_SYSFS_FLASH
+	bool "Add sysfs files for direct FPGA reflash"
+	depends on AL_UNICORN
+	default n
+	---help---
+	  Without FPGA can be only flash with ioctl call
+
+config AL_UNICORN_WRITE_BOOTLOADER
+	bool "Allow FPGA bootloader reflash with sysfs"
+	depends on AL_UNICORN_SYSFS_FLASH
+	default n
+	---help---
+	  Without FPGA bootloader can not be overwritten
+
+config AL_UNICORN_WIDTH_VIDEO_SUPPORT
+	bool "Add video support to Aldebaran Robotics Unicorn"
+	depends on AL_UNICORN
+	default y
+	select VIDEOBUF_DMA_CONTIG
+	select VIDEOBUF_GEN
+	select VIDEO_DEV
+	---help---
+	  Without this option unicorn create only i2c bus.
+
+config AL_UNICORN_FPS_ON_THE_FLY
+	bool "Enable camera fps change on the fly (EXPERIMENTAL)."
+	depends on AL_UNICORN_WIDTH_VIDEO_SUPPORT && EXPERIMENTAL
+	default n
+	---help---
+	  CAUTION: Totaly experimental/buggy
