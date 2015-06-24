@@ -930,42 +930,9 @@ static int ath6kl_set_probed_ssids(struct ath6kl *ar,
 			ssid_list[i].flag = SPECIFIC_SSID_FLAG;
 		else
 			ssid_list[i].flag = ANY_SSID_FLAG;
-
-		if (n_match_ssid == 0)
-			ssid_list[i].flag |= MATCH_SSID_FLAG;
 	}
 
 	index_to_add = i;
-
-	for (i = 0; i < n_match_ssid; i++) {
-		ssid_found = false;
-
-		for (j = 0; j < n_ssids; j++) {
-			if ((match_set[i].ssid.ssid_len ==
-			     ssid_list[j].ssid.ssid_len) &&
-			    (!memcmp(ssid_list[j].ssid.ssid,
-				     match_set[i].ssid.ssid,
-				     match_set[i].ssid.ssid_len))) {
-				ssid_list[j].flag |= MATCH_SSID_FLAG;
-				ssid_found = true;
-				break;
-			}
-		}
-
-		if (ssid_found)
-			continue;
-
-		if (index_to_add >= MAX_PROBED_SSIDS)
-			continue;
-
-		ssid_list[index_to_add].ssid.ssid_len =
-			match_set[i].ssid.ssid_len;
-		memcpy(ssid_list[index_to_add].ssid.ssid,
-		       match_set[i].ssid.ssid,
-		       match_set[i].ssid.ssid_len);
-		ssid_list[index_to_add].flag |= MATCH_SSID_FLAG;
-		index_to_add++;
-	}
 
 	for (i = 0; i < index_to_add; i++) {
 		ath6kl_wmi_probedssid_cmd(ar->wmi, vif->fw_vif_idx, i,
