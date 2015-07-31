@@ -185,9 +185,9 @@ azx_assign_device(struct azx *chip, struct snd_pcm_substream *substream)
 		struct azx_dev *azx_dev = &chip->azx_dev[dev];
 		dsp_lock(azx_dev);
 		if (!azx_dev->opened && !dsp_is_locked(azx_dev)) {
-			if (azx_dev->assigned_key == substream->pcm->assigned_key) {
+			if (azx_dev->device == substream->pcm->device) {
 				azx_dev->opened = 1;
-				azx_dev->assigned_key = substream->pcm->assigned_key;
+				azx_dev->device = substream->pcm->device;
 				dsp_unlock(azx_dev);
 				return azx_dev;
 			}
@@ -200,7 +200,7 @@ azx_assign_device(struct azx *chip, struct snd_pcm_substream *substream)
 	if (res) {
 		dsp_lock(res);
 		res->opened = 1;
-		res->assigned_key = substream->pcm->assigned_key;
+		res->device = substream->pcm->device;
 		dsp_unlock(res);
 	}
 	return res;

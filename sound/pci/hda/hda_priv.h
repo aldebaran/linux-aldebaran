@@ -207,7 +207,7 @@ struct azx_dev {
 					 */
 	unsigned char stream_tag;	/* assigned stream */
 	unsigned char index;		/* stream index */
-	int assigned_key;		/* last device# key assigned to */
+	int device;		        /* last device# key assigned to */
 
 	unsigned int opened:1;
 	unsigned int running:1;
