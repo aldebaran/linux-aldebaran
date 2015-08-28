@@ -24,7 +24,6 @@
 
 #include "unicorn-video.h"
 
-#ifdef CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
 #include <linux/videodev2.h>
 #include "unicorn-mmap.h"
 #include "unicorn-ioctlops.h"
@@ -487,4 +486,3 @@ int unicorn_init_video(struct unicorn_dev *dev)
   return 0;
 }
 
-#endif
