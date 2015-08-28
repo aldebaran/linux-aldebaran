@@ -22,7 +22,6 @@
 
 #include "unicorn.h"
 
-#ifdef CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
 #include "unicorn-video.h"
 #include "linux/delay.h"
 
@@ -171,4 +170,3 @@ const struct videobuf_queue_ops unicorn_video_qops = {
   .buf_queue = buffer_queue,
   .buf_release = buffer_release,
 };
-#endif

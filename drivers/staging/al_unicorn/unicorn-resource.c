@@ -21,7 +21,6 @@
 
 #include "unicorn-resource.h"
 
-#ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
 
 int res_check(struct unicorn_fh *fh, unsigned int bit)
 {
@@ -78,5 +77,3 @@ int get_resource(struct unicorn_fh *fh, int resource)
     return 0;
   }
 }
-
-#endif
