@@ -22,7 +22,6 @@
 
 #include "unicorn-ioctlops.h"
 
-#ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
 #include "unicorn.h"
 #include "unicorn-video.h"
 #include "unicorn-resource.h"
@@ -667,4 +666,3 @@ const struct v4l2_ioctl_ops video_ioctl_ops = {
   .vidioc_s_register = vidioc_s_register,
 #endif
 };
-#endif
