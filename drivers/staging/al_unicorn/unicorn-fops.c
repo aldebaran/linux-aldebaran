@@ -23,7 +23,6 @@
 
 #include "unicorn-fops.h"
 
-#ifdef CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
 #include "unicorn.h"
 #include "unicorn-video.h"
 #include "unicorn-mmap.h"
@@ -183,4 +182,3 @@ const struct v4l2_file_operations video_fops = {
 };
 
 
-#endif
