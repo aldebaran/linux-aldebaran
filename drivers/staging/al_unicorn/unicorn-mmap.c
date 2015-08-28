@@ -21,7 +21,6 @@
 
 #include "unicorn-mmap.h"
 
-#ifdef  CONFIG_AL_UNICORN_WIDTH_VIDEO_SUPPORT
 
 struct videobuf_dma_contig_memory {
   u32 magic;
@@ -201,5 +200,3 @@ int video_mmap_mapper_free(
 
   return 0;
 }
-
-#endif
