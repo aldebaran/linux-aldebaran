@@ -1,0 +1,13 @@
+#
+# For a description of the syntax of this configuration file,
+# see Documentation/kbuild/config-language.txt.
+#
+# Cgos configuration.
+#
+
+mainmenu_option next_comment
+comment 'congatec OS API (CGOS) support'
+
+tristate 'CGOS port support' CONFIG_CGOS
+
+endmenu
