@@ -475,7 +475,7 @@ static ssize_t flash_access_store(struct class *unicorn_class,
   int i=0,j=0;
   if(count==sizeof(FPGA1)-2)
   {
-	  for(i=0;i<sizeof(FPGA1)-2;i+=3)
+	  for(i=0; i<count; i+=3)
 	  {
 		  tbl[j]=buf[i]<<16 | buf[i+1]<<8 | buf[i+2];
 		  j++;
