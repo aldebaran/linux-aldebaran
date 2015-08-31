@@ -383,15 +383,13 @@ int unicorn_video_register(struct unicorn_dev *dev, int chan_num,
 static int unicorn_probe_camera(struct unicorn_dev *dev, struct v4l2_subdev **v4l2_subdev,
     struct camera_to_probe_t *cam_to_probe)
 {
-  int ret;
-
   *v4l2_subdev = v4l2_i2c_new_subdev(&dev->v4l2_dev,
       cam_to_probe->i2c_adapter,
       cam_to_probe->name,
       cam_to_probe->i2c_addr, NULL);
 
   if (!*v4l2_subdev) {
-    dprintk_video(1, dev->name, "i2c subdev not found (%s @ 0x%x).\n",
+    dprintk_video(1, dev->name, "i2c subdev not found (%s @ 0x%p).\n",
       cam_to_probe->name, cam_to_probe->i2c_adapter);
     return 0;
   }
