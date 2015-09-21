@@ -2202,8 +2202,10 @@ static int ov5640_probe(struct i2c_client *client,
 	int ret;
 
 	ov5640 = kzalloc(sizeof(*ov5640), GFP_KERNEL);
-	if (!ov5640)
+	if (!ov5640) {
+		v4l2_err(client, "Failed to allocate memory for private data!\n");
 		return -ENOMEM;
+	}
 
 	ov5640->curr_size = &ov5640_mode_info_data[ov5640_mode_VGA_640_480];
 	ov5640->curr_fmt = &ov5640_formats[ov5640_format_YUYV];
@@ -2212,25 +2214,30 @@ static int ov5640_probe(struct i2c_client *client,
 	sd = &ov5640->subdev;
 
 	ret = ov5640_init(sd,0);
-	if(ret<0)
-	{
+	if (ret<0) {
 		kfree(ov5640);
 		return -ENODEV;
 	}
 
 	ret = ov5640_s_stream(sd, 1);
 	if (ret < 0) {
-		v4l2_err(sd, "Can't start streaming during probe\n");
+		v4l2_err(sd, "fail to start streaming during probe\n");
+		kfree(ov5640);
+		return ret;
 	}
 
 	ret = ov5640_load_firmware(sd);
 	if (ret < 0) {
-		v4l2_err(sd, "Can't load autofocus firmware\n");
+		v4l2_err(sd, "fail to load autofocus firmware\n");
+		kfree(ov5640);
+		return ret;
 	}
 
 	ret = ov5640_s_stream(sd, 0);
 	if (ret < 0) {
-		v4l2_err(sd, "Can't stop streaming during probe\n");
+		v4l2_err(sd, "fail to stop streaming during probe\n");
+		kfree(ov5640);
+		return ret;
 	}
 
 	ret = v4l2_ctrl_handler_init(&ov5640->ctrl_handler,
