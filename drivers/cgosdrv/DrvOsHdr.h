@@ -34,6 +34,10 @@
 
 #include <stddef.h>
 
+unsigned int cgos_issue_request(unsigned int command,
+    unsigned int *ibuf, unsigned int isize,
+    unsigned int *obuf, unsigned int osize, unsigned int *olen);
+
 //***************************************************************************
 
 #endif
