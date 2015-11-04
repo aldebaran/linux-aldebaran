@@ -14,5 +14,14 @@ config CGOS
 	  
 	  If unsure, say Y.
 
+config CGOS_I2C
+	tristate "cgos-i2c"
+	depends on CGOS
+	---help---
+	  Expose i2c busses provided by CGOS driver.
+
+	  If unsure, say Y.
+
+
 endmenu
 
