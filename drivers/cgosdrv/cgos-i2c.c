@@ -118,6 +118,7 @@ static int cgos_i2c_master_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 	struct cgos_i2c_adapter *dev =
 	    container_of(adap, struct cgos_i2c_adapter, adapter);
 	int ret = 0, i;
+	int err = 0;
 
 	uint rd_lmax = 0, wr_lmax = 0;
 	u8 *rd_buf, *wr_buf, *rd_data, *wr_data;
@@ -196,22 +197,22 @@ static int cgos_i2c_master_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 		if (ret) {
 			/* request exit with error */
 			cgos_dbg(KERN_ERR, "request error!\n");
-			ret = -EREMOTEIO;
-			goto free_wr_buf;
+			err++;
+			continue;
 		}
 
 		if (rd_hdr->response_len < rd_hdr_len) {
 			/* transaction failure */
 			cgos_dbg(KERN_ERR, "transfer error!\n");
-			ret = -EREMOTEIO;
-			goto free_wr_buf;
+			err++;
+			continue;
 		}
 
 		if (rd_hdr->status != 0) {
 			/* transaction exit with error */
 			cgos_dbg(KERN_ERR, "transfer error!\n");
-			ret = -EREMOTEIO;
-			goto free_wr_buf;
+			err++;
+			continue;
 		}
 
 		if (msgs[i].flags & I2C_M_RD) {
@@ -237,10 +238,9 @@ static int cgos_i2c_master_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 
 	}
 
-	/* on success, return the number of processed messages */
-	ret = num;
+	/* return the number of successfully processed messages */
+	ret = num - err;
 
-free_wr_buf:
 	if (wr_lmax > CGBUF_LEN)
 		kfree(wr_buf);
 free_rd_buf:
