@@ -247,6 +247,7 @@ static const struct hda_pcm_stream wm8860_pcm_analog_playback = {
 		.cleanup = wm8860_playback_pcm_cleanup,
 		.close = wm8860_playback_pcm_close,
 	},
+	.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_FLOAT_LE,
 };
 
 static const struct hda_pcm_stream wm8860_pcm_analog_capture = {
@@ -260,6 +261,7 @@ static const struct hda_pcm_stream wm8860_pcm_analog_capture = {
 		.cleanup = wm8860_capture_pcm_cleanup,
 		.close = wm8860_capture_pcm_close,
 	},
+	.formats = SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_FLOAT_LE,
 };
 
 static int wm8860_build_pcms(struct hda_codec *codec)
@@ -417,7 +419,7 @@ static const struct hda_verb wm8860g_capture_init_verbs[] = {
 		  AC_FMT_BASE_48K
 		| (0 << AC_FMT_MULT_SHIFT)
 		| (0 << AC_FMT_DIV_SHIFT)
-		| AC_FMT_BITS_16
+		| AC_FMT_BITS_32
 		| (CHANNEL_STEREO << AC_FMT_CHAN_SHIFT)},
 	/* ---------------------------------
 	 * Configure MIC-1
@@ -426,7 +428,7 @@ static const struct hda_verb wm8860g_capture_init_verbs[] = {
 		  AC_FMT_BASE_48K
 		| (0 << AC_FMT_MULT_SHIFT)
 		| (0 << AC_FMT_DIV_SHIFT)
-		| AC_FMT_BITS_16
+		| AC_FMT_BITS_32
 		| (CHANNEL_STEREO << AC_FMT_CHAN_SHIFT)},
 	/* ---------------------------------
 	 * Configure MIC-2
@@ -435,7 +437,7 @@ static const struct hda_verb wm8860g_capture_init_verbs[] = {
 		  AC_FMT_BASE_48K
 		| (0 << AC_FMT_MULT_SHIFT)
 		| (0 << AC_FMT_DIV_SHIFT)
-		| AC_FMT_BITS_16
+		| AC_FMT_BITS_32
 		| (CHANNEL_STEREO << AC_FMT_CHAN_SHIFT)},
 	/* ---------------------------------
 	 * Configure DAC-1
@@ -444,7 +446,7 @@ static const struct hda_verb wm8860g_capture_init_verbs[] = {
 		  AC_FMT_BASE_48K
 		| (0 << AC_FMT_MULT_SHIFT)
 		| (0 << AC_FMT_DIV_SHIFT)
-		| AC_FMT_BITS_16
+		| AC_FMT_BITS_32
 		| (CHANNEL_STEREO << AC_FMT_CHAN_SHIFT)},
 	/* ---------------------------------
 	 * Configure DAC-2
@@ -453,7 +455,7 @@ static const struct hda_verb wm8860g_capture_init_verbs[] = {
 		  AC_FMT_BASE_48K
 		| (0 << AC_FMT_MULT_SHIFT)
 		| (0 << AC_FMT_DIV_SHIFT)
-		| AC_FMT_BITS_16
+		| AC_FMT_BITS_32
 		| (CHANNEL_STEREO << AC_FMT_CHAN_SHIFT)},
 	/* ---------------------------------
 	 * configure Port-E specification:
