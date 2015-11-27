@@ -24,25 +24,16 @@
  
 //***************************************************************************
 
-#ifndef _DRVULA_H_
-#define _DRVULA_H_
+#ifndef _DRVOSHDR_H_
+#define _DRVOSHDR_H_
 
 //***************************************************************************
 
-#ifndef cgos_cdecl
-#define cgos_cdecl
-#endif
+#include <stddef.h>
 
-//***************************************************************************
-
-cgos_cdecl void *UlaOpenDriver(unsigned long reserved);
-cgos_cdecl void UlaCloseDriver(void *hDriver);
-cgos_cdecl unsigned long UlaGetBoardCount(void *hDriver);
-cgos_cdecl unsigned char *UlaGetBoardName(void *hDriver, unsigned long Index);
-cgos_cdecl unsigned int UlaDeviceIoControl(void *hDriver, unsigned long dwIoControlCode,
-    void *pInBuffer, unsigned long nInBufferSize,
-    void *pOutBuffer, unsigned long nOutBufferSize,
-    unsigned long *pBytesReturned);
+unsigned long cgos_issue_request(unsigned long command,
+    unsigned long *ibuf, unsigned long isize,
+    unsigned long *obuf, unsigned long osize, unsigned long *olen);
 
 //***************************************************************************
 

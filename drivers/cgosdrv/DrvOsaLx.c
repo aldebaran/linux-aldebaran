@@ -1,6 +1,26 @@
-// DrvOsaLx.c
-// CGOS OS Abstraction Layer for Linux Kernel Drivers
-// {G)U(2} 2005.06.02
+/*---------------------------------------------------------------------------
+ *
+ * Copyright (c) 2015, congatec AG. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ * The full text of the license may also be found at:
+ * http://opensource.org/licenses/GPL-2.0
+ *
+ *---------------------------------------------------------------------------
+ */
 
 //***************************************************************************
 
@@ -22,7 +42,9 @@
 #define PAGE_KERNEL_EXEC PAGE_KERNEL
 #endif
 
-#define cgos_cdecl __attribute__((regparm(0)))
+//MODGWE #define cgos_cdecl __attribute__((regparm(0)))
+#define cgos_cdecl	//MODGWE
+
 #include "DrvOsa.h"
 
 //***************************************************************************
@@ -49,6 +71,7 @@ cgos_cdecl void OsaUnMapAddress(void *base, unsigned long len)
 
 cgos_cdecl void *OsaMemAlloc(unsigned long len)
   {
+  if(len == 0) return NULL; //MODGWE
   return __vmalloc(len, GFP_KERNEL, PAGE_KERNEL_EXEC);
   }
 

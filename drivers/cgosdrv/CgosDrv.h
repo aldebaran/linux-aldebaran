@@ -24,25 +24,23 @@
  
 //***************************************************************************
 
-#ifndef _DRVULA_H_
-#define _DRVULA_H_
+#ifndef _CGOSDRV_H_
+#define _CGOSDRV_H_
 
 //***************************************************************************
 
-#ifndef cgos_cdecl
-#define cgos_cdecl
-#endif
-
-//***************************************************************************
-
-cgos_cdecl void *UlaOpenDriver(unsigned long reserved);
-cgos_cdecl void UlaCloseDriver(void *hDriver);
-cgos_cdecl unsigned long UlaGetBoardCount(void *hDriver);
-cgos_cdecl unsigned char *UlaGetBoardName(void *hDriver, unsigned long Index);
-cgos_cdecl unsigned int UlaDeviceIoControl(void *hDriver, unsigned long dwIoControlCode,
-    void *pInBuffer, unsigned long nInBufferSize,
-    void *pOutBuffer, unsigned long nOutBufferSize,
-    unsigned long *pBytesReturned);
+#include "DrvOsHdr.h"  // OS specific header files
+#include "CgosDef.h"   // Standard definitions
+#define NOCGOSAPI
+#include "Cgos.h"      // CGOS Library API definitions and functions
+#include "CgosPriv.h"  // CGOS Library API private definitions and functions
+#include "CgosIoct.h"  // CGOS IO Control Driver Interface
+#include "Cgeb.h"      // CGEB definitions
+#include "CgebSda.h"   // CGEB Secure Data Area
+#include "DrvVars.h"   // Driver Variables
+#include "DrvUla.h"    // Driver Upper Layer
+#include "DrvOsa.h"    // CGOS OS Abstraction Layer
+#include "CgebFct.h"   // CGEB functions
 
 //***************************************************************************
 

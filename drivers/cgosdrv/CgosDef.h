@@ -19,20 +19,36 @@
  
 //***************************************************************************
 
-#ifndef _CGOSIOBD_H_
-#define _CGOSIOBD_H_
+#ifndef _CGOSDEF_H_
+#define _CGOSDEF_H_
 
 //***************************************************************************
 
-typedef struct {
-  void *pInBuffer;
-  unsigned long nInBufferSize;
-  void *pOutBuffer;
-  unsigned long nOutBufferSize;
-  unsigned long *pBytesReturned;
-  } IOCTL_BUF_DESC;
+#ifndef FALSE
+#define FALSE 0
+#endif
+
+#ifndef TRUE
+#define TRUE 1
+#endif
+
+#ifndef NULL
+#define NULL ((void *)0)
+#endif
+
+//***************************************************************************
+
+// just to have an option
+#ifdef DEF_WCHAR_T
+#define wchar_t short
+#endif
+
+//***************************************************************************
+
+#ifndef dbpf
+#define dbpf(s)
+#endif
 
 //***************************************************************************
 
 #endif
-

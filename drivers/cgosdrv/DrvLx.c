@@ -1,6 +1,26 @@
-// DrvLx.c
-// CGOS Driver for linux
-// {G)U(2} 2005.06.02
+/*---------------------------------------------------------------------------
+ *
+ * Copyright (c) 2015, congatec AG. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as 
+ * published by the Free Software Foundation; either version 2 of 
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, 
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+ * See the GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation, 
+ * Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ * The full text of the license may also be found at:        
+ * http://opensource.org/licenses/GPL-2.0
+ *
+ *---------------------------------------------------------------------------
+ */ 
 
 //***************************************************************************
 
@@ -14,6 +34,7 @@
 
 #include <linux/fs.h>
 #include <linux/errno.h>
+#include <linux/export.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 
@@ -21,8 +42,11 @@
 #include <linux/miscdevice.h>
 #include "CgosIobd.h"
 
-#define cgos_cdecl __attribute__((regparm(0)))
+//MODGWE #define cgos_cdecl __attribute__((regparm(0)))
+#define cgos_cdecl 	//MODGWE
+
 #include "DrvUla.h"
+#include "DrvOsHdr.h"
 
 //***************************************************************************
 
@@ -102,16 +126,16 @@ int cgos_ioctl(struct inode *_inode, struct file *f, unsigned int command, unsig
   if (maxlen>sizeof(buf))
     pbuf=kmalloc(maxlen,GFP_KERNEL);
   if (!pbuf) return -ENOMEM;
-
+  
   if (iobd.nInBufferSize) {
     if (!iobd.pInBuffer || copy_from_user(pbuf,iobd.pInBuffer,iobd.nInBufferSize))
       return_ioctl(-EFAULT);
     }
 
-  down(&osDrvVars.semIoCtl);
-  ret=UlaDeviceIoControl(osDrvVars.hDriver,command,pbuf,iobd.nInBufferSize,
-     pbuf,iobd.nOutBufferSize,&rlen);
-  up(&osDrvVars.semIoCtl);
+  ret = cgos_issue_request(command & ~0UL,
+      (unsigned long*)pbuf, iobd.nInBufferSize,
+      (unsigned long*)pbuf, iobd.nOutBufferSize, &rlen);
+
   if (ret) return_ioctl(-EFAULT);
 
   if (rlen) {
@@ -126,10 +150,23 @@ int cgos_ioctl(struct inode *_inode, struct file *f, unsigned int command, unsig
   return 0;
   }
 
+unsigned long cgos_issue_request(unsigned long command,
+    unsigned long *ibuf, unsigned long isize,
+    unsigned long *obuf, unsigned long osize, unsigned long *olen)
+{
+  unsigned long ret;
+  down(&osDrvVars.semIoCtl);
+  ret=UlaDeviceIoControl(osDrvVars.hDriver, command,
+      ibuf, isize, obuf, osize, olen);
+  up(&osDrvVars.semIoCtl);
+  return ret;
+}
+EXPORT_SYMBOL(cgos_issue_request);
+
 //***************************************************************************
 static struct file_operations cgos_fops={
   owner: THIS_MODULE,
-  unlocked_ioctl: cgos_ioctl,
+  ioctl: cgos_ioctl,
   open: cgos_open,
   release: cgos_release,
   };
@@ -218,11 +255,7 @@ MODULE_PARM(cgos_major,"i");
 // These lines are just present to allow you to suppress the tainted kernel
 // messages when the module is loaded and they imply absolutely nothing else.
 
-#ifdef NO_TAINTED_KERNEL
 MODULE_LICENSE("GPL"); // Great Polar Lights
-#else
-MODULE_LICENSE("Free as is");
-#endif
 
 //***************************************************************************
 

@@ -24,25 +24,32 @@
  
 //***************************************************************************
 
-#ifndef _DRVULA_H_
-#define _DRVULA_H_
+#ifndef _CGEBFCT_H_
+#define _CGEBFCT_H_
 
 //***************************************************************************
 
-#ifndef cgos_cdecl
-#define cgos_cdecl
-#endif
+unsigned int CgebInvoke(CGOS_DRV_CGEB *cgeb, CGEBFPS *fps, unsigned long size, unsigned long fct);
+unsigned int CgebInvokePlain(CGOS_DRV_CGEB *cgeb, unsigned long fct, unsigned long *pRes);
+unsigned int CgebInvokeVoid(CGOS_DRV_CGEB *cgeb, CGEBFPS *fps, unsigned long size);
+unsigned long CgebInvokePar(CGOS_DRV_CGEB *cgeb, unsigned long flags, unsigned long fct,
+    unsigned long unit, unsigned long par0, unsigned long par1,
+    unsigned long par2, unsigned long par3, unsigned long *pret0, unsigned long *pret1);
+unsigned long CgebInvokeIoctl(CGOS_DRV_CGEB *cgeb, unsigned long flags, unsigned long fct,
+  CGOS_DRV_VARS *cdv);
+unsigned int CgebInvokeRet(CGOS_DRV_CGEB *cgeb, unsigned long flags, unsigned long fct,
+    unsigned long *pRes);
+unsigned int CgebInvokeRetUnit(CGOS_DRV_CGEB *cgeb, unsigned long flags, unsigned long fct,
+    unsigned long unit, unsigned long *pRes);
 
 //***************************************************************************
 
-cgos_cdecl void *UlaOpenDriver(unsigned long reserved);
-cgos_cdecl void UlaCloseDriver(void *hDriver);
-cgos_cdecl unsigned long UlaGetBoardCount(void *hDriver);
-cgos_cdecl unsigned char *UlaGetBoardName(void *hDriver, unsigned long Index);
-cgos_cdecl unsigned int UlaDeviceIoControl(void *hDriver, unsigned long dwIoControlCode,
-    void *pInBuffer, unsigned long nInBufferSize,
-    void *pOutBuffer, unsigned long nOutBufferSize,
-    unsigned long *pBytesReturned);
+void CgebClose(CGOS_DRV_CGEB *cgeb);
+unsigned int CgebOpen(CGOS_DRV_VARS *cdv, unsigned char *base, unsigned long len);
+
+//***************************************************************************
+
+unsigned long CgebTransAddr(CGOS_DRV_CGEB *cgeb, unsigned long addr);
 
 //***************************************************************************
 

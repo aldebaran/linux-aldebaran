@@ -24,25 +24,35 @@
  
 //***************************************************************************
 
-#ifndef _DRVULA_H_
-#define _DRVULA_H_
+#ifndef _CGEBSDA_H_
+#define _CGEBSDA_H_
 
 //***************************************************************************
 
-#ifndef cgos_cdecl
-#define cgos_cdecl
-#endif
+typedef struct {
+  unsigned char day;          // day (BCD 01h-31h)
+  unsigned char month;        // month(BCD 01h-12h)
+  unsigned char year;         // year(BCD 05h-99h)
+  } CGEB_DATE;
 
-//***************************************************************************
-
-cgos_cdecl void *UlaOpenDriver(unsigned long reserved);
-cgos_cdecl void UlaCloseDriver(void *hDriver);
-cgos_cdecl unsigned long UlaGetBoardCount(void *hDriver);
-cgos_cdecl unsigned char *UlaGetBoardName(void *hDriver, unsigned long Index);
-cgos_cdecl unsigned int UlaDeviceIoControl(void *hDriver, unsigned long dwIoControlCode,
-    void *pInBuffer, unsigned long nInBufferSize,
-    void *pOutBuffer, unsigned long nOutBufferSize,
-    unsigned long *pBytesReturned);
+typedef struct {
+  unsigned char cgTotalSize;         // total secure data area size in bytes
+  unsigned char cgCheckSize;         // size of the checksummed area
+  unsigned char cgChecksum;          // checksum correction byte
+  unsigned char cgSerialNumber[6];   // board serial number (BCD)
+  unsigned char cgPartNumber[16];    // board part number (ASCII)
+  unsigned char cgEanCode[7];        // board EAN-13 code (BCD)
+  unsigned char cgProductRevMaj;     // major product rev (ASCII)
+  unsigned char cgProductRevMin;     // minor product rev (ASCII)
+  CGEB_DATE cgMfgDate;               // date of manufacturing
+  CGEB_DATE cgRepairDate;            // date of last repair
+  unsigned char cgManufacturerId;    // manufacturer ID (hex)
+  unsigned char cgProjectId[4];      // project ID (ASCII)
+  unsigned char cgRepairCounter;     // repair counter (hex)
+  unsigned char cgSecureDataRes[13]; // spare
+  unsigned char cgBootCounter[3];    // board boot counter (hex)
+  unsigned short cgRunningTime;      // board running time in hours (hex)
+  } CGEB_SDA;
 
 //***************************************************************************
 
