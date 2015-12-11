@@ -356,7 +356,11 @@ static struct hda_input_mux wm8860g_capture_source = {
 static struct snd_kcontrol_new wm8860g_playback_mixers[] = {
 	HDA_CODEC_VOLUME("Analog Front Playback Volume", NID_IO_DAC_2,
 		0x0, HDA_OUTPUT),
+	HDA_CODEC_MUTE("Analog Front Playback Volume", NID_IO_DAC_2,
+		0x0, HDA_OUTPUT),
 	HDA_CODEC_VOLUME("Analog Rear Playback Volume", NID_IO_DAC_1,
+		0x0, HDA_OUTPUT),
+	HDA_CODEC_MUTE("Analog Rear Playback Volume", NID_IO_DAC_1,
 		0x0, HDA_OUTPUT),
 	{ /* end */ }
 };
@@ -526,11 +530,11 @@ static const struct hda_verb wm8860g_capture_init_verbs[] = {
 		SET_AMP_STEREO | 0x18},
 	{NID_PORT_H, AC_VERB_SET_AMP_GAIN_MUTE,
 		SET_AMP_STEREO | 0x18},
-	/* Un-mute Output port: set at 0x48 correct basic volume */
+	/* Un-mute Output port: set at 0dB = 0x7F correct basic volume */
 	{NID_IO_DAC_2, AC_VERB_SET_AMP_GAIN_MUTE,
-		SET_AMP_STEREO | 0x48},
+		SET_AMP_STEREO | 0x7F},
 	{NID_IO_DAC_1, AC_VERB_SET_AMP_GAIN_MUTE,
-		SET_AMP_STEREO | 0x48},
+		SET_AMP_STEREO | 0x7F},
 	/* ---------------------------------
 	 * Start Streams (all time, no need to change state)
 	 * --------------------------------- */
