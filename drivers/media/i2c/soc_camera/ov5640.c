@@ -108,6 +108,11 @@ struct ov5640 {
 	const struct ov5640_format *curr_fmt;
 	const struct ov5640_mode_info *curr_size;
 	struct v4l2_ctrl_handler ctrl_handler;
+	struct {
+		/* exposure cluster */
+		struct v4l2_ctrl *auto_exposure;
+		struct v4l2_ctrl *exposure;
+	};
 	int angle;
 	bool auto_focus_enabled;
 };
@@ -1209,23 +1214,6 @@ static int ov5640_s_auto_exposure(struct v4l2_subdev *sd, int value)
 	return 0;
 }
 
-static int ov5640_g_auto_exposure(struct v4l2_subdev *sd, __s32 *value)
-{
-	u8 reg;
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-
-	ov5640_reg_read(client, AEC_AGC_MANUAL, &reg);
-
-	if (reg&AEC_MANUAL) {
-		*value = V4L2_EXPOSURE_MANUAL;
-	} else {
-		*value = V4L2_EXPOSURE_AUTO;
-	}
-
-	v4l2_dbg(2, debug, sd, "get auto exposure: %d\n", *value);
-	return 0;
-}
-
 static int ov5640_s_auto_white_balance(struct v4l2_subdev *sd, int value)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -1683,8 +1671,8 @@ static const struct control_params ov5640_ctrl[] = {
 	},
 	{
 		.id = V4L2_CID_EXPOSURE_AUTO,
-		.max = 1,
-		.s.mask = ~((1 << V4L2_EXPOSURE_AUTO) | (1 << V4L2_EXPOSURE_MANUAL)),
+		.max = V4L2_EXPOSURE_MANUAL,
+		.s.mask = 0,
 		.def = V4L2_EXPOSURE_AUTO,
 		.is_menu = true,
 		.is_volatile = false,
@@ -1774,6 +1762,7 @@ static const struct control_params ov5640_ctrl[] = {
 
 static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 {
+	int ret;
 	struct ov5640 *ov5640 = container_of(ctrl->handler,
 			struct ov5640, ctrl_handler);
 	struct v4l2_subdev *sd = &ov5640->subdev;
@@ -1797,15 +1786,17 @@ static int ov5640_s_ctrl(struct v4l2_ctrl *ctrl)
 		case V4L2_CID_FOCUS_AUTO:
 			return ov5640_s_auto_focus(sd, ctrl->val);
 		case V4L2_CID_EXPOSURE_AUTO:
-			return ov5640_s_auto_exposure(sd, ctrl->val);
+			ret = ov5640_s_auto_exposure(sd, ov5640->auto_exposure->val);
+			if (!ret && ctrl->val == V4L2_EXPOSURE_MANUAL)
+				/* set exposure only in manual mode */
+				ret = ov5640_s_exposure(sd, ov5640->exposure->val);
+			return ret;
 		case V4L2_CID_AUTO_WHITE_BALANCE:
 			return ov5640_s_auto_white_balance(sd, ctrl->val);
 		case V4L2_CID_AUTOGAIN:
 			return ov5640_s_auto_gain(sd, ctrl->val);
 		case V4L2_CID_GAIN:
 			return ov5640_s_gain(sd, ctrl->val);
-		case V4L2_CID_EXPOSURE:
-			return ov5640_s_exposure(sd, ctrl->val);
 	}
 	return -EINVAL;
 }
@@ -1834,15 +1825,17 @@ static int ov5640_g_ctrl(struct v4l2_ctrl *ctrl)
 		case V4L2_CID_FOCUS_AUTO:
 			return ov5640_g_auto_focus(sd, &ctrl->val);
 		case V4L2_CID_EXPOSURE_AUTO:
-			return ov5640_g_auto_exposure(sd, &ctrl->val);
+			/* do not update auto exposure value since it is managed
+			   by the framework which makes assumption on its state
+			   while changing from auto to manual.
+			   see update_from_auto_cluster. */
+			return ov5640_g_exposure(sd, &ov5640->exposure->val);
 		case V4L2_CID_AUTO_WHITE_BALANCE:
 			return ov5640_g_auto_white_balance(sd, &ctrl->val);
 		case V4L2_CID_AUTOGAIN:
 			return ov5640_g_auto_gain(sd, &ctrl->val);
 		case V4L2_CID_GAIN:
 			return ov5640_g_gain(sd, &ctrl->val);
-		case V4L2_CID_EXPOSURE:
-			return ov5640_g_exposure(sd, &ctrl->val);
 		case V4L2_CID_BG_COLOR:
 			return ov5640_g_luminance(sd, &ctrl->val);
 		case V4L2_CID_GREEN_BALANCE:
@@ -2004,10 +1997,17 @@ static int ov5640_register_controls(struct v4l2_subdev *sd, struct v4l2_ctrl_han
 {
 	int i;
 	struct v4l2_ctrl *ctrl;
+	struct ov5640 *ov5640 = to_ov5640(sd);
 	for (i = 0; i < ARRAY_SIZE(ov5640_ctrl); i++) {
 		ctrl = ov5640_register_ctrl(sd, hl, &ov5640_ctrl[i]);
 		if (ctrl == NULL) {
 			v4l2_dbg(1, debug, sd, "fail to register control %d\n", i);
+		}
+		/* save controls for exposure cluster */
+		if (ov5640_ctrl[i].id == V4L2_CID_EXPOSURE_AUTO) {
+			ov5640->auto_exposure = ctrl;
+		} else if (ov5640_ctrl[i].id == V4L2_CID_EXPOSURE) {
+			ov5640->exposure = ctrl;
 		}
 	}
 	if (hl->error) {
@@ -2015,6 +2015,8 @@ static int ov5640_register_controls(struct v4l2_subdev *sd, struct v4l2_ctrl_han
 		v4l2_warn(sd, "ctrl_handler error: %x\n", err);
 		return err;
 	}
+	v4l2_ctrl_auto_cluster(2, &ov5640->auto_exposure,
+			      V4L2_EXPOSURE_MANUAL, true);
 	return 0;
 }
 
