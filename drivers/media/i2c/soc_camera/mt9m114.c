@@ -2878,7 +2878,7 @@ static int mt9m114_ctrl_registration(struct v4l2_ctrl_handler *ctrl_handler)
 }
 
 #ifdef CONFIG_VIDEO_ADV_DEBUG
-static int mt9m114_g_register(struct v4l2_subdev *sd, struct v4l_dbg_register *reg)
+static int mt9m114_g_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
 {
 	int ret = 0;
 	u16 addr = reg->reg & 0xffff;
@@ -2895,7 +2895,7 @@ static int mt9m114_g_register(struct v4l2_subdev *sd, struct v4l_dbg_register *r
 	return ret;
 }
 
-static int mt9m114_s_register(struct v4l2_subdev *sd, struct v4l_dbg_register *reg)
+static int mt9m114_s_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
 {
 	int ret = 0;
 	u16 addr = reg->reg & 0xffff;
