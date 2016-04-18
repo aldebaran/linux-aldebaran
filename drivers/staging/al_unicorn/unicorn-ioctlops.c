@@ -369,7 +369,7 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = fh->dev;
-  int err;
+  int err, it;
 
   if (unlikely(fh->type != V4L2_BUF_TYPE_VIDEO_CAPTURE))
     return -EINVAL;
@@ -381,6 +381,12 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
     return -EBUSY;
 
   dprintk_video(1, fh->dev->name, "streamon video device %d ...\n", fh->channel);
+  for (it=0; it < max_subdev_per_video_bus; it++) {
+    if(dev->sensor[fh->input][it] != NULL) {
+      v4l2_subdev_call(dev->sensor[fh->input][it], video, s_stream, 1);
+    }
+  }
+
   err = videobuf_streamon(&fh->vidq);
   dprintk_video(1, fh->dev->name, "streamon video device %d DONE\n", fh->channel);
   return err;
@@ -390,7 +396,7 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = fh->dev;
-  int err, res;
+  int err, res, it;
 
   if (fh->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
     return -EINVAL;
@@ -400,11 +406,18 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
   res = get_resource(fh,  0x01 << fh->channel);
   dprintk_video(1, fh->dev->name, "streamoff for video device %d ...\n", fh->channel);
   err = videobuf_streamoff(&fh->vidq);
+
+  for (it=0; it < max_subdev_per_video_bus; it++) {
+    if(dev->sensor[fh->input][it] != NULL) {
+      v4l2_subdev_call(dev->sensor[fh->input][it], video, s_stream, 0);
+    }
+  }
+
   dprintk_video(1, fh->dev->name, "streamoff for video device %d DONE\n", fh->channel);
   if (err < 0)
     return err;
   res_free(dev, fh, res);
-  return 0;
+  return err;
 }
 
 static int vidioc_log_status(struct file *file, void *priv)
