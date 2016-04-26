@@ -609,7 +609,7 @@ static int vidioc_g_register(struct file *file, void *priv, struct v4l2_dbg_regi
   return err;
 }
 
-static int vidioc_s_register(struct file *file, void *priv, struct v4l2_dbg_register *reg)
+static int vidioc_s_register(struct file *file, void *priv, const struct v4l2_dbg_register *reg)
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = (fh)->dev;
