@@ -33,6 +33,7 @@ static int video_open(struct file *file)
 {
   struct unicorn_dev *dev = video_drvdata(file);
   struct unicorn_fh *fh = dev->vidq[video_devdata(file)->index].fh;
+  int i;
   file->private_data = fh;
 
   dprintk_video(1, dev->name, "open device %d ...\n", fh->channel);
@@ -54,6 +55,13 @@ static int video_open(struct file *file)
       sizeof(struct unicorn_buffer), fh, &dev->mutex);
   dprintk_video(1, dev->name, "%s() device %d dma init DONE\n", __func__, fh->channel);
 
+  // need to start streaming once dma is running
+  dprintk_video(1, dev->name,  "%s() power up device %d...\n", __func__, fh->channel);
+  for (i=0; i<max_subdev_per_video_bus; i++) {
+    if(dev->sensor[fh->input][i] !=NULL)
+      v4l2_subdev_call(dev->sensor[fh->input][i], core, s_power, 1);
+  }
+
   mutex_unlock(&dev->mutex);
 
   dprintk_video(1, dev->name, "open device %d DONE\n", fh->channel);
@@ -64,6 +72,7 @@ static int video_release(struct file *file)
 {
   struct unicorn_fh *fh = file->private_data;
   struct unicorn_dev *dev = fh->dev;
+  int i;
 
   dprintk_video(1, dev->name,  "release device %d ...\n", fh->channel);
 
@@ -71,6 +80,7 @@ static int video_release(struct file *file)
   dev->pcie_dma->dma[fh->channel].ctrl |= DMA_CONTROL_RESET;
 
   /* stop video capture */
+  dprintk_video(1, dev->name,  "%s() stop video capture for device %d...\n", __func__, fh->channel);
   if (res_check(fh, 0x01<<fh->channel)) {
     videobuf_queue_cancel(&fh->vidq);
     res_free(dev, fh, 0x01<<fh->channel);
@@ -86,6 +96,12 @@ static int video_release(struct file *file)
 
   v4l2_prio_close(&dev->prio, fh->prio);
   file->private_data = NULL;
+
+  dprintk_video(1, dev->name,  "%s() power down device %d...\n", __func__, fh->channel);
+  for (i=0; i<max_subdev_per_video_bus; i++) {
+    if(dev->sensor[fh->input][i] !=NULL)
+      v4l2_subdev_call(dev->sensor[fh->input][i], core, s_power, 0);
+  }
 
   dprintk_video(1, dev->name,  "release device %d DONE\n", fh->channel);
   return 0;
