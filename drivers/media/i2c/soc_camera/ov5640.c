@@ -2020,67 +2020,63 @@ static int ov5640_register_controls(struct v4l2_subdev *sd, struct v4l2_ctrl_han
 	return 0;
 }
 
+static int ov5640_config_stream(struct v4l2_subdev *sd) {
+	struct ov5640 *ov5640 = to_ov5640(sd);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	int ret = 0;
+
+	const struct ov5640_format *curr_fmt = ov5640->curr_fmt;
+	const struct ov5640_mode_info *curr_size = ov5640->curr_size;
+
+	v4l2_dbg(1, debug, sd, "%s size: %dx%d, code: %d, color: %d\n", __func__,
+			ov5640->curr_size->width, ov5640->curr_size->height,
+			ov5640->curr_fmt->code, ov5640->curr_fmt->colorspace);
+
+	if (curr_fmt == NULL || curr_size == NULL) {
+		v4l2_dbg(1, debug, sd, "%s fmt: 0x%p, size: 0x%p\n", __func__, curr_fmt, curr_size);
+		return -EFAULT;
+	}
+
+	ret = ov5640_reg_write(client, FORMAT_CONTROL_0, curr_fmt->fmtreg);
+	if (ret)
+		return ret;
+
+	ret = ov5640_reg_write(client, FORMAT_MUX_CONTROL, curr_fmt->fmtmuxreg);
+	if (ret)
+		return ret;
+
+	ret = ov5640_config_timing(sd);
+	if (ret)
+		return ret;
+
+	ret = ov5640_reg_writes(client, curr_size->init_data_ptr, curr_size->init_data_size);
+	if (ret)
+		return ret;
+
+	if ((curr_size->mode == ov5640_mode_QVGA_320_240) ||
+			(curr_size->mode == ov5640_mode_VGA_640_480)) {
+		ret = ov5640_reg_write(client, ISP_CONTROL_1, 0xa3);
+	} else {
+		ret = ov5640_reg_write(client, ISP_CONTROL_1, 0x83);
+	}
+	return ret;
+}
+
 static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct ov5640 *ov5640 = to_ov5640(sd);
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret = 0;
 
-	v4l2_dbg(1, debug, sd, "%s size: %dx%d, code: %d, color: %d\n", __func__,
-			ov5640->curr_size->width, ov5640->curr_size->width,
-			ov5640->curr_fmt->code, ov5640->curr_fmt->colorspace);
-
 	if (enable) {
-		const struct ov5640_format *curr_fmt = ov5640->curr_fmt;
-		const struct ov5640_mode_info *curr_size = ov5640->curr_size;
 		v4l2_dbg(1, debug, sd, "Enable stream...");
-
-		if (curr_fmt == NULL || curr_size == NULL) {
-			v4l2_dbg(1, debug, sd, "%s fmt: 0x%p, size: 0x%p\n",
-					__func__, curr_fmt, curr_size);
-			return -EFAULT;
-		}
-
-		ret = ov5640_reg_write(client, FORMAT_CONTROL_0,
-				curr_fmt->fmtreg);
-		if (ret)
-			return ret;
-
-		ret = ov5640_reg_write(client, FORMAT_MUX_CONTROL,
-				curr_fmt->fmtmuxreg);
-		if (ret)
-			return ret;
-
-		ret = ov5640_config_timing(sd);
-		if (ret)
-			return ret;
-
-		ret = ov5640_reg_writes(client, curr_size->init_data_ptr,
-				curr_size->init_data_size);
-		if (ret)
-			return ret;
-
-
-		if ((curr_size->mode == ov5640_mode_QVGA_320_240) ||
-				(curr_size->mode == ov5640_mode_VGA_640_480))
-		{
-			ret = ov5640_reg_write(client, ISP_CONTROL_1, 0xa3);
-		}
-		else
-		{
-			ret = ov5640_reg_write(client, ISP_CONTROL_1, 0x83);
-		}
-
-		if (ret)
-			return ret;
 
 		ret = ov5640_reg_clr(client, SYSTEM_CTRL_0, 0x40);
 		if (ret)
 			goto out;
 
 		// activate AF if needed since powerdown release focus
-		if (to_ov5640(sd)->auto_focus_enabled)
-		{
+		if (to_ov5640(sd)->auto_focus_enabled) {
 			// Then set ov5640 to continuous focus mode
 			v4l2_dbg(1, debug, sd, "Enable auto focus...\n");
 			ret = ov5640_reg_write(client, AF_CTRL, AF_CONTINUE);
@@ -2145,9 +2141,15 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 	ov5640->curr_fmt = try_fmt(sd, mf);
 	ov5640->curr_size = try_size(sd, mf);
 
-	ret = ov5640_s_stream(sd,1);
-	if (ret)
-	{
+	ret = ov5640_config_stream(sd);
+	if (ret < 0) {
+		v4l2_warn(sd, "%s: ov5640_config_stream fail: %d\n",
+				__func__, ret);
+		return ret;
+	}
+
+	ret = ov5640_s_stream(sd, 1);
+	if (ret) {
 		v4l2_warn(sd, "%s: ov5640_s_stream fail: %d\n",
 				__func__, ret);
 		return -ENODEV;
@@ -2219,6 +2221,13 @@ static int ov5640_probe(struct i2c_client *client,
 	if (ret<0) {
 		kfree(ov5640);
 		return -ENODEV;
+	}
+
+	ret = ov5640_config_stream(sd);
+	if (ret < 0) {
+		v4l2_warn(sd, "%s: ov5640_config_stream fail: %d\n",
+				__func__, ret);
+		return ret;
 	}
 
 	ret = ov5640_s_stream(sd, 1);
