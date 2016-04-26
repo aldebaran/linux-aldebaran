@@ -1073,28 +1073,7 @@ static const struct ov5640_format *try_fmt(struct v4l2_subdev *sd,
  * V4L2 subdev internal operations
  */
 
-#if 0 //TODO handle power off/power on of chip
-static int ov5640_s_power(struct v4l2_subdev *sd, int on)
-{
-	struct ov5640 *ov5640 = to_ov5640(sd);
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	struct device *dev = &client->dev;
-
-
-	if (on) {
-
-		usleep_range(2000, 2000);
-	} else {
-
-	}
-	return 0;
-}
-#endif
-
-/*
- * Camera debug functions
- */
-
+/* Camera debug functions */
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 static int ov5640_g_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
 {
@@ -1848,23 +1827,57 @@ static int ov5640_g_ctrl(struct v4l2_ctrl *ctrl)
 	return -EINVAL;
 }
 
-static int ov5640_init(struct v4l2_subdev *subdev, u32 val)
+static int ov5640_s_power(struct v4l2_subdev *sd, int enable)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(subdev);
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	int ret = 0;
+
+	if (enable) {
+		v4l2_dbg(1, debug, sd, "Power up SOC...");
+
+		ret = ov5640_reg_clr(client, SYSTEM_CTRL_0, 0x40);
+		if (ret)
+			goto out;
+
+		// activate AF if needed since powerdown release focus
+		if (to_ov5640(sd)->auto_focus_enabled) {
+			// Then set ov5640 to continuous focus mode
+			v4l2_dbg(1, debug, sd, "Enable auto focus...\n");
+			ret = ov5640_reg_write(client, AF_CTRL, AF_CONTINUE);
+			if (ret) {
+				v4l2_err(sd, "Failed to set continuous focus mode\n");
+				goto out;
+			}
+			v4l2_dbg(1, debug, sd, "Enable auto focus...done\n");
+		}
+	} else {
+		u8 tmpreg = 0;
+		v4l2_dbg(1, debug, sd, "Power down SOC...");
+
+		ret = ov5640_reg_read(client, SYSTEM_CTRL_0, &tmpreg);
+		if (ret)
+			goto out;
+
+		ret = ov5640_reg_write(client, SYSTEM_CTRL_0, tmpreg | 0x40);
+		if (ret)
+			goto out;
+	}
+
+out:
+	return ret;
+}
+
+static int ov5640_init(struct v4l2_subdev *sd, u32 val)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	int ret = 0;
 	u8 revision = 0;
 
-	to_ov5640(subdev)->angle = 0;
-	to_ov5640(subdev)->auto_focus_enabled = true; // enable auto focus by default
+	v4l2_dbg(1, debug, sd, "Init device...");
 
-#if 0 //TODO handle power off/power on of chip
-	ret = ov5640_s_power(subdev, 1);
-	if (ret < 0) {
-		dev_err(&client->dev, "OV5640 power up failed\n");
-		return ret;
-	}
-#endif
+	to_ov5640(sd)->angle = 0;
+	to_ov5640(sd)->auto_focus_enabled = true; // enable auto focus by default
 
 	ret = ov5640_reg_read(client, CHIP_REVISION, &revision);
 	if (ret) {
@@ -1881,50 +1894,54 @@ static int ov5640_init(struct v4l2_subdev *subdev, u32 val)
 		goto out;
 
 	/* SW Reset */
+	v4l2_info(sd, "Reset device...\n");
 	ret = ov5640_reg_set(client, SYSTEM_CTRL_0, 0x80);
 	if (ret) {
-		v4l2_err(subdev, "Failed to set the soft reset\n");
+		v4l2_err(sd, "Failed to set the soft reset\n");
 		goto out;
 	}
-
 	msleep(5); // 5ms in the init doc
-
 	ret = ov5640_reg_clr(client, SYSTEM_CTRL_0, 0x80);
 	if (ret) {
-		v4l2_err(subdev, "Failed to stop the soft reset\n");
+		v4l2_err(sd, "Failed to stop the soft reset\n");
 		goto out;
 	}
+	v4l2_info(sd, "Reset device...done\n");
 
-	/* SW Powerdown */
-	ret = ov5640_reg_set(client, SYSTEM_CTRL_0, 0x40);
+	/* SW Powerup */
+	v4l2_info(sd, "Power up device...\n");
+	ret = ov5640_s_power(sd, 1);
 	if (ret) {
-		v4l2_err(subdev, "Failed to power down the device\n");
+		v4l2_err(sd, "Failed to power up the device\n");
 		goto out;
 	}
+	v4l2_info(sd, "Power up device...done\n");
 
-	v4l2_info(subdev, "Set default configuration...\n");
+	v4l2_info(sd, "Set default configuration...\n");
 	ret = ov5640_reg_writes(client, configscript_common1,
 			ARRAY_SIZE(configscript_common1));
 	if (ret) {
-		v4l2_err(subdev, "Failed to set default configuration 1\n");
+		v4l2_err(sd, "Failed to set default configuration 1\n");
 		goto out;
 	}
-
 	ret = ov5640_reg_writes(client, configscript_common2,
 			ARRAY_SIZE(configscript_common2));
 	if (ret) {
-		v4l2_err(subdev, "Failed to set default configuration 2\n");
+		v4l2_err(sd, "Failed to set default configuration 2\n");
 		goto out;
 	}
-	v4l2_info(subdev, "Set default configuration...done\n");
+	v4l2_info(sd, "Set default configuration...done\n");
 
 out:
-#if 0 //TODO handle power off/power on of chip
-	ov5640_s_power(subdev, 0);
-#endif
+	v4l2_info(sd, "Power down device...\n");
+	ret = ov5640_s_power(sd, 0);
+	if (ret) {
+		v4l2_err(sd, "Failed to power down the device\n");
+	} else {
+		v4l2_info(sd, "Power down...done\n");
+	}
 
-	v4l2_dbg(1, debug, subdev, "Init chip...done");
-
+	v4l2_dbg(1, debug, sd, "Init chip...done");
 	return ret;
 }
 
@@ -2062,45 +2079,13 @@ static int ov5640_config_stream(struct v4l2_subdev *sd) {
 	return ret;
 }
 
-static int ov5640_s_stream(struct v4l2_subdev *sd, int enable)
-{
-	struct ov5640 *ov5640 = to_ov5640(sd);
-	struct i2c_client *client = v4l2_get_subdevdata(sd);
-	int ret = 0;
-
+static int ov5640_s_stream(struct v4l2_subdev *sd, int enable) {
 	if (enable) {
 		v4l2_dbg(1, debug, sd, "Enable stream...");
-
-		ret = ov5640_reg_clr(client, SYSTEM_CTRL_0, 0x40);
-		if (ret)
-			goto out;
-
-		// activate AF if needed since powerdown release focus
-		if (to_ov5640(sd)->auto_focus_enabled) {
-			// Then set ov5640 to continuous focus mode
-			v4l2_dbg(1, debug, sd, "Enable auto focus...\n");
-			ret = ov5640_reg_write(client, AF_CTRL, AF_CONTINUE);
-			if (ret) {
-				v4l2_err(sd, "Failed to set continuous focus mode\n");
-				goto out;
-			}
-			v4l2_dbg(1, debug, sd, "Enable auto focus...done\n");
-		}
 	} else {
-		u8 tmpreg = 0;
 		v4l2_dbg(1, debug, sd, "Disable stream...");
-
-		ret = ov5640_reg_read(client, SYSTEM_CTRL_0, &tmpreg);
-		if (ret)
-			goto out;
-
-		ret = ov5640_reg_write(client, SYSTEM_CTRL_0, tmpreg | 0x40);
-		if (ret)
-			goto out;
 	}
-
-out:
-	return ret;
+	return 0;
 }
 
 static int ov5640_g_fmt(struct v4l2_subdev *sd,
@@ -2147,13 +2132,6 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 				__func__, ret);
 		return ret;
 	}
-
-	ret = ov5640_s_stream(sd, 1);
-	if (ret) {
-		v4l2_warn(sd, "%s: ov5640_s_stream fail: %d\n",
-				__func__, ret);
-		return -ENODEV;
-	}
 	return 0;
 }
 
@@ -2168,9 +2146,6 @@ static int ov5640_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 }
 
 static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
-#if 0 //TODO handle power off/power on of chip
-	.s_power	= ov5640_s_power,
-#endif
 	.queryctrl = v4l2_subdev_queryctrl,
 	.querymenu = v4l2_subdev_querymenu,
 	.g_ctrl = v4l2_subdev_g_ctrl,
@@ -2179,6 +2154,7 @@ static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
 	.try_ext_ctrls = v4l2_subdev_try_ext_ctrls,
 	.s_ext_ctrls = v4l2_subdev_s_ext_ctrls,
 	.init		= ov5640_init,
+	.s_power	= ov5640_s_power,
 #ifdef CONFIG_VIDEO_ADV_DEBUG
 	.g_register = ov5640_g_register,
 	.s_register = ov5640_s_register,
@@ -2230,9 +2206,9 @@ static int ov5640_probe(struct i2c_client *client,
 		return ret;
 	}
 
-	ret = ov5640_s_stream(sd, 1);
+	ret = ov5640_s_power(sd, 1);
 	if (ret < 0) {
-		v4l2_err(sd, "fail to start streaming during probe\n");
+		v4l2_err(sd, "fail to power up soc during probe\n");
 		kfree(ov5640);
 		return ret;
 	}
@@ -2244,9 +2220,9 @@ static int ov5640_probe(struct i2c_client *client,
 		return ret;
 	}
 
-	ret = ov5640_s_stream(sd, 0);
+	ret = ov5640_s_power(sd, 0);
 	if (ret < 0) {
-		v4l2_err(sd, "fail to stop streaming during probe\n");
+		v4l2_err(sd, "fail to power down soc during probe\n");
 		kfree(ov5640);
 		return ret;
 	}
