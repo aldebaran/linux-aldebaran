@@ -2970,7 +2970,11 @@ static int ath6kl_stop_ap(struct wiphy *wiphy, struct net_device *dev)
 		return -ENOTCONN;
 
 	ath6kl_wmi_disconnect_cmd(ar->wmi, vif->fw_vif_idx);
+
+	spin_lock_bh(&vif->if_lock);
 	clear_bit(CONNECTED, &vif->flags);
+	netif_carrier_off(vif->ndev);
+	spin_unlock_bh(&vif->if_lock);
 
 	/* Restore ht setting in firmware */
 	return ath6kl_restore_htcap(vif);
