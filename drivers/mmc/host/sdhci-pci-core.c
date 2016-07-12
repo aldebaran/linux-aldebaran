@@ -400,7 +400,8 @@ static const struct sdhci_pci_fixes sdhci_intel_byt_emmc = {
 	.quirks		= SDHCI_QUIRK_NO_ENDATTR_IN_NOPDESC,
 	.quirks2	= SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
 			  SDHCI_QUIRK2_CAPS_BIT63_FOR_HS400 |
-			  SDHCI_QUIRK2_STOP_WITH_TC,
+			  SDHCI_QUIRK2_STOP_WITH_TC |
+			  SDHCI_QUIRK2_NO_1_8_V,
 };
 
 static const struct sdhci_pci_fixes sdhci_intel_byt_sdio = {
