@@ -1003,7 +1003,7 @@ struct wmi_bss_filter_cmd {
 } __packed;
 
 /* WMI_SET_PROBED_SSID_CMDID */
-#define MAX_PROBED_SSIDS   16
+#define MAX_PROBED_SSIDS   8
 
 enum wmi_ssid_flag {
 	/* disables entry */
@@ -1224,7 +1224,7 @@ enum wmi_phy_mode {
 	WMI_11G_HT20	= 0x6,
 };
 
-#define WMI_MAX_CHANNELS        32
+#define WMI_MAX_CHANNELS        64
 
 /*
  *  WMI_RSSI_THRESHOLD_PARAMS_CMDID
