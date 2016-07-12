@@ -1597,6 +1597,48 @@ static const char *ath6kl_init_get_hif_name(enum ath6kl_hif_type type)
 	return NULL;
 }
 
+int ath6kl_fw_watchdog_enable(struct ath6kl *ar)
+{
+	u32 param;
+	int ret;
+
+	ret = ath6kl_diag_read32(ar,
+		ath6kl_get_hi_item_addr(ar, HI_ITEM(hi_option_flag2)),
+		(u32 *)&param);
+
+	if (ret != 0)
+		return ret;
+
+	param |= HI_OPTION_FW_WATCHDOG_ENABLE;
+
+	ret = ath6kl_diag_write32(ar,
+		ath6kl_get_hi_item_addr(ar, HI_ITEM(hi_option_flag2)),
+		param);
+
+	return ret;
+}
+
+int ath6kl_fw_crash_cold_reset_enable(struct ath6kl *ar)
+{
+	u32 param;
+	int ret;
+
+	ret = ath6kl_diag_read32(ar,
+		ath6kl_get_hi_item_addr(ar, HI_ITEM(hi_option_flag2)),
+		(u32 *)&param);
+
+	if (ret != 0)
+		return ret;
+
+	param |= HI_OPTION_FW_CRASH_COLD_RESET;
+
+	ret = ath6kl_diag_write32(ar,
+		ath6kl_get_hi_item_addr(ar, HI_ITEM(hi_option_flag2)),
+		param);
+
+	return ret;
+}
+
 
 static const struct fw_capa_str_map {
 	int id;
@@ -1687,6 +1729,22 @@ static int __ath6kl_init_hw_start(struct ath6kl *ar)
 	char buf[200];
 
 	ath6kl_dbg(ATH6KL_DBG_BOOT, "hw start\n");
+
+	ath6kl_info("Firmware recovery mode cold\n");
+
+	ret = ath6kl_fw_watchdog_enable(ar);
+	if (ret != 0) {
+		ath6kl_err("Failed enable fw watchdog%d\n",
+			ret);
+		return ret;
+	}
+
+	ret = ath6kl_fw_crash_cold_reset_enable(ar);
+	if (ret != 0) {
+		ath6kl_err("Failed enable fw code reset %d\n",
+			ret);
+		return ret;
+	}
 
 	ret = ath6kl_hif_power_on(ar);
 	if (ret)

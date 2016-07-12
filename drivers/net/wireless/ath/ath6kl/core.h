@@ -963,6 +963,9 @@ void aggr_recv_addba_req_evt(struct ath6kl_vif *vif, u8 tid, u16 seq_no,
 			     u8 win_sz);
 void ath6kl_wakeup_event(void *dev);
 
+int ath6kl_fw_watchdog_enable(struct ath6kl *ar);
+int ath6kl_fw_crash_cold_reset_enable(struct ath6kl *ar);
+
 void ath6kl_init_control_info(struct ath6kl_vif *vif);
 struct ath6kl_vif *ath6kl_vif_first(struct ath6kl *ar);
 void ath6kl_cfg80211_vif_stop(struct ath6kl_vif *vif, bool wmi_ready);
