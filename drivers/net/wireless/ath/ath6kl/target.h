@@ -316,6 +316,12 @@ struct host_interest {
 
 #define HI_OPTION_FW_BRIDGE_SHIFT 0x04
 
+/*Enable cold reset when firmware crash*/
+#define HI_OPTION_FW_CRASH_COLD_RESET	       0x100000
+
+/*Enable watchdog*/
+#define HI_OPTION_FW_WATCHDOG_ENABLE		0x200000
+
 /* Fw Mode/SubMode Mask
 |------------------------------------------------------------------------------|
 |   SUB   |   SUB   |   SUB   |  SUB    |         |         |         |
