@@ -509,7 +509,7 @@ static int parse_command(const char __user *buffer, size_t count)
 
 	if (count > 3)
 		return -EINVAL;
-	if (copy_from_user(s, buffer, count))
+	if (count <= 3 && copy_from_user(s, buffer, count))
 		return -EFAULT;
 	if (!count)
 		return 0;
