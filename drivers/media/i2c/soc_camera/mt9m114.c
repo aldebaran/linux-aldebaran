@@ -1668,12 +1668,14 @@ static int mt9m114_detect(struct v4l2_subdev *sd)
 	return ret;
 }
 
-static int mt9m114_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
-			    u32 *code) {
-	if (index >= ARRAY_SIZE(mt9m114_formats))
+static int mt9m114_enum_mbus_code(struct v4l2_subdev *sd,
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_mbus_code_enum *code) {
+
+	if (code->pad || code->index >= ARRAY_SIZE(mt9m114_formats))
 		return -EINVAL;
 
-	*code = mt9m114_formats[index].pixelcode;
+	code->code = mt9m114_formats[code->index].pixelcode;
 	return 0;
 }
 
@@ -1793,11 +1795,6 @@ static int mt9m114_set_format(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int mt9m114_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmf)
-{
-	mt9m114_try_fmt_internal(sd, fmf, NULL, NULL);
-	return 0;
-}
 
 /* Set a format.*/
 static int mt9m114_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
@@ -2946,10 +2943,20 @@ static int mt9m114_is_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt
 
 /* stereo wrapper for resolution change: when playing stereo stream
  * resolution change is not allowed */
-static int mt9m114_stereo_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *fmt)
+static int mt9m114_stereo_set_fmt(struct v4l2_subdev *sd,
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_format *format)
 {
 	int ret, restart_synchro;
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct v4l2_mbus_framefmt *fmt = &format->format;
+
+	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
+	{
+		mt9m114_try_fmt_internal(sd, fmt, NULL, NULL);
+		cfg->try_fmt = *fmt;
+		return 0;
+	}
 
 	/* same frame format */
 	if (mt9m114_is_fmt(sd, fmt)) {
@@ -3007,9 +3014,6 @@ static int mt9m114_stereo_s_stream(struct v4l2_subdev *sd, int enable)
 }
 
 static const struct v4l2_subdev_video_ops mt9m114_video_ops = {
-	.enum_mbus_fmt = mt9m114_enum_fmt,
-	.try_mbus_fmt = mt9m114_try_fmt,
-	.s_mbus_fmt = mt9m114_stereo_s_fmt, /* stereo wrapper (set resolution and colorspace) */
 	.cropcap = mt9m114_cropcap,
 	.g_crop = mt9m114_g_crop,
 	.s_parm = mt9m114_stereo_s_parm, /* stereo wrapper (set framerate) */
@@ -3017,9 +3021,15 @@ static const struct v4l2_subdev_video_ops mt9m114_video_ops = {
 	.s_stream = mt9m114_stereo_s_stream, /* stereo wrapper (stream on/off) */
 };
 
+static struct v4l2_subdev_pad_ops mt9m114_pad_ops = {
+	.enum_mbus_code = mt9m114_enum_mbus_code,
+	.set_fmt	= mt9m114_stereo_set_fmt,
+};
+
 static const struct v4l2_subdev_ops mt9m114_ops = {
 	.core = &mt9m114_core_ops,
 	.video = &mt9m114_video_ops,
+	.pad   = &mt9m114_pad_ops,
 };
 
 /* ----------------------------------------------------------------------- */
