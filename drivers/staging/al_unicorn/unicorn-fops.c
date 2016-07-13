@@ -194,7 +194,7 @@ const struct v4l2_file_operations video_fops = {
   .read = video_read,  /* done */
   .poll = video_poll,  /* done */
   .mmap = video_mmap, /* done */
-  .ioctl = video_ioctl2, /* not found */
+  .unlocked_ioctl = video_ioctl2, /* not found */
 };
 
 
