@@ -262,24 +262,6 @@ static int vidioc_s_parm(struct file *filp, void *priv,
   return 0;
 }
 
-static int vidioc_g_priority(struct file *file, void * priv, enum v4l2_priority *p)
-{
-  struct unicorn_fh *fh = priv;
-  struct unicorn_dev *dev = fh->dev;
-
-  *p = v4l2_prio_max(&dev->prio);
-
-  return 0;
-}
-
-static int vidioc_s_priority(struct file *file, void *f, enum v4l2_priority prio)
-{
-  struct unicorn_fh *fh = f;
-  struct unicorn_dev *dev = ((struct unicorn_fh *)f)->dev;
-
-  return v4l2_prio_change(&dev->prio, &fh->prio, prio);
-}
-
 static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
         struct v4l2_format *f)
 {
@@ -337,11 +319,12 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
     {
       if(dev->sensor[fh->input][i] != NULL)
       {
-        struct v4l2_mbus_framefmt fmt;
-        fmt.width = f->fmt.pix.width;
-        fmt.height = f->fmt.pix.height;
-        fmt.colorspace = f->fmt.pix.colorspace;
-        err += v4l2_subdev_call(dev->sensor[fh->input][i], video, s_mbus_fmt, &fmt);
+        struct v4l2_subdev_format fmt;
+	struct v4l2_subdev_pad_config cfg;
+        fmt.format.width = f->fmt.pix.width;
+        fmt.format.height = f->fmt.pix.height;
+        fmt.format.colorspace = f->fmt.pix.colorspace;
+        err += v4l2_subdev_call(dev->sensor[fh->input][i], pad, set_fmt, &cfg, &fmt);
         dprintk_video(1, dev->name, "%s() width=%d height=%d field=%d err=%d\n", __func__, fh->width,
         fh->height, fh->vidq.field, err);
       }
@@ -662,8 +645,6 @@ const struct v4l2_ioctl_ops video_ioctl_ops = {
   .vidioc_streamon = vidioc_streamon, /* done */
   .vidioc_streamoff = vidioc_streamoff, /* done */
   .vidioc_log_status = vidioc_log_status, /* done */
-  .vidioc_g_priority = vidioc_g_priority,
-  .vidioc_s_priority = vidioc_s_priority,
   .vidioc_s_parm = vidioc_s_parm,
   .vidioc_g_parm = vidioc_g_parm,
   .vidioc_g_std = vidioc_g_std,
