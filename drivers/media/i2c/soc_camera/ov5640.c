@@ -2088,12 +2088,14 @@ static int ov5640_s_stream(struct v4l2_subdev *sd, int enable) {
 	return 0;
 }
 
-static int ov5640_g_fmt(struct v4l2_subdev *sd,
-		struct v4l2_mbus_framefmt *mf)
+static int ov5640_get_fmt(struct v4l2_subdev *sd,
+	       struct v4l2_subdev_pad_config *cfg,
+	       struct v4l2_subdev_format *format)
 {
+	struct v4l2_mbus_framefmt *mf = &format->format;
 	struct ov5640 *ov5640 = to_ov5640(sd);
 
-	if (!mf)
+	if (format->pad)
 		return -EINVAL;
 
 	mf->width = ov5640->curr_size->width;
@@ -2105,24 +2107,24 @@ static int ov5640_g_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int ov5640_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
+static int ov5640_set_fmt(struct v4l2_subdev *sd,
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_format *format)
 {
-	if (!sd || !mf)
-		return -EINVAL;
-	try_fmt(sd, mf);
-	try_size(sd, mf);
-	return 0;
-}
-
-static int ov5640_s_fmt(struct v4l2_subdev *sd,
-		struct v4l2_mbus_framefmt *mf)
-{
+	struct v4l2_mbus_framefmt *mf = &format->format;
 	struct ov5640 *ov5640 = to_ov5640(sd);
 	int ret = 0;
 
-	if (!sd || !mf)
+	if (format->pad)
 		return -EINVAL;
 
+	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
+	{
+		try_fmt(sd, mf);
+		try_size(sd, mf);
+		cfg->try_fmt = *mf;
+		return 0;
+	}
 	ov5640->curr_fmt = try_fmt(sd, mf);
 	ov5640->curr_size = try_size(sd, mf);
 
@@ -2135,13 +2137,14 @@ static int ov5640_s_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int ov5640_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
-				u32 *code)
+static int ov5640_enum_mbus_code(struct v4l2_subdev *sd,
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_mbus_code_enum *code)
 {
-	if (!code || index >= ARRAY_SIZE(ov5640_formats))
+	if (code->pad || code->index >= ARRAY_SIZE(ov5640_formats))
 		return -EINVAL;
 
-	*code = ov5640_formats[index].code;
+	code->code = ov5640_formats[code->index].code;
 	return 0;
 }
 
@@ -2162,16 +2165,19 @@ static struct v4l2_subdev_core_ops ov5640_subdev_core_ops = {
 };
 
 static struct v4l2_subdev_video_ops ov5640_subdev_video_ops = {
-	.g_mbus_fmt	= ov5640_g_fmt,
-	.s_mbus_fmt	= ov5640_s_fmt,
-	.enum_mbus_fmt = ov5640_enum_fmt,
-	.try_mbus_fmt = ov5640_try_fmt,
 	.s_stream	= ov5640_s_stream,
+};
+
+static struct v4l2_subdev_pad_ops ov5640_subdev_pad_ops = {
+	.enum_mbus_code = ov5640_enum_mbus_code,
+	.get_fmt	= ov5640_get_fmt,
+	.set_fmt	= ov5640_set_fmt,
 };
 
 static struct v4l2_subdev_ops ov5640_subdev_ops = {
 	.core	= &ov5640_subdev_core_ops,
 	.video	= &ov5640_subdev_video_ops,
+	.pad    = &ov5640_subdev_pad_ops,
 };
 
 static int ov5640_probe(struct i2c_client *client,
