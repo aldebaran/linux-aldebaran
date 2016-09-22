@@ -21,6 +21,7 @@
 #include <linux/init.h>
 #include <linux/slab.h>
 #include <linux/module.h>
+#include <linux/delay.h>
 
 #include <sound/core.h>
 #include "hda_codec.h"
@@ -88,8 +89,6 @@ struct wm8860_spec {
 	/* capture source */
 	const struct hda_input_mux *input_mux;
 	const hda_nid_t *capsrc_nids;
-	/* PCM information */
-	struct hda_pcm pcm_rec[3];	/* used in alc_build_pcms() */
 };
 
 /*
@@ -126,6 +125,7 @@ static int wm8860_playback_pcm_open(struct hda_pcm_stream *hinfo,
 {
 	snd_hda_codec_write(codec, NID_PARAMETER, 0, AC_VERB_SET_GPIO_DATA,
 		GPIO_MUTE_DISABLE | GPIO_AMPLIFICATION_ENABLE);
+	msleep(20);
 	return 0;
 }
 
@@ -267,11 +267,12 @@ static const struct hda_pcm_stream wm8860_pcm_analog_capture = {
 static int wm8860_build_pcms(struct hda_codec *codec)
 {
 	struct wm8860_spec *spec = codec->spec;
-	struct hda_pcm *info = spec->pcm_rec;
+	struct hda_pcm *info;
 
-	codec->num_pcms = 1;
-	codec->pcm_info = info;
-	info->name = "wm8860";
+	info = snd_hda_codec_pcm_new(codec, "wm8860");
+	if (!info)
+		return -ENOMEM;
+
 	info->stream[SNDRV_PCM_STREAM_PLAYBACK] = wm8860_pcm_analog_playback;
 	info->stream[SNDRV_PCM_STREAM_PLAYBACK].channels_max =
 		spec->dac_nids_count;
@@ -587,31 +588,17 @@ static int patch_wm8860g(struct hda_codec *codec)
 /*
  * patch entries
  */
-static const struct hda_codec_preset snd_hda_preset_wolfson[] = {
-	{ .id = 0x1aec8800, .name = "WM8860", .patch = patch_wm8860g },
+static const struct hda_device_id snd_hda_id_wolfson[] = {
+	HDA_CODEC_ENTRY(0x1aec8800, "WM8860", patch_wm8860g),
 	{ /* end */ }
 };
-
-MODULE_ALIAS("snd-hda-codec-id:1aec8800");
+MODULE_DEVICE_TABLE(hdaudio, snd_hda_id_wolfson);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Wolfson Multimedia HD-audio codec");
 
-static struct hda_codec_preset_list wolfson_list = {
-	.preset = snd_hda_preset_wolfson,
-	.owner = THIS_MODULE,
+static struct hda_codec_driver wolfson_driver = {
+	.id = snd_hda_id_wolfson,
 };
 
-static int __init patch_wolfson_init(void)
-{
-	return snd_hda_add_codec_preset(&wolfson_list);
-}
-
-static void __exit patch_wolfson_exit(void)
-{
-	snd_hda_delete_codec_preset(&wolfson_list);
-}
-
-module_init(patch_wolfson_init)
-module_exit(patch_wolfson_exit)
-
+module_hda_codec_driver(wolfson_driver);
