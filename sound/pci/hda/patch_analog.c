@@ -75,9 +75,6 @@ struct ad198x_spec {
 	const struct hda_channel_mode *channel_mode;
 	int num_channel_mode;
 
-	/* PCM information */
-	struct hda_pcm pcm_rec[3];	/* used in alc_build_pcms() */
-
 	unsigned int spdif_route;
 
 	unsigned int jack_present: 1;
@@ -272,24 +269,25 @@ static const struct hda_pcm_stream ad198x_pcm_digital_capture = {
 static int ad198x_build_pcms(struct hda_codec *codec)
 {
 	struct ad198x_spec *spec = codec->spec;
-	struct hda_pcm *info = spec->pcm_rec;
+	struct hda_pcm *info;
 
-	codec->num_pcms = 1;
-	codec->pcm_info = info;
+	info = snd_hda_codec_pcm_new(codec, "AD198x Analog");
+	if (!info)
+		return -ENOMEM;
 
-	info->name = "AD198x Analog";
 	info->stream[SNDRV_PCM_STREAM_PLAYBACK] = ad198x_pcm_analog_playback;
 	info->stream[SNDRV_PCM_STREAM_PLAYBACK].channels_max = spec->multiout.max_channels;
-	info->stream[SNDRV_PCM_STREAM_PLAYBACK].nid = spec->multiout.dac_nids[0];
+	info->stream[SNDRV_PCM_STREAM_PLAYBACK].nid = spec->multiout.dac_nids[0]; 
 	info->stream[SNDRV_PCM_STREAM_CAPTURE] = ad198x_pcm_analog_capture;
 	info->stream[SNDRV_PCM_STREAM_CAPTURE].substreams = spec->num_adc_nids;
 	info->stream[SNDRV_PCM_STREAM_CAPTURE].nid = spec->adc_nids[0];
 
 	if (spec->multiout.dig_out_nid) {
-		info++;
-		codec->num_pcms++;
+		info = snd_hda_codec_pcm_new(codec, "AD198x Digital");
+		if (!info)
+			return -ENOMEM;
+
 		codec->spdif_status_reset = 1;
-		info->name = "AD198x Digital";
 		info->pcm_type = HDA_PCM_TYPE_SPDIF;
 		info->stream[SNDRV_PCM_STREAM_PLAYBACK] = ad198x_pcm_digital_playback;
 		info->stream[SNDRV_PCM_STREAM_PLAYBACK].nid = spec->multiout.dig_out_nid;
@@ -1561,22 +1559,22 @@ static int patch_ad1882(struct hda_codec *codec)
 /*
  * patch entries
  */
-static const struct hda_codec_preset snd_hda_preset_analog[] = {
-	{ .id = 0x11d4184a, .name = "AD1884A", .patch = patch_ad1884 },
-	{ .id = 0x11d41882, .name = "AD1882", .patch = patch_ad1882 },
-	{ .id = 0x11d41883, .name = "AD1883", .patch = patch_ad1884 },
-	{ .id = 0x11d41884, .name = "AD1884", .patch = patch_ad1884 },
-	{ .id = 0x11d4194a, .name = "AD1984A", .patch = patch_ad1884 },
-	{ .id = 0x11d4194b, .name = "AD1984B", .patch = patch_ad1884 },
-	{ .id = 0x11d41981, .name = "AD1981", .patch = patch_ad1981 },
-	{ .id = 0x11d41983, .name = "AD1983", .patch = patch_ad1983 },
-	{ .id = 0x11d41984, .name = "AD1984", .patch = patch_ad1884 },
-	{ .id = 0x11d41986, .name = "AD1986A", .patch = patch_ad1986a },
-	{ .id = 0x11d41988, .name = "AD1988", .patch = patch_ad1988 },
-	{ .id = 0x11d4198b, .name = "AD1988B", .patch = patch_ad1988 },
-	{ .id = 0x11d4882a, .name = "AD1882A", .patch = patch_ad1882 },
-	{ .id = 0x11d4989a, .name = "AD1989A", .patch = patch_ad1989a_naoV4 },
-	{ .id = 0x11d4989b, .name = "AD1989B", .patch = patch_ad1988 },
+static const struct hda_device_id snd_hda_id_analog[] = {
+	HDA_CODEC_ENTRY(0x11d4184a, "AD1884A", patch_ad1884),
+	HDA_CODEC_ENTRY(0x11d41882, "AD1882", patch_ad1882),
+	HDA_CODEC_ENTRY(0x11d41883, "AD1883", patch_ad1884),
+	HDA_CODEC_ENTRY(0x11d41884, "AD1884", patch_ad1884),
+	HDA_CODEC_ENTRY(0x11d4194a, "AD1984A", patch_ad1884),
+	HDA_CODEC_ENTRY(0x11d4194b, "AD1984B", patch_ad1884),
+	HDA_CODEC_ENTRY(0x11d41981, "AD1981", patch_ad1981),
+	HDA_CODEC_ENTRY(0x11d41983, "AD1983", patch_ad1983),
+	HDA_CODEC_ENTRY(0x11d41984, "AD1984", patch_ad1884),
+	HDA_CODEC_ENTRY(0x11d41986, "AD1986A", patch_ad1986a),
+	HDA_CODEC_ENTRY(0x11d41988, "AD1988", patch_ad1988),
+	HDA_CODEC_ENTRY(0x11d4198b, "AD1988B", patch_ad1988),
+	HDA_CODEC_ENTRY(0x11d4882a, "AD1882A", patch_ad1882),
+	HDA_CODEC_ENTRY(0x11d4989a, "AD1989A", patch_ad1989a_naoV4),
+	HDA_CODEC_ENTRY(0x11d4989b, "AD1989B", patch_ad1988),
 	{} /* terminator */
 };
 MODULE_DEVICE_TABLE(hdaudio, snd_hda_id_analog);
