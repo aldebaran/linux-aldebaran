@@ -1,0 +1,101 @@
+//***************************************************************************
+
+void CgebCall(CGEBFPS *fps, void *addr)
+  {
+  // addr points to a bimodal C style function that expects a far pointer to an fps.
+  // if cs is 0 then it does a near return, otherwise a far return.
+  // if we ever need a far return then we must not pass cs at all.
+  // parameters are removed by the caller
+  ((void (*)(unsigned short cs, CGEBFPS *fps, unsigned short ds))addr)(0,fps,fps->data.seg);
+  }
+
+
+//***************************************************************************
+
+unsigned long CgebInvokeIoctl(CGOS_DRV_CGEB *cgeb, unsigned long flags, unsigned long fct,
+  CGOS_DRV_VARS *cdv)
+  {
+  CGEBFPS fps;
+  CGOSIOCTLIN *cin=cdv->cin;
+  CGOSIOCTLOUT *cout=cdv->cout;
+  fps.fct=fct;
+  fps.unit=cin->type;
+  fps.pars[0]=cin->pars[0];
+  fps.pars[1]=cin->pars[1];
+  fps.pars[2]=cin->pars[2];
+  fps.pars[3]=cin->pars[3];
+  fps.iptr=0;
+  fps.optr=0;
+  if (cdv->lout) fps.optr=cout+1;
+  if (cdv->lin) fps.iptr=cin+1;
+  if (!CgebInvoke(cgeb,&fps,sizeof(fps),fct)) return FALSE;
+  if (/*(flags&16) && cdv->lout*/ cdv->retcnt && fps.optr)
+    OsaMemCpy(cout+1,fps.optr,cdv->retcnt);
+  cout->rets[0]=fps.rets[0];
+  cout->rets[1]=fps.rets[1];
+  if (flags&1) return fps.rets[0];
+  if (flags&2) return fps.status;
+  return TRUE;
+  }
+
+//***************************************************************************
+
+
+
+/*
+
+FPS usage and assumptions in CGEB function calls
+
+The CGEB CS and DS in the FPS refer to the same range of physical memory, so offsets can be used 
+interchangeably. The SS and the segments in mapped memory may use different offsets.
+The segment of the parameter block can be contained in SS or DS.
+
+All numeric input parameters are passed into pars[0..3]. If the call is directly forwarded 
+by the driver the order is the same as in the ioctl parameter block. The order is 
+usually identical to the Cgos* function call.
+
+The unit field is a 0-based dword specifing then instance number of multiple devices.
+It is derived from the type passed into Cgos* functions. In many cases it is passed directly.
+In some cases like I2C and storage areas it is translated.
+
+A pointers to an input structure is passed in iptr. On information structures the first
+dword usually contains the size in bytes. On write data functions only a pointer to the raw 
+data is passed.
+
+All numeric return values are to be placed in rets[0..1]. Usually only rets[0] is required.
+
+The status field contains either an result or continuation code. Result codes can either be a 
+negative error number or 0 which indicates success. Continuation codes are positive numbers. 
+If a result code is returned the function is complete. If a continuation code is returned then
+the function will be called again with the same FPS. On the first call the driver sets the status
+field to 0 indicating success and also that this is the first call to that function. Note that the
+cont field is also set to 0 on the first call.
+
+A step or stage field is no longer present.
+
+A pointer to a data structure in the CGEB CS or DS can be returned in optr.
+The optr will be filled by the driver if the CGOS call should return data in that memory.
+This is usually done on read data calls. Which way the optr is used depends on the function.
+
+The function field contains the CGEB function number.
+
+All other fields like the cont, subfps, and subfct fields are set to 0 on the first call and remain 
+untouched if a continuation is requested.
+
+Note that the FPS structure, continuation codes, and the watchdog structures have been 
+changed significantly.
+
+Example xCgebI2CTransfer:
+
+  fps.unit=unit;
+  fps.pars[0]=dwLenWrite;
+  fps.pars[1]=dwLenRead;
+  fps.pars[2]=flags;
+  fps.iptr=pBytesWrite;
+  fps.optr=pBytesRead;
+  fps.fct=xCgebI2CTransfer;
+  
+Flags are the same as CGEB flags. After the call fps.rets[0] should contain the length.
+
+
+*/
