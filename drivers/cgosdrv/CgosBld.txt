@@ -1,0 +1,116 @@
+1.00.001 2005.05.25
+  - Release Candiate 1
+  - CE and DOSX version
+  - legacy wrapper
+  - public tool CgosDump
+  - private tools CgosCall and CgebDump
+
+1.00.002 2005.06.01
+  - Release Candiate 2
+  - made CgosVgaEndDarkBoot private
+  - backlight and contrast are now percentages 0..100 (used to be 0..255)
+  - I2C bus timing is now a frequency (was a period)
+  - implemented and compiled NT/2000/XP/9x driver (not tested yet)
+  - implemented QNX lib and driver (not compiled yet)
+
+1.00.003 2005.06.02
+  - First Windows NT/2000/XP/9x driver 
+  - Fixed dwType on CgosVga* functions (where restricted to 0 = LCD)
+  - implemented Linux lib and driver (not compiled yet)
+
+1.00.004 2005.06.20
+  - First QNX6 driver
+  - qnx source files crlf cleaned on 2005.06.22
+
+1.00.005 2005.06.24
+  - First Linux 2.4 driver
+  - source crlf cleaned
+
+1.00.005 2005.06.28
+  - rebuild all OS to ensure platform independance
+  - implemented VxWorks lib and driver (not compiled yet)
+
+1.01.006 2005.06.29
+  - added private CgosCgbc* functions
+
+1.01.007 2005.06.30
+  - fixed CgosCgbcHandleCommand return count
+  - added option to return input pars as return count
+  - fixed CgosCgbcSetControl parameter order
+
+1.01.008 2005.12.15
+  - linux 2.6 support
+  - scan F thru C segment for CGEB low signature
+
+1.02.009 2006.02.27
+  - Enabled CgosTemperature*, *Fan*, and *Voltage* functions
+  - Added CgosStorageAreaLock, *Unlock, *IsLocked
+  - Added CgosLibGetLastError, CgosLibSetLastErrorAddress
+  - Added type support for I2C
+  - Fixed StorageArea sizes for flash
+
+1.02.010 2006.03.07
+  - Fixed CgosWDogSetConfigStruct
+  - changed dwType parameter to dwUnit on all Cgos function calls
+  - changed defined type values for CGOS_TEMP_*, CGOS_FAN_*, 
+    CGOS_VOLTAGE_*, and CGOS_WDOG_TYPE_ from type to (type<<16)+1
+
+1.02.011 2006.03.16
+  - added szVendor field to CGEB_BOARDINFO which is returned as 
+    manufacturer
+
+1.02.011 2006.03.27
+  - fixed Cgeb.c signed/unsigned warning under CE
+  - CE CgosDump now uses generic CgosDump.c source
+
+1.02.012 2006.05.31
+  - fixed CgosVgaGetInfo
+
+1.02.013 2006.07.04
+  - Increased QNX message size from 2k to 128k
+  - Added /usr/lib path to QNX makefile
+
+1.02.014 2006.09.27
+  - Added support for linux kernel 2.6.17
+  - Improved linux make files
+  - Fixed CgosWDog(G/S)etConfigStruct to accept CGOSWDCONFIG
+    without optional parameters
+  - CgosWDogSetConfig disables watch dog if timeout & delay are 0
+
+1.02.015 2007.05.10
+  - Added support for linux kernel 2.6.18 (devfs)
+  - Implemented CgosIO* functions
+  - Added more temp types to cgos.h
+
+1.03.016 2007.05.28
+  - Added CgosI2CGetMaxFrequency, 
+    CgosI2CGetFrequency, CgosI2CSetFrequency
+
+1.03.017 2007.06.01
+  - Fixed CE virtual memory mapping with non-page-aligned addresses (X800)
+  - Check for NULL virtuals on CGEB address mapping (CGEB_MAP_MEM_LIST)
+
+1.03.018 2007.09.06
+  - VxWorks optional support for INCLUDE_MMU_FULL (INCLUDE_MMU_BASIC)
+  - VxWorks sources in-sync
+  - VxWorks 5.5 proper project
+  - Linux: config.h dependency in DrvLx.c eliminated
+  - Linux: toplevel makefile replaced
+  - Linux: support for jida wrapper
+
+1.03.019 2010.04.30
+  - Linux: eliminate text relocations in libcgos.so in order to support SELinux
+  - Linux: support for udev
+  - Linux: fix kernel crash when NX functionality enabled (memory allocation method in DrvOsaLx.c changed)
+  - Linux: automatic creation of device node removed in LibOsaLx.c 
+    (this prevents the ppdev from being loaded instead of cgosdrv in recent distributions)
+  
+1.03.020 2011.10.12
+  - Linux: support for 64bit Linux (CGOS64)
+
+1.03.021 2012.03.27
+  - Linux: source code cleanup
+  - Linux: precompiled components removed, source files added instead
+  - Linux: GPL header inserted in all source files
+  - Linux: support for kernel version 2.4 removed in DrvLx.c
+  - Linux: AMD64 defined depending on __amd64__ preprocessor definition in DrvOsHdr.h
