@@ -43,7 +43,7 @@
 #endif
 
 #define cgos_cdecl __attribute__((regparm(0)))
-#include <DrvOsa.h>
+#include "DrvOsa.h"
 
 //***************************************************************************
 
