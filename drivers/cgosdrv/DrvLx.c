@@ -34,7 +34,6 @@
 
 #include <linux/fs.h>
 #include <linux/errno.h>
-#include <linux/export.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
 
@@ -46,7 +45,6 @@
 #define cgos_cdecl 	//MODGWE
 
 #include "DrvUla.h"
-#include "DrvOsHdr.h"
 
 //***************************************************************************
 
@@ -132,10 +130,10 @@ int cgos_ioctl(struct inode *_inode, struct file *f, unsigned int command, unsig
       return_ioctl(-EFAULT);
     }
 
-  ret = cgos_issue_request(command & ~0UL,
-      (unsigned long*)pbuf, iobd.nInBufferSize,
-      (unsigned long*)pbuf, iobd.nOutBufferSize, &rlen);
-
+  down(&osDrvVars.semIoCtl);
+  ret=UlaDeviceIoControl(osDrvVars.hDriver,command,pbuf,iobd.nInBufferSize,
+     pbuf,iobd.nOutBufferSize,&rlen);
+  up(&osDrvVars.semIoCtl);
   if (ret) return_ioctl(-EFAULT);
 
   if (rlen) {
@@ -149,19 +147,6 @@ int cgos_ioctl(struct inode *_inode, struct file *f, unsigned int command, unsig
 
   return 0;
   }
-
-unsigned long cgos_issue_request(unsigned long command,
-    unsigned long *ibuf, unsigned long isize,
-    unsigned long *obuf, unsigned long osize, unsigned long *olen)
-{
-  unsigned long ret;
-  down(&osDrvVars.semIoCtl);
-  ret=UlaDeviceIoControl(osDrvVars.hDriver, command,
-      ibuf, isize, obuf, osize, olen);
-  up(&osDrvVars.semIoCtl);
-  return ret;
-}
-EXPORT_SYMBOL(cgos_issue_request);
 
 //***************************************************************************
 static struct file_operations cgos_fops={
