@@ -38,6 +38,10 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 
+#ifdef CONFIG_COMPAT
+#include <linux/compat.h>
+#endif
+
 #include <asm/uaccess.h>
 #include <linux/miscdevice.h>
 #include "CgosIobd.h"
@@ -87,6 +91,38 @@ int cgos_release(struct inode *_inode, struct file *f)
 
 #define return_ioctl(ret) { if (pbuf!=buf) kfree(pbuf); return ret; }
 
+static long cgos_common_ioctl(struct file *f, unsigned int command, IOCTL_BUF_DESC iobd);
+
+#ifdef CONFIG_COMPAT
+
+typedef struct {
+  compat_uptr_t pInBuffer;
+  unsigned int nInBufferSize;
+  compat_uptr_t pOutBuffer;
+  unsigned int nOutBufferSize;
+  compat_uptr_t pBytesReturned;
+} IOCTL_BUF_DESC_COMPAT;
+
+long cgos_compat_ioctl(struct file *f, unsigned int command, unsigned long arg)
+  {
+  IOCTL_BUF_DESC_COMPAT iobd_compat;
+  IOCTL_BUF_DESC iobd;
+
+  if (copy_from_user(&iobd_compat,
+		     (IOCTL_BUF_DESC_COMPAT*) compat_ptr(arg),
+		     sizeof(iobd_compat)))
+    return -EFAULT;
+
+  iobd.pInBuffer = compat_ptr(iobd_compat.pInBuffer);
+  iobd.nInBufferSize = iobd_compat.nInBufferSize;
+  iobd.pOutBuffer = compat_ptr(iobd_compat.pOutBuffer);
+  iobd.nOutBufferSize = iobd_compat.nOutBufferSize;
+  iobd.pBytesReturned= compat_ptr(iobd_compat.pBytesReturned);
+
+  return cgos_common_ioctl(f, command, iobd);
+}
+#endif /* CONFIG_COMPAT */
+
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,35)
 #define ioctl unlocked_ioctl
 long cgos_ioctl(struct file *f, unsigned int command, unsigned long arg)
@@ -95,12 +131,16 @@ int cgos_ioctl(struct inode *_inode, struct file *f, unsigned int command, unsig
 #endif
   {
   IOCTL_BUF_DESC iobd;
+  if (copy_from_user(&iobd,(IOCTL_BUF_DESC *)arg, sizeof(iobd)))
+    return -EFAULT;
+  return cgos_common_ioctl(f, command, iobd);
+  }
+
+static long cgos_common_ioctl(struct file *f, unsigned int command, IOCTL_BUF_DESC iobd)
+  {
   unsigned char buf[512];
   unsigned char *pbuf=buf;
   unsigned int ret, rlen=0, maxlen;
-
-  if (copy_from_user(&iobd,(IOCTL_BUF_DESC *)arg,sizeof(iobd)))
-    return -EFAULT;
 
   maxlen=iobd.nInBufferSize>iobd.nOutBufferSize?iobd.nInBufferSize:iobd.nOutBufferSize;
   if (maxlen>sizeof(buf))
@@ -147,6 +187,9 @@ EXPORT_SYMBOL(cgos_issue_request);
 static struct file_operations cgos_fops={
   owner: THIS_MODULE,
   ioctl: cgos_ioctl,
+#ifdef CONFIG_COMPAT
+  compat_ioctl: cgos_compat_ioctl,
+#endif
   open: cgos_open,
   release: cgos_release,
   };
