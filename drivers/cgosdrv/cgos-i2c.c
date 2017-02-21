@@ -59,22 +59,6 @@ struct cgos_i2c_adapter {
 static DEFINE_MUTEX(cgos_mutex);
 static LIST_HEAD(cgos_i2c_adapters);
 
-enum cgos_fct {
-	cgos_release_handle = 1,
-	cgos_request_handle = 3,
-	cgos_i2c_count = 31,
-	cgos_i2c_type = 32,
-	cgos_i2c_is_available = 33,
-	cgos_i2c_read = 34,
-	cgos_i2c_write = 35,
-	cgos_i2c_read_register = 36,
-	cgos_i2c_write_register = 37,
-	cgos_i2c_write_read_combined = 38,
-	cgos_i2c_get_max_frequency = 85,
-	cgos_i2c_get_frequency = 86,
-	cgos_i2c_set_frequency = 87
-};
-
 #ifdef DEBUG
 #define dump_device(d)  _dump_device(d)
 static void _dump_device(struct cgos_i2c_adapter *dev)
@@ -175,11 +159,11 @@ static int cgos_i2c_master_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 		wr_hdr->len = wr_hdr_len;
 
 		if (msgs[i].flags & I2C_M_RD) {
-			wr_hdr->fct = cgos_i2c_read;
+			wr_hdr->fct = xCgosI2CRead;
 			wr_hdr->data[0] |= 0x1;
 			rd_hdr->len += msgs[i].len;
 		} else {
-			wr_hdr->fct = cgos_i2c_write;
+			wr_hdr->fct = xCgosI2CWrite;
 			wr_hdr->len += msgs[i].len;
 			memcpy(&wr_data[0], &msgs[i].buf[0], msgs[i].len);
 		}
@@ -320,7 +304,7 @@ static int __init cgos_i2c_init(void)
 	memset(&rd_hdr, 0, sizeof(rd_hdr));
 	memset(&wr_hdr, 0, sizeof(wr_hdr));
 	rd_hdr.len = rd_hdr_len;
-	wr_hdr.fct = cgos_request_handle;
+	wr_hdr.fct = xCgosBoardOpen;
 	wr_hdr.len = wr_hdr_len;
 	ret = cgos_do_request(&wr_hdr, &rd_hdr);
 	if (ret || rd_hdr.response_len < rd_hdr_len)
@@ -331,7 +315,7 @@ static int __init cgos_i2c_init(void)
 	/* setup i2c adapters */
 	memset(&rd_hdr, 0, sizeof(rd_hdr));
 	rd_hdr.len = rd_hdr_len;
-	wr_hdr.fct = cgos_i2c_count;
+	wr_hdr.fct = xCgosI2CCount;
 	ret = cgos_do_request(&wr_hdr, &rd_hdr);
 	if (ret || rd_hdr.response_len < rd_hdr_len)
 		return -EREMOTEIO;
@@ -342,7 +326,7 @@ static int __init cgos_i2c_init(void)
 		memset(&rd_hdr, 0, sizeof(rd_hdr));
 		rd_hdr.len = rd_hdr_len;
 		wr_hdr.type = i;
-		wr_hdr.fct = cgos_i2c_type;
+		wr_hdr.fct = xCgosI2CType;
 		r = cgos_do_request(&wr_hdr, &rd_hdr);
 		if (r || rd_hdr.response_len < rd_hdr_len)
 			return -EREMOTEIO;
@@ -351,7 +335,7 @@ static int __init cgos_i2c_init(void)
 			continue;
 		memset(&rd_hdr, 0, sizeof(rd_hdr));
 		rd_hdr.len = rd_hdr_len;
-		wr_hdr.fct = cgos_i2c_is_available;
+		wr_hdr.fct = xCgosI2CIsAvailable;
 		r = cgos_do_request(&wr_hdr, &rd_hdr);
 		if (r)
 			continue;
@@ -400,7 +384,7 @@ static void __exit cgos_i2c_exit(void)
 	rd_hdr.len = rd_hdr_len;
 	memset(wr_hdr.data, 0x0, sizeof(wr_hdr.data));
 	wr_hdr.handle = dev->handle;
-	wr_hdr.fct = cgos_release_handle;
+	wr_hdr.fct = xCgosBoardClose;
 	wr_hdr.type = 0;
 	wr_hdr.len = wr_hdr_len;
 
