@@ -11,7 +11,7 @@ config CGOS
 	tristate "Congatec CGOS API driver"
 	---help---
 	  If you want to use the congatec board features you should include
-	  
+
 	  If unsure, say Y.
 
 config CGOS_I2C
@@ -22,6 +22,12 @@ config CGOS_I2C
 
 	  If unsure, say Y.
 
+config CGOS_SBR
+	tristate "cgos-sbr"
+	depends on CGOS
+	---help---
+	  Expose robot head id.
+
+	  If unsure, say N.
 
 endmenu
-
