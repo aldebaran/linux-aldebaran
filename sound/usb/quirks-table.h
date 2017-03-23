@@ -88,25 +88,15 @@
  * Disable audio interface to prevent this.
  */
 {
-	USB_DEVICE(0x1d27, 0x0601),
+	USB_DEVICE_INTERFACE_NUMBER(0x1d27, 0x0601, 1),
 	.driver_info = (unsigned long) & (const struct snd_usb_audio_quirk) {
-		.ifnum = QUIRK_ANY_INTERFACE,
-		.type = QUIRK_COMPOSITE,
-		.data = (const struct snd_usb_audio_quirk[]) {
-			/* Control Device */
-			{
-				.ifnum = 1,
-				.type = QUIRK_IGNORE_INTERFACE,
-			},
-			/* Capture */
-			{
-				.ifnum = 2,
-				.type = QUIRK_IGNORE_INTERFACE,
-			},
-			{
-				.ifnum = -1
-			}
-		}
+		.type = QUIRK_IGNORE_INTERFACE,
+	}
+},
+{
+	USB_DEVICE_INTERFACE_NUMBER(0x1d27, 0x0601, 2),
+	.driver_info = (unsigned long) & (const struct snd_usb_audio_quirk) {
+		.type = QUIRK_IGNORE_INTERFACE,
 	}
 },
 /* Creative/Toshiba Multimedia Center SB-0500 */
