@@ -81,7 +81,7 @@ static int video_release(struct file *file)
 
   /* stop video capture */
   dprintk_video(1, dev->name,  "%s() stop video capture for device %d...\n", __func__, fh->channel);
-  if (res_check(fh, 0x01<<fh->channel)) {
+  if (res_locked(dev, 0x01<<fh->channel)) {
     videobuf_queue_cancel(&fh->vidq);
     res_free(dev, fh, 0x01<<fh->channel);
   }
@@ -136,7 +136,7 @@ static unsigned int video_poll(struct file *file,
   struct unicorn_dev *dev = fh->dev;
   dprintk_video(1, dev->name, "%s()\n", __func__);
 
-  if (res_check(fh, 0x01 << fh->channel)) {
+  if (res_locked(dev, 0x01 << fh->channel)) {
     /* streaming capture */
     if (list_empty(&fh->vidq.stream))
       return POLLERR;
