@@ -39,6 +39,14 @@ static int video_open(struct file *file)
   dprintk_video(1, dev->name, "open device %d ...\n", fh->channel);
 
   mutex_lock(&dev->mutex);
+  fh->client_counter++;
+
+  if (fh->client_counter > 1) {
+    /* Buffer and sensor registers already initialized */
+    mutex_unlock(&dev->mutex);
+    dprintk_video(1, dev->name, "open device %d DONE\n", fh->channel);
+    return 0;
+  }
 
   dev->global_register->video[fh->channel].ctrl &= ~VIDEO_CONTROL_INPUT_SEL_MASK;
   dev->global_register->video[fh->channel].ctrl |= (fh->input) << VIDEO_CONTROL_INPUT_SEL_POS;
@@ -76,6 +84,16 @@ static int video_release(struct file *file)
 
   dprintk_video(1, dev->name,  "release device %d ...\n", fh->channel);
 
+  mutex_lock(&dev->mutex);
+  fh->client_counter--;
+
+  if (fh->client_counter > 0) {
+    /* A client is still using the device, don't free memory */
+    mutex_unlock(&dev->mutex);
+    dprintk_video(1, dev->name,  "release device %d DONE\n", fh->channel);
+    return 0;
+  }
+
   dev->global_register->video[fh->channel].ctrl &= ~VIDEO_CONTROL_ENABLE;
   dev->pcie_dma->dma[fh->channel].ctrl |= DMA_CONTROL_RESET;
 
@@ -102,6 +120,8 @@ static int video_release(struct file *file)
     if(dev->sensor[fh->input][i] !=NULL)
       v4l2_subdev_call(dev->sensor[fh->input][i], core, s_power, 0);
   }
+
+  mutex_unlock(&dev->mutex);
 
   dprintk_video(1, dev->name,  "release device %d DONE\n", fh->channel);
   return 0;
