@@ -276,7 +276,6 @@ struct unicorn_fh {
   struct unicorn_dev *dev;
   enum v4l2_buf_type type;
 
-  u32 resources;
 
   enum v4l2_priority prio;
   /* video capture */
