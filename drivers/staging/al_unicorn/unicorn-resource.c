@@ -22,11 +22,6 @@
 #include "unicorn-resource.h"
 
 
-int res_check(struct unicorn_fh *fh, unsigned int bit)
-{
-  return fh->resources & bit;
-}
-
 int res_locked(struct unicorn_dev *dev, unsigned int bit)
 {
   return dev->resources & bit;
@@ -35,10 +30,6 @@ int res_locked(struct unicorn_dev *dev, unsigned int bit)
 int res_get(struct unicorn_dev *dev, struct unicorn_fh *fh, unsigned int bit)
 {
   dprintk_video(1, dev->name, "%s()\n", __func__);
-  if (fh->resources & bit)
-    /* have it already allocated */
-    return 1;
-
   /* is it free? */
   mutex_lock(&dev->mutex);
   if (dev->resources & bit)
@@ -48,7 +39,6 @@ int res_get(struct unicorn_dev *dev, struct unicorn_fh *fh, unsigned int bit)
     return 0;
   }
   /* it's free, grab it */
-  fh->resources |= bit;
   dev->resources |= bit;
   dprintk_video(1, dev->name, "res: get %d\n", bit);
   mutex_unlock(&dev->mutex);
@@ -57,11 +47,10 @@ int res_get(struct unicorn_dev *dev, struct unicorn_fh *fh, unsigned int bit)
 
 void res_free(struct unicorn_dev *dev, struct unicorn_fh *fh, unsigned int bits)
 {
-  BUG_ON((fh->resources & bits) != bits);
+  BUG_ON((dev->resources & bits) != bits);
   dprintk_video(1, dev->name, "%s()\n", __func__);
 
   mutex_lock(&dev->mutex);
-  fh->resources &= ~bits;
   dev->resources &= ~bits;
   dprintk_video(1, dev->name, "res: put %d\n", bits);
   mutex_unlock(&dev->mutex);
