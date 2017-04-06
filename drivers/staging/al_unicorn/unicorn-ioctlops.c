@@ -24,7 +24,6 @@
 
 #include "unicorn.h"
 #include "unicorn-video.h"
-#include "unicorn-resource.h"
 
 #define FORMAT_FLAGS_PACKED       0x01
 
@@ -360,8 +359,11 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
   if (unlikely(i != fh->type))
     return -EINVAL;
 
-  if (unlikely(!res_get(dev, fh, get_resource(fh, 0x01 << fh->channel))))
+  mutex_lock(&dev->mutex);
+  if (unlikely(fh->vidq.streaming)){
+    mutex_unlock(&dev->mutex);
     return -EBUSY;
+  }
 
   dprintk_video(1, fh->dev->name, "streamon video device %d ...\n", fh->channel);
   for (it=0; it < max_subdev_per_video_bus; it++) {
@@ -371,6 +373,8 @@ static int vidioc_streamon(struct file *file, void *priv, enum v4l2_buf_type i)
   }
 
   err = videobuf_streamon(&fh->vidq);
+  mutex_unlock(&dev->mutex);
+
   dprintk_video(1, fh->dev->name, "streamon video device %d DONE\n", fh->channel);
   return err;
 }
@@ -386,8 +390,8 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
   if (i != fh->type)
     return -EINVAL;
 
-  res = get_resource(fh,  0x01 << fh->channel);
   dprintk_video(1, fh->dev->name, "streamoff for video device %d ...\n", fh->channel);
+  mutex_lock(&dev->mutex);
   err = videobuf_streamoff(&fh->vidq);
 
   for (it=0; it < max_subdev_per_video_bus; it++) {
@@ -395,11 +399,8 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
       v4l2_subdev_call(dev->sensor[fh->input][it], video, s_stream, 0);
     }
   }
-
+  mutex_unlock(&dev->mutex);
   dprintk_video(1, fh->dev->name, "streamoff for video device %d DONE\n", fh->channel);
-  if (err < 0)
-    return err;
-  res_free(dev, fh, res);
   return err;
 }
 
