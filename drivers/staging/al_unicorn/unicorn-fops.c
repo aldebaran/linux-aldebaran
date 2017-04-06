@@ -26,7 +26,6 @@
 #include "unicorn.h"
 #include "unicorn-video.h"
 #include "unicorn-mmap.h"
-#include "unicorn-resource.h"
 #include "unicorn-vbuff.h"
 
 static int video_open(struct file *file)
@@ -99,10 +98,8 @@ static int video_release(struct file *file)
 
   /* stop video capture */
   dprintk_video(1, dev->name,  "%s() stop video capture for device %d...\n", __func__, fh->channel);
-  if (res_locked(dev, 0x01<<fh->channel)) {
+  if (fh->vidq.streaming)
     videobuf_queue_cancel(&fh->vidq);
-    res_free(dev, fh, 0x01<<fh->channel);
-  }
 
   if (fh->vidq.read_buf) {
     fh->vidq.ops->buf_release(&fh->vidq, fh->vidq.read_buf);
@@ -136,9 +133,12 @@ static ssize_t video_read(struct file *file, char __user * data, size_t count,
 
   switch (fh->type) {
     case V4L2_BUF_TYPE_VIDEO_CAPTURE:
-      if (res_locked(fh->dev, 0x01<<fh->channel))
+      mutex_lock(&dev->mutex);
+      if (fh->vidq.streaming) {
+        mutex_unlock(&dev->mutex);
         return -EBUSY;
-
+      }
+      mutex_unlock(&dev->mutex);
       return videobuf_read_one(&fh->vidq, data, count, ppos,
           file->f_flags & O_NONBLOCK);
 
@@ -156,13 +156,16 @@ static unsigned int video_poll(struct file *file,
   struct unicorn_dev *dev = fh->dev;
   dprintk_video(1, dev->name, "%s()\n", __func__);
 
-  if (res_locked(dev, 0x01 << fh->channel)) {
+  mutex_lock(&dev->mutex);
+  if (fh->vidq.streaming){
+    mutex_unlock(&dev->mutex);
     /* streaming capture */
     if (list_empty(&fh->vidq.stream))
       return POLLERR;
     buf = list_entry(fh->vidq.stream.next,
         struct unicorn_buffer, vb.stream);
   } else {
+    mutex_unlock(&dev->mutex);
     /* read() capture */
     buf = (struct unicorn_buffer *)fh->vidq.read_buf;
     if (NULL == buf)
