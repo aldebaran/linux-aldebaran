@@ -1083,8 +1083,8 @@ static const struct hda_verb ad1989a_capture_init_verbs[] = {
 	{0x01, AC_VERB_SET_GPIO_DIRECTION, 3},
 	{0x01, AC_VERB_SET_GPIO_DATA, 2},
 
-	// set maximum volume on Output ==> must never change again (0dB = 0x27)
-	{0x03, AC_VERB_SET_AMP_GAIN_MUTE, SET_AMP_STEREO | 0x27},
+	// set maximum volume on Output ==> must never change again (-3dB = 0x25 ==> 4Watt / 0dB = 0x27 ==> 12Watt)
+	{0x03, AC_VERB_SET_AMP_GAIN_MUTE, SET_AMP_STEREO | 0x25},
 
 	// set basic volume on input ==> must never change again (0dB = 0x27)
 	{0x0D, AC_VERB_SET_AMP_GAIN_MUTE, SET_AMP_STEREO | 0x27}, // set gain of input of ADC1
