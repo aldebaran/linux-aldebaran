@@ -260,6 +260,7 @@
 #include <linux/irq.h>
 #include <linux/syscalls.h>
 #include <linux/completion.h>
+#include <linux/locallock.h>
 
 #include <asm/processor.h>
 #include <asm/uaccess.h>
@@ -1807,6 +1808,7 @@ int random_int_secret_init(void)
 
 static DEFINE_PER_CPU(__u32 [MD5_DIGEST_WORDS], get_random_int_hash)
 		__aligned(sizeof(unsigned long));
+static DEFINE_LOCAL_IRQ_LOCK(hash_entropy_int_lock);
 
 /*
  * Get a random word for internal kernel use only. Similar to urandom but
@@ -1819,12 +1821,12 @@ unsigned int get_random_int(void)
 	__u32 *hash;
 	unsigned int ret;
 
-	hash = get_cpu_var(get_random_int_hash);
+	hash = get_locked_var(hash_entropy_int_lock, get_random_int_hash);
 
 	hash[0] += current->pid + jiffies + random_get_entropy();
 	md5_transform(hash, random_int_secret);
 	ret = hash[0];
-	put_cpu_var(get_random_int_hash);
+	put_locked_var(hash_entropy_int_lock, get_random_int_hash);
 
 	return ret;
 }
@@ -1838,12 +1840,12 @@ unsigned long get_random_long(void)
 	__u32 *hash;
 	unsigned long ret;
 
-	hash = get_cpu_var(get_random_int_hash);
+	hash = get_locked_var(hash_entropy_int_lock, get_random_int_hash);
 
 	hash[0] += current->pid + jiffies + random_get_entropy();
 	md5_transform(hash, random_int_secret);
 	ret = *(unsigned long *)hash;
-	put_cpu_var(get_random_int_hash);
+	put_locked_var(hash_entropy_int_lock, get_random_int_hash);
 
 	return ret;
 }
