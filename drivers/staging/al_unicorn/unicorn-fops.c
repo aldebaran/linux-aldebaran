@@ -59,7 +59,7 @@ static int video_open(struct file *file)
       &dev->pci->dev, &dev->slock,
       V4L2_BUF_TYPE_VIDEO_CAPTURE,
       V4L2_FIELD_NONE,
-      sizeof(struct unicorn_buffer), fh, &dev->mutex);
+      sizeof(struct unicorn_buffer), fh, NULL);
   dprintk_video(1, dev->name, "%s() device %d dma init DONE\n", __func__, fh->channel);
 
   // need to start streaming once dma is running
