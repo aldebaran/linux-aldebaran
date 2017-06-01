@@ -323,6 +323,7 @@ static int vidioc_s_fmt_vid_cap(struct file *file, void *priv,
         fmt.format.width = f->fmt.pix.width;
         fmt.format.height = f->fmt.pix.height;
         fmt.format.colorspace = f->fmt.pix.colorspace;
+        fmt.pad=0;
         err += v4l2_subdev_call(dev->sensor[fh->input][i], pad, set_fmt, &cfg, &fmt);
         dprintk_video(1, dev->name, "%s() width=%d height=%d field=%d err=%d\n", __func__, fh->width,
         fh->height, fh->vidq.field, err);
