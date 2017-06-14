@@ -422,35 +422,35 @@ static struct i2c_adapter unicorn_i2c_adapters[] ={
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
   .name		= "I2C SMBUS unicorn driver 0",
-  .nr     = 0,
+  .nr     = -1,
 },
 {
   .owner		= THIS_MODULE,
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
   .name		= "I2C SMBUS unicorn driver 1",
-  .nr     = 1,
+  .nr     = -1,
 },
 {
   .owner		= THIS_MODULE,
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
   .name		= "I2C SMBUS unicorn driver 2",
-  .nr     = 2,
+  .nr     = -1,
 },
 {
   .owner		= THIS_MODULE,
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
   .name		= "I2C SMBUS unicorn driver 3",
-  .nr     = 3,
+  .nr     = -1,
 },
 {
   .owner                = THIS_MODULE,
   .class                = I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo         = &unicorn_i2c_algorithm,
   .name         = "I2C SMBUS unicorn driver multicast",
-  .nr     = 4,
+  .nr     = -1,
 }
 };
 
