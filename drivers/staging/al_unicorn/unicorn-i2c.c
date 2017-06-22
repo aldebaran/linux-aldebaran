@@ -101,13 +101,14 @@ static int unicorn_write_comand_n_byte(struct i2c_adapter * adap,u8 command, u8 
 {
   int i=0;
   int totalwritten=0;
+  int bus_nb = adap->algo_data;
 
   *i2c_error = 0;
 
   fpgaAddress->control = I2C_ADDR_MODE_8_BITS | I2C_BUS_SPEED_100KBITS | I2C_DIRECT_MODE_DIRECT
                          | I2C_RNW_WRITE
                          | I2C_WR_FIFO_CLEAR
-                         | (adap->nr << I2C_CONTROL_SLAVE_SEL_POS)
+                         | (bus_nb << I2C_CONTROL_SLAVE_SEL_POS)
                          ;
 
 
@@ -171,6 +172,7 @@ static int unicorn_read_n_byte(struct i2c_adapter * adap,u8 size,u8 * buf)
 {
   int read_index = 0;
   *i2c_error = 0;
+  int bus_nb = adap->algo_data;
 
   fpgaAddress->control |= I2C_RD_FIFO_CLEAR;
 
@@ -189,7 +191,7 @@ static int unicorn_read_n_byte(struct i2c_adapter * adap,u8 size,u8 * buf)
 
   fpgaAddress->control = I2C_ADDR_MODE_8_BITS | I2C_BUS_SPEED_100KBITS | I2C_DIRECT_MODE_DIRECT
                          | I2C_RNW_READ
-                         | (adap->nr << I2C_CONTROL_SLAVE_SEL_POS)
+                         | (bus_nb << I2C_CONTROL_SLAVE_SEL_POS)
                          | I2C_START;
 
 
@@ -421,6 +423,7 @@ static struct i2c_adapter unicorn_i2c_adapters[] ={
   .owner		= THIS_MODULE,
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
+  .algo_data    = 0,
   .name		= "I2C SMBUS unicorn driver 0",
   .nr     = -1,
 },
@@ -428,6 +431,7 @@ static struct i2c_adapter unicorn_i2c_adapters[] ={
   .owner		= THIS_MODULE,
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
+  .algo_data    = 1,
   .name		= "I2C SMBUS unicorn driver 1",
   .nr     = -1,
 },
@@ -435,6 +439,7 @@ static struct i2c_adapter unicorn_i2c_adapters[] ={
   .owner		= THIS_MODULE,
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
+  .algo_data    = 2,
   .name		= "I2C SMBUS unicorn driver 2",
   .nr     = -1,
 },
@@ -442,6 +447,7 @@ static struct i2c_adapter unicorn_i2c_adapters[] ={
   .owner		= THIS_MODULE,
   .class		= I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo		= &unicorn_i2c_algorithm,
+  .algo_data    = 3,
   .name		= "I2C SMBUS unicorn driver 3",
   .nr     = -1,
 },
@@ -449,6 +455,7 @@ static struct i2c_adapter unicorn_i2c_adapters[] ={
   .owner                = THIS_MODULE,
   .class                = I2C_CLASS_HWMON | I2C_CLASS_SPD,
   .algo         = &unicorn_i2c_algorithm,
+  .algo_data    = 4,
   .name         = "I2C SMBUS unicorn driver multicast",
   .nr     = -1,
 }
