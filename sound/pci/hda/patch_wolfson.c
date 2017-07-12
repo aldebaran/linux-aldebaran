@@ -522,15 +522,18 @@ static const struct hda_verb wm8860g_capture_init_verbs[] = {
 	/* ---------------------------------
 	 * configuration done ... unmute neededs
 	 * --------------------------------- */
-	/* Un-mute input port: and set basic volume at 0 dB = 0x18*/
+	/* Un-mute input port: and set basic volume at 7dB,
+	 * 0 dB = 0x18, and each step is 0.5dB 7dB -> 0x0E dB + 0x18 = 0x26
+	 */
+
 	{NID_WIDGET_PGA_1, AC_VERB_SET_AMP_GAIN_MUTE,
-		SET_AMP_STEREO | 0x18},
+		SET_AMP_STEREO | 0x26},
 	{NID_WIDGET_PGA_2, AC_VERB_SET_AMP_GAIN_MUTE,
-		SET_AMP_STEREO | 0x18},
+		SET_AMP_STEREO | 0x26},
 	{NID_PORT_D, AC_VERB_SET_AMP_GAIN_MUTE,
-		SET_AMP_STEREO | 0x18},
+		SET_AMP_STEREO | 0x26},
 	{NID_PORT_H, AC_VERB_SET_AMP_GAIN_MUTE,
-		SET_AMP_STEREO | 0x18},
+		SET_AMP_STEREO | 0x26},
 	/* Un-mute Output port: set at 0dB = 0x7F correct basic volume */
 	{NID_IO_DAC_2, AC_VERB_SET_AMP_GAIN_MUTE,
 		SET_AMP_STEREO | 0x7F},
