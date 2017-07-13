@@ -860,6 +860,67 @@ static int ov5640_reg_writes(struct i2c_client *client,
 	return 0;
 }
 
+/**
+ * Write up to 510 values to a register in ov5640 sensor device.
+ * @client: i2c driver client structure.
+ * @reg: Address of the register to read value from.
+ * @val: Value to be written to a specific register.
+ * @len: Length of the values to be written.
+ * Returns zero if successful, or non-zero otherwise.
+ */
+static int ov5640_reg_write_up_to_510_bytes(struct i2c_client *client, u16 reg, u8 *val, int len)
+{
+	int ret;
+	unsigned char data[510 + 2] = { (u8)(reg >> 8), (u8)(reg & 0xff) };
+
+	struct i2c_msg msg = {
+		.addr	= client->addr,
+		.flags	= 0,
+		.len	= len + 2,
+		.buf	= data,
+	};
+
+	if (len > 510)
+		return -EINVAL;
+
+	memcpy(data + 2, val, len);
+
+	ret = i2c_transfer(client->adapter, &msg, 1);
+	if (ret < 0) {
+		printk("%s transfert error ret = %d", __func__, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int ov5640_reg_write_burst(struct i2c_client *client,
+		const struct ov5640_reg *reglist,
+		int size)
+{
+	int err;
+	unsigned char buf[510];
+	int burst_start = 0, burst_length;
+
+	for (burst_start = 0; burst_start < size; burst_start += burst_length) {
+		burst_length = 0;
+		do {
+			buf[burst_length] = reglist[burst_start + burst_length].val;
+			burst_length++;
+		} while (burst_start + burst_length < size &&
+			burst_length < 510 &&
+			reglist[burst_start + burst_length - 1].reg + 1 ==
+				reglist[burst_start + burst_length].reg);
+		err = ov5640_reg_write_up_to_510_bytes(client, reglist[burst_start].reg,
+							buf, burst_length);
+		if (err) {
+			return err;
+		}
+	}
+
+	return 0;
+}
+
 static int ov5640_reg_set(struct i2c_client *client, u16 reg, u8 val)
 {
 	int ret;
@@ -1953,7 +2014,7 @@ static int ov5640_load_firmware(struct v4l2_subdev *sd)
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 
 	v4l2_info(sd, "Write auto focus firmware...\n");
-	ret = ov5640_reg_writes(client, af_firmware, ARRAY_SIZE(af_firmware));
+	ret = ov5640_reg_write_burst(client, af_firmware, ARRAY_SIZE(af_firmware));
 	if (ret) {
 		v4l2_err(sd, "Failed to load auto-focus firmware\n");
 		return ret;
