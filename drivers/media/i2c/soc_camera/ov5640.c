@@ -1935,14 +1935,13 @@ static int ov5640_init(struct v4l2_subdev *sd, u32 val)
 	int ret = 0;
 	u8 revision = 0;
 
-	v4l2_dbg(1, debug, sd, "Init device...");
-
 	to_ov5640(sd)->angle = 0;
 	to_ov5640(sd)->auto_focus_enabled = true; // enable auto focus by default
 
 	ret = ov5640_reg_read(client, CHIP_REVISION, &revision);
 	if (ret) {
-		goto out;
+		dev_info(&client->dev, "OV5640 device not detected\n");
+		goto nodev;
 	}
 
 	revision &= 0xF;
@@ -2003,6 +2002,7 @@ out:
 	}
 
 	v4l2_dbg(1, debug, sd, "Init chip...done");
+ nodev:
 	return ret;
 }
 
