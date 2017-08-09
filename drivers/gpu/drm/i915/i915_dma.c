@@ -1087,7 +1087,9 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 
 	intel_runtime_pm_enable(dev_priv);
 
+#ifdef CONFIG_SND_HDA_I915
 	i915_audio_component_init(dev_priv);
+#endif
 
 	return 0;
 
@@ -1132,7 +1134,9 @@ int i915_driver_unload(struct drm_device *dev)
 	struct drm_i915_private *dev_priv = dev->dev_private;
 	int ret;
 
+#ifdef CONFIG_SND_HDA_I915
 	i915_audio_component_cleanup(dev_priv);
+#endif
 
 	ret = i915_gem_suspend(dev);
 	if (ret) {
