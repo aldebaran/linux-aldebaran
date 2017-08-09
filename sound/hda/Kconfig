@@ -6,8 +6,8 @@ config SND_HDA_DSP_LOADER
 	bool
 
 config SND_HDA_I915
-	bool
-	default y
+	bool "Enable MIPI audio channel for i915"
+	default n
 	depends on DRM_I915
 	depends on SND_HDA_CORE
 
