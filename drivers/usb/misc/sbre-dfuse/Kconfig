@@ -1,0 +1,10 @@
+
+config USB_SBRE_DFUSE
+	tristate "STM32 DfuSe flasher"
+	help
+	  This driver is a STM32 Dfuse flasher.
+	  It detects an STM32 device connected on USB DFU mode then
+	  selects the appropriate firmware for it. In case of
+	  mismatch with actual firmware the device is flashed.
+	  The end of the procedure jumps into device application.
+
