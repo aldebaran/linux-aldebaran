@@ -507,7 +507,7 @@ static int dfuse_flash_element(struct sbre_dfuse *dev, uint32_t elementAddr,
 	/* Write chunks */
 	while (elementSize) {
 		if (elementSize < dev->transferSize)
-			xfer = dev->transferSize;
+			xfer = elementSize;
 		memcpy(sendBuf, elementData, xfer);
 		rv = dfuse_flash_block(dev, block, sendBuf, xfer);
 		if (rv < 0)
@@ -590,21 +590,25 @@ int sbre_dfuse_setup_device(struct sbre_dfuse *dev)
 	/*
 	 * Build firmware path name
 	 * Source is firmware info, cut at first separator, in lower case.
-	 * Separators are "'. ,;/|\=: and not printable chars.
+	 * Separators are chars not in these lists:
+	 * - "A-Z"
+	 * - "a-z"
+	 * - "0-9"
+	 * - " !#$%&()*+,-.:<=>?@[]^_{|}"
 	 */
 	sprintf(dev->fwPath, "sbre-");
 	for (i = 0; i < sizeof(dev->fwInfo); i++) {
-		switch (isascii(dev->fwInfo[i]) ? dev->fwInfo[i] : '\0') {
-		case '\0': case '"': case '\'': case '.': case ' ': case ',':
-		case ';': case '/': case '|': case '\\': case '=':  case ':':
+		if ('A' <= dev->fwInfo[i] && dev->fwInfo[i] <= 'Z')
+			dev->fwPath[5+i] = dev->fwInfo[i] - 'A' + 'a';
+		else if (('a' <= dev->fwInfo[i] && dev->fwInfo[i] <= 'z') ||
+		         ('0' <= dev->fwInfo[i] && dev->fwInfo[i] <= '9'))
+			dev->fwPath[5+i] = dev->fwInfo[i];
+		else if (strchr(" !#$%&()*+,-.:<=>?@[]^_{|}", &dev->fwInfo[i]))
+			dev->fwPath[5+i] = dev->fwInfo[i];
+		else {
 			sprintf(&dev->fwPath[5+i], ".dfuse");
 			i = sizeof(dev->fwInfo);
 			continue;
-		default:
-			if ('A' <= dev->fwInfo[i] && dev->fwInfo[i] <= 'Z')
-				dev->fwPath[5+i] = dev->fwInfo[i] - 'A' + 'a';
-			else
-				dev->fwPath[5+i] = dev->fwInfo[i];
 		}
 	}
 	/*
