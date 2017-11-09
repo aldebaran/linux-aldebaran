@@ -600,7 +600,7 @@ int sbre_dfuse_setup_device(struct sbre_dfuse *dev)
 	for (i = 0; i < sizeof(dev->fwInfo); i++)
 		if (!strchr(nonSeparator, dev->fwInfo[i]))
 			break;
-	if (i != sizeof(dev->fwInfo)) {
+	if (i) {
 		strcpy(dev->fwPath, "sbre-");
 		strncat(dev->fwPath, dev->fwInfo, i);
 		strcat(dev->fwPath, ".dfuse");
