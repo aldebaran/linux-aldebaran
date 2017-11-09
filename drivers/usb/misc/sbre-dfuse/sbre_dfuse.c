@@ -546,6 +546,11 @@ int sbre_dfuse_setup_device(struct sbre_dfuse *dev)
 	unsigned i;
 	char *pWr;
 	struct usb_host_interface *altSetting;
+	static const char nonSeparator[] =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		"abcdefghijklmnopqrstuvwxyz"
+		"0123456789"
+		"!#$%&()*+,-.:<=>?@[]^_{|}";
 
 	/* Select alternate */
 	for (i = 0; i < dev->interface->num_altsetting; i++) {
@@ -590,33 +595,23 @@ int sbre_dfuse_setup_device(struct sbre_dfuse *dev)
 	/*
 	 * Build firmware path name
 	 * Source is firmware info, cut at first separator, in lower case.
-	 * Separators are chars not in these lists:
-	 * - "A-Z"
-	 * - "a-z"
-	 * - "0-9"
-	 * - " !#$%&()*+,-.:<=>?@[]^_{|}"
+	 * Separators are chars not in nonSeparator string.
 	 */
-	sprintf(dev->fwPath, "sbre-");
-	for (i = 0; i < sizeof(dev->fwInfo); i++) {
-		if ('A' <= dev->fwInfo[i] && dev->fwInfo[i] <= 'Z')
-			dev->fwPath[5+i] = dev->fwInfo[i] - 'A' + 'a';
-		else if (('a' <= dev->fwInfo[i] && dev->fwInfo[i] <= 'z') ||
-		         ('0' <= dev->fwInfo[i] && dev->fwInfo[i] <= '9'))
-			dev->fwPath[5+i] = dev->fwInfo[i];
-		else if (strchr(" !#$%&()*+,-.:<=>?@[]^_{|}", &dev->fwInfo[i]))
-			dev->fwPath[5+i] = dev->fwInfo[i];
-		else {
-			sprintf(&dev->fwPath[5+i], ".dfuse");
-			i = sizeof(dev->fwInfo);
-			continue;
-		}
-	}
-	/*
-	 * Name fallback.
-	 * In case of empty firmware info, fallback to first SBRE device
-	 * managed by this driver.
-	 */
-	if (!strcmp(dev->fwPath, "sbre-.dfuse")) {
+	for (i = 0; i < sizeof(dev->fwInfo); i++)
+		if (!strchr(nonSeparator, dev->fwInfo[i]))
+			break;
+	if (i != sizeof(dev->fwInfo)) {
+		strcpy(dev->fwPath, "sbre-");
+		strncat(dev->fwPath, dev->fwInfo, i);
+		strcat(dev->fwPath, ".dfuse");
+		for (pWr = dev->fwPath; *pWr; pWr++)
+			*pWr = tolower(*pWr);
+	} else {
+		/*
+		 * Name fallback.
+		 * In case of empty firmware info, fallback to first SBRE device
+		 * managed by this driver.
+		 */
 		dev_warn(&dev->interface->dev,
 		         "Can't find firmware info, fallback to usb-i2c firmware.");
 		sprintf(dev->fwPath, "sbre-usb-i2c.dfuse");
