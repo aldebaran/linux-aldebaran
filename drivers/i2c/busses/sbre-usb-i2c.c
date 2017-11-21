@@ -233,7 +233,7 @@ static const struct i2c_algorithm i2c_algo = {
 
 /* USB management, target devices */
 static const struct usb_device_id sbre_usb_i2c_table[] = {
-	{ USB_DEVICE(0xffff, 0x5253) },
+	{ USB_DEVICE(0xC001, 0x5253) },
 	{ } /* end */
 };
 MODULE_DEVICE_TABLE(usb, sbre_usb_i2c_table);
