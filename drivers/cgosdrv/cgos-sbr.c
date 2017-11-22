@@ -79,7 +79,6 @@ static int compute_machine_id(void)
 	int err, i;
 
 	memcpy(buf, head_id, HEAD_ID_LEN);
-	memset(hashval, 0, 20);
 
 	desc.tfm = crypto_alloc_hash("md5", 0, CRYPTO_ALG_ASYNC);
 	if (desc.tfm == NULL)
