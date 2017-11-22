@@ -63,7 +63,7 @@ static struct kobj_attribute sc_attrb =
 	__ATTR(head_id, 0444, head_id_show, NULL);
 
 static struct kobj_attribute sc_attrb_machine_id =
-	__ATTR(machineid, 0444, machineid_show, NULL);
+	__ATTR(machine-id, 0444, machineid_show, NULL);
 
 static struct kobj_attribute sc_attrib_robot_type =
 	__ATTR(robot_type, 0444, robot_type_show, NULL);
