@@ -357,11 +357,11 @@ static struct hda_input_mux wm8860g_capture_source = {
 static struct snd_kcontrol_new wm8860g_playback_mixers[] = {
 	HDA_CODEC_VOLUME("Analog Front Playback Volume", NID_IO_DAC_2,
 		0x0, HDA_OUTPUT),
-	HDA_CODEC_MUTE("Analog Front Playback Volume", NID_IO_DAC_2,
+	HDA_CODEC_MUTE("Analog Front Playback Switch", NID_IO_DAC_2,
 		0x0, HDA_OUTPUT),
 	HDA_CODEC_VOLUME("Analog Rear Playback Volume", NID_IO_DAC_1,
 		0x0, HDA_OUTPUT),
-	HDA_CODEC_MUTE("Analog Rear Playback Volume", NID_IO_DAC_1,
+	HDA_CODEC_MUTE("Analog Rear Playback Switch", NID_IO_DAC_1,
 		0x0, HDA_OUTPUT),
 	{ /* end */ }
 };
