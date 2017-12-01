@@ -26,6 +26,7 @@
 #include <linux/sysfs.h>
 #include <linux/types.h>
 #include <linux/usb.h>
+#include <linux/completion.h>
 #include <uapi/linux/i2c.h>
 #include <linux/crc32.h>
 
@@ -51,8 +52,8 @@ struct sbre_usb_i2c {
 #define USB_READ_FWINFO_REQTYPE 0xA2
 #define USB_READ_FWINFO_LEN     64
 
-/* Communication timeout, 1s */
-#define USB_IO_TIMEOUT (1*HZ)
+/* Communication timeout, 100ms */
+#define USB_IO_TIMEOUT_MS 100
 
 /* Firmware protocol, transaction header */
 struct i2c_cmd_header {
@@ -92,9 +93,12 @@ static int sbre_usb_i2c_send(struct i2c_adapter *adapter, void *data, int len);
 /*
  * Firmware protocol, bulk an i2c message list into a buffer to send
  *
- * Byte 0 is list length (max 255)
- * Payload is list of i2c_cmd_header and data in case of write transaction.
+ * Byte 0 is protocol.
  * Last 4 bytes is a CRC32 validating the whole buffer (Poly 0x04C11DB7).
+ *
+ * Protocol 0 payload:
+ *   - Byte 1 is list length (max 255)
+ *   - List of i2c_cmd_header and data in case of write transaction.
  */
 static void sbre_usb_i2c_bulk(u8 **buffer, struct i2c_msg *msgs, int nmsgs)
 {
@@ -103,6 +107,7 @@ static void sbre_usb_i2c_bulk(u8 **buffer, struct i2c_msg *msgs, int nmsgs)
 	u32 crc;
 	struct i2c_cmd_header *cmd;
 
+	*buf++ = 0;
 	nmsgs &= 0xff;
 	*buf++ = nmsgs;
 	for (i = 0; i < nmsgs; i++) {
@@ -131,9 +136,12 @@ static void sbre_usb_i2c_bulk(u8 **buffer, struct i2c_msg *msgs, int nmsgs)
 /* Firmware protocol, debulk a buffer and update i2c message list
  * Returns the number of successful messages (may be 0), else a negative errno.
  *
- * Byte 0 is list length (max 255)
- * Payload is list of i2c_cmd_header and data in case of successful read.
+ * Byte 0 is protocol.
  * Last 4 bytes is a CRC32 validating the whole buffer (Poly 0x04C11DB7).
+ *
+ * Protocol 0 payload:
+ *   - Byte 1 is list length (max 255)
+ *   - List of i2c_cmd_header and data in case of write transaction.
  *
  * Every fields from sent list are tested, any difference creates an error.
  */
@@ -153,12 +161,16 @@ static int sbre_usb_i2c_debulk(struct i2c_msg *msgs, int nmsgs,
 	if ((crc>>24) != rcrc[0] || ((crc>>16)&0xff) != rcrc[1] ||
 	    ((crc>>8)&0xff) != rcrc[2] || (crc&0xff) != rcrc[3])
 		return -EIO; /* invalid crc */
-	if (iBuf[0] != nmsgs)
+	if (iBuf[0] != 0)
+		return -EIO; /* invalid protocol version */
+	if (iLen < 1+1+4) /* invalid size for protocol 0 */
+		return -EIO;
+	if (iBuf[1] != nmsgs)
 		return -EIO; /* numbers of messages mismatch */
-	if (iLen < 1+sizeof(struct i2c_cmd_header)*(int)nmsgs+4)
+	if (iLen < 1+1+sizeof(struct i2c_cmd_header)*(int)nmsgs+4)
 		return -EIO; /* invalid size */
-	iBuf += 1;
-	iLen -= 1+4;
+	iBuf += 1+1;
+	iLen -= 1+1+4;
 	for (i = 0; i < nmsgs; i++) {
 		if (iLen < sizeof(struct i2c_cmd_header))
 			return -EIO; /* unexpected EOF */
@@ -238,7 +250,7 @@ static const struct usb_device_id sbre_usb_i2c_table[] = {
 };
 MODULE_DEVICE_TABLE(usb, sbre_usb_i2c_table);
 
-/* USB management, send bulk command to device */
+/* USB management, receive bulk answer from device */
 static int sbre_usb_i2c_recv(struct i2c_adapter *adapter, void *data, int len)
 {
 	struct sbre_usb_i2c *dev = (struct sbre_usb_i2c *)adapter->algo_data;
@@ -246,20 +258,57 @@ static int sbre_usb_i2c_recv(struct i2c_adapter *adapter, void *data, int len)
 	int ret = usb_bulk_msg(dev->usb_dev,
 	                       usb_rcvbulkpipe(dev->usb_dev, USB_DATA_EP_IN),
 	                       data, len, &actual_len,
-	                       USB_IO_TIMEOUT);
+	                       USB_IO_TIMEOUT_MS);
 	return ret >= 0 ? actual_len : ret;
 }
 
-/* USB management, receive bulk answer from device */
+/* USB management, send bulk command to device */
+struct bulk_out_context {
+	struct completion done;
+	int status;
+};
+static void sbre_usb_i2c_send_callback(struct urb *urb)
+{
+	struct bulk_out_context *ctx = urb->context;
+	ctx->status = urb->status;
+	complete(&ctx->done);
+}
 static int sbre_usb_i2c_send(struct i2c_adapter *adapter, void *data, int len)
 {
 	struct sbre_usb_i2c *dev = (struct sbre_usb_i2c *)adapter->algo_data;
-	int actual_len = 0;
-	int ret = usb_bulk_msg(dev->usb_dev,
+	struct bulk_out_context ctx;
+	unsigned long expire;
+	struct urb* urb;
+	int ret;
+
+	urb = usb_alloc_urb(0, GFP_KERNEL);
+	if (!urb)
+		return -ENOMEM;
+
+	usb_fill_bulk_urb(urb, dev->usb_dev,
 	                       usb_sndbulkpipe(dev->usb_dev, USB_DATA_EP_OUT),
-	                       data, len, &actual_len,
-	                       USB_IO_TIMEOUT);
-	return ret >= 0 ? actual_len : ret;
+		data, len,
+		sbre_usb_i2c_send_callback, NULL);
+	// Firmware detects transaction's end with a packet smaller than
+	// max packet size. Insert a zero length packet if needed.
+	urb->transfer_flags |= URB_ZERO_PACKET;
+
+	init_completion(&ctx.done);
+	urb->context = &ctx;
+	urb->actual_length = 0;
+	ret = usb_submit_urb(urb, GFP_NOIO);
+	if (!ret) {
+		expire = msecs_to_jiffies(USB_IO_TIMEOUT_MS);
+		if (!wait_for_completion_timeout(&ctx.done, expire)) {
+			usb_kill_urb(urb);
+			ret = (ctx.status == -ENOENT ? -ETIMEDOUT : ctx.status);
+		} else {
+			ret = ctx.status;
+		}
+	}
+	usb_free_urb(urb);
+
+	return ret >= 0 ? urb->actual_length : ret;
 }
 
 /* USB management, delete device */
@@ -322,7 +371,7 @@ static int sbre_usb_i2c_probe(struct usb_interface *interface,
 	                     usb_rcvctrlpipe(dev->usb_dev, 0),
 	                     USB_READ_FWINFO_REQ, USB_READ_FWINFO_REQTYPE,
 	                     0, 0,
-	                     infos, sizeof(infos), USB_IO_TIMEOUT);
+	                     infos, sizeof(infos), USB_IO_TIMEOUT_MS);
 	if (rv >= 0) {
 		dev_info(&interface->dev,
 		         "SBRE USB-I2C on port %d.%d: '%s'",
@@ -381,6 +430,6 @@ static struct usb_driver sbre_usb_i2c_driver = {
 module_usb_driver(sbre_usb_i2c_driver);
 
 MODULE_AUTHOR("Stéphane Régnier <sregnier@softbankrobotics.com>");
-MODULE_DESCRIPTION("sbre-usb-i2c driver v1.0");
+MODULE_DESCRIPTION("sbre-usb-i2c driver v2.0");
 MODULE_LICENSE("GPL");
 
