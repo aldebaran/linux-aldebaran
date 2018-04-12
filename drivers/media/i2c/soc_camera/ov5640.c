@@ -2063,6 +2063,11 @@ static struct v4l2_ctrl* ov5640_register_ctrl(struct v4l2_subdev *sd,
 	}
 	if (std->is_volatile) {
 		ctrl->flags |= V4L2_CTRL_FLAG_VOLATILE;
+
+		/*If ctrl is writable, set flag to update volatile parameter on write */
+		if (!std->is_read_only) {
+			ctrl->flags |= V4L2_CTRL_FLAG_EXECUTE_ON_WRITE;
+		}
 	}
 	if (std->is_read_only) {
 		ctrl->flags |= V4L2_CTRL_FLAG_READ_ONLY;
@@ -2365,4 +2370,4 @@ module_exit(ov5640_mod_exit);
 MODULE_AUTHOR("Aldebaran Robotics");
 MODULE_DESCRIPTION("OmniVision OV5640 Camera driver");
 MODULE_LICENSE("GPL v2");
-MODULE_VERSION("1.0");
+MODULE_VERSION("1.1");
