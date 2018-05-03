@@ -195,14 +195,27 @@ static void cgos_sbr_board_close(unsigned int handle)
 			   0, NULL);
 }
 
+static void validate_machine_id(void)
+{
+	if (strlen(sbr_machine_id) != MACHINE_ID_LEN) {
+		printk(KERN_INFO "cgos-sbr: using default machineid\n");
+		snprintf(sbr_machine_id, MACHINE_ID_LEN + 1, "42424242424242424242424242424242");
+	}
+}
+
 static int __init cgos_sbr_init(void)
 {
 	unsigned int handle;
 	int err;
+	sbr_machine_id[0] = '\0';
+
+	kobj = kobject_create_and_add("qi", NULL);
+	if (!kobj)
+		return -ENOMEM;
 
 	err = cgos_sbr_board_open(&handle);
 	if (err)
-		return err;
+		goto error;
 
 	err = read_head_id(handle);
 	if (err)
@@ -211,24 +224,22 @@ static int __init cgos_sbr_init(void)
 	err = compute_machine_id();
 	if (err)
 		goto error;
-
 	robot_type = get_robot_type(head_id);
-
-	kobj = kobject_create_and_add("qi", NULL);
-	if (!kobj) {
-		err = -ENOMEM;
-		goto error;
-	}
 
 	/* Ignore error for sysfs_create_file */
 	err = sysfs_create_file(kobj, &sc_attrb.attr);
 	if (err)
 		goto error;
-	err = sysfs_create_file(kobj, &sc_attrb_machine_id.attr);
+	err = sysfs_create_file(kobj, &sc_attrib_robot_type.attr);
 	if (err)
 		goto error;
-	err = sysfs_create_file(kobj, &sc_attrib_robot_type.attr);
   error:
+	/* In any case set a machine id, this can be because the board
+	 * has no head id yet, or any error with cgos driver.
+	 */
+	validate_machine_id();
+	err = sysfs_create_file(kobj, &sc_attrb_machine_id.attr);
+
 	cgos_sbr_board_close(handle);
 	return err;
 }
