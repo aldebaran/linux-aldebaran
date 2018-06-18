@@ -61,10 +61,7 @@ enum ov5640_mode {
 	ov5640_mode_MIN = 0,
 	ov5640_mode_QVGA_320_240 = 0,
 	ov5640_mode_VGA_640_480 = 1,
-	ov5640_mode_720P_1280_720 = 2,
-	ov5640_mode_1080P_1920_1080 = 3,
-	ov5640_mode_QSXGA_2560_1920 = 4,
-	ov5640_mode_MAX = 5
+	ov5640_mode_MAX = 2
 };
 
 struct ov5640_format {
@@ -650,21 +647,6 @@ const struct ov5640_mode_info ov5640_mode_info_data[ov5640_mode_MAX] = {
 		ov5640_setting_30fps_VGA_640_480,
 		ARRAY_SIZE(ov5640_setting_30fps_VGA_640_480),
 	},
-	[ov5640_mode_720P_1280_720]{
-		ov5640_mode_720P_1280_720,  1280, 720,
-		ov5640_setting_30fps_720P_1280_720,
-		ARRAY_SIZE(ov5640_setting_30fps_720P_1280_720),
-	},
-	[ov5640_mode_1080P_1920_1080]{
-		ov5640_mode_1080P_1920_1080,  1920, 1080,
-		ov5640_setting_30fps_1080P_1920_1080,
-		ARRAY_SIZE(ov5640_setting_30fps_1080P_1920_1080),
-	},
-	[ov5640_mode_QSXGA_2560_1920]{
-		ov5640_mode_QSXGA_2560_1920, 2560, 1920,
-		ov5640_setting_7_5fps_QSXGA_2592_1944,
-		ARRAY_SIZE(ov5640_setting_7_5fps_QSXGA_2592_1944),
-	},
 };
 
 
@@ -699,54 +681,6 @@ static const struct ov5640_timing_cfg timing_cfg[ov5640_mode_MAX] = {
 		.h_odd_ss_inc = 3,
 		.h_even_ss_inc = 1,
 		.v_odd_ss_inc = 3,
-		.v_even_ss_inc = 1,
-	},
-	[ov5640_mode_720P_1280_720] = {
-		.x_addr_start = 0,
-		.y_addr_start = 250,
-		.x_addr_end = 2623,
-		.y_addr_end = 1705,
-		.h_output_size = 1280,
-		.v_output_size = 720,
-		.h_total_size = 1892,
-		.v_total_size = 740,
-		.isp_h_offset = 16,
-		.isp_v_offset = 4,
-		.h_odd_ss_inc = 3,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 3,
-		.v_even_ss_inc = 1,
-	},
-	[ov5640_mode_1080P_1920_1080] = {
-		.x_addr_start = 336,
-		.y_addr_start = 434,
-		.x_addr_end = 2287,
-		.y_addr_end = 1522,
-		.h_output_size = 1920,
-		.v_output_size = 1080,
-		.h_total_size = 2500,
-		.v_total_size = 1120,
-		.isp_h_offset = 16,
-		.isp_v_offset = 4,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
-		.v_even_ss_inc = 1,
-	},
-	[ov5640_mode_QSXGA_2560_1920] = {
-		.x_addr_start = 0,
-		.y_addr_start = 0,
-		.x_addr_end = 2623,
-		.y_addr_end = 1951,
-		.h_output_size = 2560,
-		.v_output_size = 1920,
-		.h_total_size = 2844,
-		.v_total_size = 1968,
-		.isp_h_offset = 16,
-		.isp_v_offset = 4,
-		.h_odd_ss_inc = 1,
-		.h_even_ss_inc = 1,
-		.v_odd_ss_inc = 1,
 		.v_even_ss_inc = 1,
 	},
 };
