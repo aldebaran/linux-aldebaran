@@ -146,8 +146,6 @@ static int wm8860_playback_pcm_prepare(struct hda_pcm_stream *hinfo,
 {
 	struct wm8860_spec *spec = codec->spec;
 
-	snd_hda_codec_write(codec, spec->dac_nids[substream->number], 0,
-		AC_VERB_SET_POWER_STATE, AC_PWRST_D0);
 	snd_hda_codec_setup_stream(codec, spec->dac_nids[substream->number],
 		stream_tag, 0, format);
 	return 0;
@@ -160,8 +158,6 @@ static int wm8860_playback_pcm_cleanup(struct hda_pcm_stream *hinfo,
 	struct wm8860_spec *spec = codec->spec;
 
 	snd_hda_codec_cleanup_stream(codec, spec->dac_nids[substream->number]);
-	snd_hda_codec_write(codec, spec->dac_nids[substream->number], 0,
-		AC_VERB_SET_POWER_STATE, AC_PWRST_D3);
 	return 0;
 }
 
@@ -217,8 +213,6 @@ static int wm8860_capture_pcm_prepare(struct hda_pcm_stream *hinfo,
 {
 	struct wm8860_spec *spec = codec->spec;
 
-	snd_hda_codec_write(codec, spec->adc_nids[substream->number], 0,
-		AC_VERB_SET_POWER_STATE, AC_PWRST_D0);
 	snd_hda_codec_setup_stream(codec, spec->adc_nids[substream->number],
 		stream_tag, 0, format);
 	return 0;
@@ -231,8 +225,6 @@ static int wm8860_capture_pcm_cleanup(struct hda_pcm_stream *hinfo,
 	struct wm8860_spec *spec = codec->spec;
 
 	snd_hda_codec_cleanup_stream(codec, spec->adc_nids[substream->number]);
-	snd_hda_codec_write(codec, spec->adc_nids[substream->number], 0,
-		AC_VERB_SET_POWER_STATE, AC_PWRST_D3);
 	return 0;
 }
 
@@ -544,11 +536,11 @@ static const struct hda_verb wm8860g_capture_init_verbs[] = {
 	 * Start Streams (all time, no need to change state)
 	 * --------------------------------- */
 	/* Enables DAC and ADC: */
-	{NID_IO_DAC_1, AC_VERB_SET_POWER_STATE, AC_PWRST_D3},
-	{NID_IO_DAC_2, AC_VERB_SET_POWER_STATE, AC_PWRST_D3},
-	{NID_IO_ADC_1, AC_VERB_SET_POWER_STATE, AC_PWRST_D3},
-	{NID_IO_MIC_1, AC_VERB_SET_POWER_STATE, AC_PWRST_D3},
-	{NID_IO_MIC_2, AC_VERB_SET_POWER_STATE, AC_PWRST_D3},
+	{NID_IO_DAC_1, AC_VERB_SET_POWER_STATE, AC_PWRST_D0},
+	{NID_IO_DAC_2, AC_VERB_SET_POWER_STATE, AC_PWRST_D0},
+	{NID_IO_ADC_1, AC_VERB_SET_POWER_STATE, AC_PWRST_D0},
+	{NID_IO_MIC_1, AC_VERB_SET_POWER_STATE, AC_PWRST_D0},
+	{NID_IO_MIC_2, AC_VERB_SET_POWER_STATE, AC_PWRST_D0},
 	/* Authorise the codec to start all IOs */
 	{NID_PARAMETER, AC_VERB_SET_POWER_STATE, AC_PWRST_D0},
 	{ /* end */ }
