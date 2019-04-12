@@ -646,24 +646,24 @@
 		pmx_sde: pmx_sde {
 			sde_dsi_active: sde_dsi_active {
 				mux {
-					pins = "gpio6", "gpio52";
+					pins = "gpio87";
 					function = "gpio";
 				};
 
 				config {
-					pins = "gpio6", "gpio52";
+					pins = "gpio87";
 					drive-strength = <8>;   /* 8 mA */
 					bias-disable = <0>;   /* no pull */
 				};
 			};
 			sde_dsi_suspend: sde_dsi_suspend {
 				mux {
-					pins = "gpio6", "gpio52";
+					pins = "gpio87";
 					function = "gpio";
 				};
 
 				config {
-					pins = "gpio6", "gpio52";
+					pins = "gpio87";
 					drive-strength = <2>;   /* 2 mA */
 					bias-pull-down;         /* PULL DOWN */
 				};
