@@ -547,12 +547,12 @@
 	pinctrl-0 = <&sde_dp_aux_active &sde_dp_usbplug_cc_active>;
 	pinctrl-1 = <&sde_dp_aux_suspend &sde_dp_usbplug_cc_suspend>;
 	qcom,aux-en-gpio = <&tlmm 43 0>;
-	qcom,aux-sel-gpio = <&tlmm 51 0>;
+	qcom,aux-sel-gpio = <&tlmm 49 0>;
 	qcom,usbplug-cc-gpio = <&tlmm 38 0>;
 };
 
 &mdss_mdp {
-	connectors = <&sde_rscc &dsi_ifc_atops_800_vid_display>;
+	connectors = <&sde_rscc &sde_wb &sde_dp>;
 };
 
 &dsi_dual_nt35597_truly_video {

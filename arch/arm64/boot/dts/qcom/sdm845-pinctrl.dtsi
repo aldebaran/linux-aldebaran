@@ -472,11 +472,11 @@
 		wcd_usbc_analog_en1 {
 			wcd_usbc_analog_en1_idle: wcd_usbc_ana_en1_idle {
 				mux {
-					pins = "gpio49";
+					pins = "gpio116";
 					function = "gpio";
 				};
 				config {
-					pins = "gpio49";
+					pins = "gpio116";
 					drive-strength = <2>;
 					bias-pull-down;
 					output-low;
@@ -485,11 +485,11 @@
 
 			wcd_usbc_analog_en1_active: wcd_usbc_ana_en1_active {
 				mux {
-					pins = "gpio49";
+					pins = "gpio116";
 					function = "gpio";
 				};
 				config {
-					pins = "gpio49";
+					pins = "gpio116";
 					drive-strength = <2>;
 					bias-disable;
 					output-high;
@@ -700,12 +700,12 @@
 
 		sde_dp_aux_active: sde_dp_aux_active {
 			mux {
-				pins = "gpio43", "gpio51";
+				pins = "gpio43", "gpio49";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio43", "gpio51";
+				pins = "gpio43", "gpio49";
 				bias-disable = <0>; /* no pull */
 				drive-strength = <8>;
 			};
@@ -713,12 +713,12 @@
 
 		sde_dp_aux_suspend: sde_dp_aux_suspend {
 			mux {
-				pins = "gpio43", "gpio51";
+				pins = "gpio43", "gpio49";
 				function = "gpio";
 			};
 
 			config {
-				pins = "gpio43", "gpio51";
+				pins = "gpio43", "gpio49";
 				bias-pull-down;
 				drive-strength = <2>;
 			};
