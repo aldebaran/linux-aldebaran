@@ -318,7 +318,7 @@
 		pinctrl-1 = <&cam_sensor_mclk0_suspend
 				&cam_sensor_rear_suspend>;
 		gpios = <&tlmm 13 0>,
-			<&tlmm 80 0>,
+			<&tlmm 3 0>,
 			<&tlmm 79 0>;
 		gpio-reset = <1>;
 		gpio-vana = <2>;
