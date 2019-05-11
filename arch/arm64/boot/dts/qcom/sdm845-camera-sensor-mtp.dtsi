@@ -364,7 +364,7 @@
 		pinctrl-1 = <&cam_sensor_mclk2_suspend
 				&cam_sensor_rear2_suspend>;
 		gpios = <&tlmm 15 0>,
-			<&tlmm 9 0>;
+			<&tlmm 0 0>;
 		gpio-reset = <1>;
 		gpio-req-tbl-num = <0 1>;
 		gpio-req-tbl-flags = <1 0>;
