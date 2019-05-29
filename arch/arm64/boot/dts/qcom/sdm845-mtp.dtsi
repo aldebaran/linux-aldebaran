@@ -352,7 +352,7 @@
 &usb1 {
 	status = "ok";
 	dwc3@a800000 {
-		maximum-speed = "high-speed";
+		maximum-speed = "super-speed";
 		dr_mode = "host";
 	};
 };
