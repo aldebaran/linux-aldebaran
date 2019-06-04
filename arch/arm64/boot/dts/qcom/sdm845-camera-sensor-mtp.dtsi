@@ -300,7 +300,7 @@
 		led-flash-src = <&led_flash_rear>;
 		actuator-src = <&actuator_rear>;
 		ois-src = <&ois_rear>;
-		eeprom-src = <&eeprom_rear>;
+		//eeprom-src = <&eeprom_rear>;
 		cam_vio-supply = <&pm8998_lvs1>;
 		cam_vana-supply = <&pmi8998_bob>;
 		cam_vdig-supply = <&camera_rear_ldo>;
@@ -346,7 +346,7 @@
 		sensor-position-yaw = <180>;
 		actuator-src = <&actuator_rear_aux>;
 		led-flash-src = <&led_flash_rear_aux>;
-		eeprom-src = <&eeprom_rear_aux>;
+		//eeprom-src = <&eeprom_rear_aux>;
 		cam_vdig-supply = <&camera_ldo>;
 		cam_vio-supply = <&pm8998_lvs1>;
 		cam_vana-supply = <&camera_vana_ldo>;
