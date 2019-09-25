@@ -520,18 +520,18 @@ static ssize_t flash_data_read(struct file *f, struct kobject *kobj,
      {
        if(readFlash(dev,buffer,count,offset)>=0)
        {
-         dprintk(1, "unicorn-spi-flash", "flash_data_read(): buffer:0x%p off:0x%llx size:0x%x\n",buffer,offset,count);
+         dprintk(1, "unicorn-spi-flash", "flash_data_read(): buffer:0x%p off:0x%llx size:0x%lx\n",buffer,offset,count);
          ret_count = count;
        }
        else
        {
-         printk(KERN_ERR "unicorn: Error during reading flash off:0x%llx size:0x%x\n",offset,count);
+         printk(KERN_ERR "unicorn: Error during reading flash off:0x%llx size:0x%lx\n",offset,count);
          ret_count = -EIO;
        }
      }
      else
      {
-       printk(KERN_ERR "unicorn: Error during reading flash out of bound off:0x%llx size:0x%x\n",offset,count);
+       printk(KERN_ERR "unicorn: Error during reading flash out of bound off:0x%llx size:0x%lx\n",offset,count);
        ret_count = -EIO;
      }
    }
@@ -560,18 +560,18 @@ static ssize_t flash_data_write(struct file *f, struct kobject *kobj,
     {
       if(writeFlash(dev,buffer,count,offset)>=0)
       {
-        dprintk(1, "unicorn-spi-flash", "flash_data_write(): buffer:0x%p off:0x%llx count:0x%x\n",buffer,offset,count);
+        dprintk(1, "unicorn-spi-flash", "flash_data_write(): buffer:0x%p off:0x%llx count:0x%lx\n",buffer,offset,count);
         ret_count = count;
       }
       else
       {
-        printk(KERN_ERR "unicorn: Error during writting flash off:0x%llx size:0x%x\n",offset,count);
+        printk(KERN_ERR "unicorn: Error during writting flash off:0x%llx size:0x%lx\n",offset,count);
         ret_count = -EIO;
       }
     }
     else
     {
-      printk(KERN_ERR "unicorn: Error during writting flash out of bound off:0x%llx size:0x%x\n",offset,count);
+      printk(KERN_ERR "unicorn: Error during writting flash out of bound off:0x%llx size:0x%lx\n",offset,count);
       ret_count = -EIO;
     }
   }
@@ -605,18 +605,18 @@ static ssize_t bootloader_data_read(struct file *f, struct kobject *kobj,
      {
        if(readFlash(dev,buffer,count-1,offset)>=0)
        {
-         dprintk(1, "unicorn-spi-flash", "bootloader_data_read(): buffer:0x%p off:0x%llx size:0x%x\n",buffer,offset,count);
+         dprintk(1, "unicorn-spi-flash", "bootloader_data_read(): buffer:0x%p off:0x%llx size:0x%lx\n",buffer,offset,count);
          ret_count = count;
        }
        else
        {
-         printk(KERN_ERR "unicorn: Error during reading bootloader off:0x%llx size:0x%x\n",offset,count);
+         printk(KERN_ERR "unicorn: Error during reading bootloader off:0x%llx size:0x%lx\n",offset,count);
          ret_count = -EIO;
        }
      }
      else
      {
-       printk(KERN_ERR "unicorn: Error during reading bootloader out of bound off:0x%llx size:0x%x\n",offset,count);
+       printk(KERN_ERR "unicorn: Error during reading bootloader out of bound off:0x%llx size:0x%lx\n",offset,count);
        ret_count = -EIO;
      }
    }
@@ -642,18 +642,18 @@ static ssize_t bootloader_data_write(struct file *f, struct kobject *kobj,
     {
       if(writeFlash(dev,buffer,count,offset)>=0)
       {
-        dprintk(1, "unicorn-spi-flash", "bootloader_data_write(): buffer:0x%p off:0x%llx count:0x%x\n",buffer,offset,count);
+        dprintk(1, "unicorn-spi-flash", "bootloader_data_write(): buffer:0x%p off:0x%llx count:0x%lx\n",buffer,offset,count);
         ret_count = count;
       }
       else
       {
-        printk(KERN_ERR "unicorn: Error during writting bootloader off:0x%llx size:0x%x\n",offset,count);
+        printk(KERN_ERR "unicorn: Error during writting bootloader off:0x%llx size:0x%lx\n",offset,count);
         ret_count = -EIO;
       }
     }
     else
     {
-      printk(KERN_ERR "unicorn: Error during writting bootloader out of bound off:0x%llx size:0x%x\n",offset,count);
+      printk(KERN_ERR "unicorn: Error during writting bootloader out of bound off:0x%llx size:0x%lx\n",offset,count);
       ret_count = -EIO;
     }
   }
@@ -725,7 +725,7 @@ static ssize_t flash_synchro_write(struct file *f, struct kobject *kobj, struct 
 		goto err;
 	}
 
-	dprintk(1, "unicorn-spi-flash", "flash_synchro_write: off:0x%llx count:%x\n",offset,count);
+	dprintk(1, "unicorn-spi-flash", "flash_synchro_write: off:0x%llx count:%lx\n",offset,count);
 	ret_count = count;
   }
 
