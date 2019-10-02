@@ -384,7 +384,7 @@ static int vidioc_streamoff(struct file *file, void *priv, enum v4l2_buf_type i)
 {
   struct unicorn_fh *fh = priv;
   struct unicorn_dev *dev = fh->dev;
-  int err, res, it;
+  int err, it;
 
   if (fh->type != V4L2_BUF_TYPE_VIDEO_CAPTURE)
     return -EINVAL;
