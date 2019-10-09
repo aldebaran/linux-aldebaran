@@ -25,6 +25,9 @@
 
 #include "atl1c.h"
 
+static char mac_add_cmdl[ETH_ALEN * 3];
+module_param_string(mac, mac_add_cmdl, ETH_ALEN * 3, 0644);
+
 /*
  * check_eeprom_exist
  * return 1 if eeprom exist
@@ -82,7 +85,9 @@ static bool atl1c_read_current_addr(struct atl1c_hw *hw, u8 *eth_addr)
  */
 static int atl1c_get_permanent_address(struct atl1c_hw *hw)
 {
-	u32 i;
+	struct atl1c_adapter *adapter = hw->adapter;
+	struct pci_dev *pdev = adapter->pdev;
+	u32 i, j;
 	u32 otp_ctrl_data;
 	u32 twsi_ctrl_data;
 	u16 phy_data;
@@ -91,6 +96,23 @@ static int atl1c_get_permanent_address(struct atl1c_hw *hw)
 	/* MAC-address from BIOS is the 1st priority */
 	if (atl1c_read_current_addr(hw, hw->perm_mac_addr))
 		return 0;
+
+	/* Get MAC-address from kernel command line
+	 * string  AA:BB:CC:DD:EE:FF
+	 * index   0--3--6--9--12-15
+	 */
+	if (strlen(mac_add_cmdl) == ETH_ALEN * 3 - 1) {
+		dev_info(&pdev->dev, "MAC add from cmdline = %s\n",
+			 mac_add_cmdl);
+		for (i = 0, j = 0; i < ETH_ALEN; i++, j += 3) {
+			// add a null char after each byte
+			*(mac_add_cmdl + j + 2) = 0;
+			if (kstrtou8(mac_add_cmdl + j, 16,
+				     hw->perm_mac_addr + i))
+				return -1;
+		}
+		return 0;
+	}
 
 	/* init */
 	AT_READ_REG(hw, REG_OTP_CTRL, &otp_ctrl_data);
