@@ -368,6 +368,12 @@
 	       reg = <0x0C>;
 	       clock-frequency = <400000>;
 	};
+	at24@50 {
+		compatible = "24c128";
+		reg = <0x50>;
+		pagesize = <64>;
+		status = "ok";
+	};
 	lp8863-q1@3C {
 		status = "okay";
 		compatible = "ti,lp8863";
