@@ -1,0 +1,7 @@
+config SERDES_941_948
+        tristate "TI SERDES 941 948 pair device based driver"
+        depends on I2C
+        default n
+        ---help---
+          TI SERDES 941 948 device driver based on I2C.
+          This is a driver to provides I2C access to TI SerDes device 941 and 948.
