@@ -1291,6 +1291,18 @@ config TOUCHSCREEN_GT9XX_v28
 
 source "drivers/input/touchscreen/gt9xx_v2.8/Kconfig"
 
+config TOUCHSCREEN_SBRE_GT928
+        bool "Goodix touchpanel for SBRE GT928"
+        depends on I2C
+        help
+          Say Y here if you have a Goodix GT928 touchscreen.
+          Gt9xx controllers are multi touch controllers which can
+          report 5 touches at a time.
+
+          If unsure, say N.
+
+source "drivers/input/touchscreen/sbre_gt928/Kconfig"
+
 config TOUCHSCREEN_HIMAX_CHIPSET
 	bool "Himax touchpanel CHIPSET"
 	depends on I2C
