@@ -362,7 +362,12 @@
 
 &qupv3_se5_i2c {
 	status = "ok";
-
+	serdes: serdes_949@0C {
+	       status = "okay";
+	       compatible = "ti,serdes_949";
+	       reg = <0x0C>;
+	       clock-frequency = <400000>;
+	};
 	lp8863-q1@3C {
 		status = "okay";
 		compatible = "ti,lp8863";
