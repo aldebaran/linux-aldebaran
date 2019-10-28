@@ -109,7 +109,7 @@ int unicorn_start_video_dma(struct unicorn_dev *dev,
   dev->pcie_dma->dma[fh->channel].ctrl |= DMA_CONTROL_START;
   dev->global_register->video[fh->channel].ctrl |= VIDEO_CONTROL_ENABLE;
 
-  dprintk_video(1, dev->name, "dma_0_start_add=%x dma_1_start_add=%x", (unsigned int)&dev->pcie_dma->dma[0], (unsigned int)&dev->pcie_dma->dma[1]);
+  dprintk_video(1, dev->name, "dma_0_start_add=%lx dma_1_start_add=%lx", (uintptr_t)&dev->pcie_dma->dma[0], (uintptr_t)&dev->pcie_dma->dma[1]);
 
   return 0;
 }
