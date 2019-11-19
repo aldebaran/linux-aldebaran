@@ -867,6 +867,19 @@
 			};
 		};
 
+		pn547_active: pn547_active {
+			mux {
+				pins = "gpio83", "gpio84";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio83", "gpio84";
+				bias-pull-down;
+				drive-strength = <16>;
+			};
+                };
+
 		sec_aux_pcm {
 			sec_aux_pcm_sleep: sec_aux_pcm_sleep {
 				mux {
