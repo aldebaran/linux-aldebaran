@@ -3951,8 +3951,6 @@ static int msm_pcie_enable(struct msm_pcie_dev_t *dev, u32 options)
 			dev->gpio[MSM_PCIE_GPIO_PERST].on);
 		PCIE_ERR(dev, "PCIe RC%d link initialization failed\n",
 			dev->rc_idx);
-		ret = -1;
-		goto link_fail;
 	}
 
 	dev->link_status = MSM_PCIE_LINK_ENABLED;
