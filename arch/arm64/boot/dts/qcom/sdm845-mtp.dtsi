@@ -638,6 +638,10 @@
 	};
 };
 
-&wil6210 {
+&pcie0 {
+	status = "disabled";
+}
+&pcie1 {
 	status = "ok";
+	qcom,boot-option = <0x0>;
 };
