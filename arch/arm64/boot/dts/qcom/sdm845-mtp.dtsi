@@ -200,11 +200,25 @@
 	//qcom,mdss-dsi-pwm-gpio = <&pmi8998_gpios 5 GPIO_ACTIVE_HIGH>;
 };
 
+&dsi_y101ch27250_wxga_vid {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+	qcom,mdss-dsi-bl-pmic-control-type = "bl_ctrl_wled";
+	qcom,mdss-dsi-bl-min-level = <1>;
+	qcom,mdss-dsi-bl-max-level = <4095>;
+	qcom,platform-reset-gpio = <&tlmm 87 0>;
+	qcom,mdss-dsi-mode-sel-gpio-state = "single_port";
+};
+
 /*
 &dsi_nt35597_truly_dsc_cmd_display {
 	qcom,dsi-display-active;
 }; */
+/*
 &dsi_ifc_atops_800_vid_display {
+	qcom,dsi-display-active;
+};
+*/
+&dsi_y101ch27250_wxga_vid_display {
 	qcom,dsi-display-active;
 };
 /*
@@ -333,6 +347,7 @@
 
 &qupv3_se3_i2c {
 	status = "ok";
+/*
 	nq@28 {
 		compatible = "qcom,nq-nci";
 		reg = <0x28>;
@@ -350,6 +365,7 @@
 			     &nfc_clk_default>;
 		pinctrl-1 = <&nfc_int_suspend &nfc_enable_suspend>;
 	};
+*/
 };
 
 &qupv3_se10_i2c {
