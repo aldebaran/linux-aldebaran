@@ -751,6 +751,7 @@
 		};
 
 		/* add pingrp for touchscreen */
+/*
 		pmx_ts_int_active {
 			ts_int_active: ts_int_active {
 				mux {
@@ -825,18 +826,32 @@
 				};
 			};
 		};
-
+*/
 		ts_mux {
-			ts_active: ts_active {
+			ts_int_active: ts_int_active {
 				mux {
-					pins = "gpio2", "gpio125";
+					pins = "gpio125";
 					function = "gpio";
 				};
 
 				config {
-					pins = "gpio2", "gpio125";
+					pins = "gpio125";
 					drive-strength = <16>;
 					bias-pull-up;
+				};
+			};
+
+			ts_reset_active: ts_reset_active {
+				mux {
+					pins = "gpio2";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio2";
+					drive-strength = <16>;
+					bias-pull-up;
+					output-high;
 				};
 			};
 
@@ -862,7 +877,7 @@
 				config {
 					pins = "gpio125";
 					drive-strength = <2>;
-					bias-disable;
+					bias-pull-down;
 				};
 			};
 		};

@@ -25,6 +25,9 @@
 #include <linux/input/mt.h>
 #endif
 
+#define RETRY_MAX_TIMES 	5
+#define I2C_MAX_TRANSFER_SIZE 	255
+
 static const char *goodix_ts_name = "goodix-ts";
 static const char *goodix_input_phys = "input/ts";
 static struct workqueue_struct *goodix_wq;
@@ -126,56 +129,88 @@ numbers of i2c_msgs to transfer:
  *********************************************************/
 s32 gtp_i2c_read(struct i2c_client *client, u8 *buf, s32 len)
 {
-	struct i2c_msg msgs[2];
-	s32 ret=-1;
-	s32 retries = 0;
+	unsigned int transfer_length = 0;
+	unsigned int pos = 0, address = (buf[0] << 8) + buf[1];
+	unsigned char get_buf[64], addr_buf[2];
+	int retry, r = 2;
+	struct i2c_msg msgs[] = {
+		{
+			.addr = client->addr,
+			.flags = !I2C_M_RD,
+			.buf = &addr_buf[0],
+			.len = GTP_ADDR_LENGTH,
+		}, {
+			.addr = client->addr,
+			.flags = I2C_M_RD,
+		}
+	};
 
 	GTP_DEBUG_FUNC();
 
-	msgs[0].flags = !I2C_M_RD;
-	msgs[0].addr  = client->addr;
-	msgs[0].len   = GTP_ADDR_LENGTH;
-	msgs[0].buf   = &buf[0];
-	//msgs[0].scl_rate = 300 * 1000;    // for Rockchip, etc.
-
-	msgs[1].flags = I2C_M_RD;
-	msgs[1].addr  = client->addr;
-	msgs[1].len   = len - GTP_ADDR_LENGTH;
-	msgs[1].buf   = &buf[GTP_ADDR_LENGTH];
-	//msgs[1].scl_rate = 300 * 1000;
-
-	while(retries < 5)
-	{
-		ret = i2c_transfer(client->adapter, msgs, 2);
-		if(ret == 2)break;
-		retries++;
+	len -= GTP_ADDR_LENGTH;
+	if (likely(len < sizeof(get_buf))) {
+		/* code optimize, use stack memory */
+		msgs[1].buf = &get_buf[0];
+	} else {
+		msgs[1].buf = kzalloc(len > I2C_MAX_TRANSFER_SIZE
+				? I2C_MAX_TRANSFER_SIZE : len, GFP_KERNEL);
+		if (!msgs[1].buf)
+			return -ENOMEM;
 	}
-	if((retries >= 5))
-	{
+
+	while (pos != len) {
+		if (unlikely(len - pos > I2C_MAX_TRANSFER_SIZE))
+			transfer_length = I2C_MAX_TRANSFER_SIZE;
+		else
+			transfer_length = len - pos;
+		msgs[0].buf[0] = (address >> 8) & 0xFF;
+		msgs[0].buf[1] = address & 0xFF;
+		msgs[1].len = transfer_length;
+		for (retry = 0; retry < RETRY_MAX_TIMES; retry++) {
+			if (likely(i2c_transfer(client->adapter,
+					msgs, 2) == 2)) {
+				memcpy(&buf[2 + pos], msgs[1].buf,
+					transfer_length);
+				pos += transfer_length;
+				address += transfer_length;
+				break;
+			}
+			GTP_INFO("I2c read retry[%d]:0x%x\n",
+				retry + 1, address);
+			usleep_range(2000, 2100);
+		}
+		if (unlikely(retry == RETRY_MAX_TIMES)) {
+			GTP_ERROR("I2c read failed,dev:%02x,reg:%04x,size:%u\n",
+				client->addr, address, len);
+			r = -EAGAIN;
 #if GTP_COMPATIBLE_MODE
-		struct goodix_ts_data *ts = i2c_get_clientdata(client);
+			struct goodix_ts_data *ts = i2c_get_clientdata(client);
 #endif
 
 #if GTP_GESTURE_WAKEUP
-		// reset chip would quit doze mode
-		if (DOZE_ENABLED == doze_status)
-		{
-			return ret;
-		}
+			// reset chip would quit doze mode
+			if (DOZE_ENABLED == doze_status)
+			{
+				return ret;
+			}
 #endif
-		GTP_ERROR("I2C Read: 0x%04X, %d bytes failed, errcode: %d! Process reset.", (((u16)(buf[0] << 8)) | buf[1]), len-2, ret);
 #if GTP_COMPATIBLE_MODE
-		if (CHIP_TYPE_GT9F == ts->chip_type)
-		{
-			gtp_recovery_reset(client);
-		}
-		else
+			if (CHIP_TYPE_GT9F == ts->chip_type)
+			{
+				gtp_recovery_reset(client);
+			}
+			else
 #endif
-		{
-			gtp_reset_guitar(client, 10);
+			{
+				gtp_reset_guitar(client, 10);
+			}
+			goto read_exit;
 		}
 	}
-	return ret;
+read_exit:
+	if (len >= sizeof(get_buf))
+		kfree(msgs[1].buf);
+	return r;
 }
 
 
