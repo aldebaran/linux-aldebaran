@@ -435,17 +435,20 @@
 		00 00 00 00 99 01];
 
 	};
+
 	pn547: pn547@28 {
 	       status = "okay";
 	       compatible = "nxp,pn547";
 	       reg = <0x28>;
 	       clock-frequency = <400000>;
-	       pinctrl-names = "pn547_active";
-	       pinctrl-0 = <&pn547_active>;
+	       pinctrl-names = "pn547_int_active", "pn547_int_sleep", "pn547_reset_active", "pn547_reset_sleep";
+	       pinctrl-0 = <&pn547_int_active>;
+	       pinctrl-1 = <&pn547_int_sleep>;
+	       pinctrl-2 = <&pn547_reset_active>;
+	       pinctrl-3 = <&pn547_reset_sleep>;
 	       interrupt-gpios = <&tlmm 83 0x2008>;
 	       enable-gpios = <&tlmm 84 0x00>;
        };
-
 };
 
 /*

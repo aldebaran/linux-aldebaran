@@ -882,16 +882,57 @@
 			};
 		};
 
-		pn547_active: pn547_active {
-			mux {
-				pins = "gpio83", "gpio84";
-				function = "gpio";
+		pn547_pins: pn547_pins {
+			pn547_reset_sleep: pn547_reset_sleep {
+				mux {
+					pins = "gpio84";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio84";
+					drive-strength = <2>;
+					bias-pull-down;
+				};
 			};
 
-			config {
-				pins = "gpio83", "gpio84";
-				bias-pull-down;
-				drive-strength = <16>;
+			pn547_reset_active: pn547_reset_active {
+				mux {
+					pins = "gpio84";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio84";
+					drive-strength = <16>;
+					bias-pull-up;
+				};
+			};
+
+			pn547_int_sleep: pn547_int_sleep {
+				mux {
+					pins = "gpio83";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio83";
+					drive-strength = <2>;
+					bias-pull-down;
+				};
+			};
+
+			pn547_int_active: pn547_int_active {
+				mux {
+					pins = "gpio83";
+					function = "gpio";
+				};
+
+				config {
+					pins = "gpio83";
+					drive-strength = <16>;
+					bias-pull-up;
+				};
 			};
                 };
 
