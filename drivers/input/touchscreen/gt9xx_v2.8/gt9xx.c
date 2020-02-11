@@ -411,6 +411,9 @@ static u8 gtp_get_points(struct goodix_ts_data *ts,
 		if (ts->pdata->swap_x2y)
 			GTP_SWAP(points[i].x, points[i].y);
 
+		/* sbr: fix screen orientation is upside down */
+		points[i].x = ts->pdata->abs_size_x - points[i].x;
+
 		dev_dbg(&ts->client->dev, "[%d][%d %d %d]\n",
 			points[i].id, points[i].x, points[i].y, points[i].p);
 
