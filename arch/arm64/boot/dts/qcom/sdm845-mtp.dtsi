@@ -395,24 +395,34 @@
 		compatible = "ti,lp8863";
 		reg = <0x3C>;
 	};
-	gt9xx: gt9xx@5d {
+
+	gt9xx: goodix@5d {
 		status = "okay";
 		compatible = "goodix,gt9xx";
 		reg = <0x5d>;
 		interrupt-parent = <&tlmm>;
 		interrupts = <125 0x2008>;
-		pinctrl-names = "ts_int_active", "ts_int_suspend", "ts_reset_active", "ts_reset_suspend";
+		reset-gpios = <&tlmm 2 0x00>;
+		irq-gpios = <&tlmm 125 0x2008>;
+		pinctrl-names = "gdix_ts_int_default", "gdix_ts_int_output_low",
+			"gdix_ts_int_output_high", "gdix_ts_int_input",
+			"gdix_ts_rst_default", "gdix_ts_rst_output_low",
+			"gdix_ts_rst_output_high", "gdix_ts_rst_input";
 		pinctrl-0 = <&ts_int_active>;
 		pinctrl-1 = <&ts_int_suspend>;
-		pinctrl-2 = <&ts_reset_active>;
-		pinctrl-3 = <&ts_reset_suspend>;
-		goodix,rst-gpio = <&tlmm 2 0>;
-		goodix,irq-gpio = <&tlmm 125 0x2008>;
-		goodix,display-coords = <0 0 800 1280>;
-		goodix,panel-coords = <0 0 800 1280>;
-		goodix,button-map= <158 102 139>;
-		goodix,product-id = "928";
-
+		pinctrl-2 = <&ts_int_active>;
+		pinctrl-3 = <&ts_int_active>;
+		pinctrl-4 = <&ts_reset_active>;
+		pinctrl-5 = <&ts_reset_suspend>;
+		pinctrl-6 = <&ts_reset_active>;
+		pinctrl-7 = <&ts_reset_active>;
+		goodix,swap-x2y = <1>;
+		touchscreen-size-x= <1280>;
+		touchscreen-size-y= <800>;
+		touchscreen-max-w = <255>;
+		touchscreen-max-p = <255>;
+		touchscreen-max-id= <255>;
+		touchscreen-key-map= <158>, <102>, <139>;
 		goodix,cfg-group0 = [
 		00 20 03 00 05 0A 0C 00 01 0F
 		14 0F 5A 46 03 05 00 00 00 00
