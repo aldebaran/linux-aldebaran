@@ -1989,7 +1989,7 @@ static int gtp_power_init(struct goodix_ts_data *ts)
 {
 	int ret;
 
-	ts->vdd_ana = regulator_get(&ts->client->dev, "vdd_ana");
+	ts->vdd_ana = regulator_get_optional(&ts->client->dev, "vdd_ana");
 	if (IS_ERR(ts->vdd_ana)) {
 		ts->vdd_ana = NULL;
 		ret = PTR_ERR(ts->vdd_ana);
@@ -1997,7 +1997,7 @@ static int gtp_power_init(struct goodix_ts_data *ts)
 			 "Regulator get failed vdd ret=%d\n", ret);
 	}
 
-	ts->vcc_i2c = regulator_get(&ts->client->dev, "vcc_i2c");
+	ts->vcc_i2c = regulator_get_optional(&ts->client->dev, "vcc_i2c");
 	if (IS_ERR(ts->vcc_i2c)) {
 		ts->vcc_i2c = NULL;
 		ret = PTR_ERR(ts->vcc_i2c);
