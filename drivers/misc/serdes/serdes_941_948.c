@@ -73,20 +73,19 @@ static int serdes_948_init(struct serdes_941_948_data *data)
     //ds90ub948  Device initialization
     pr_info("%s\n",__func__);
 
+    //LINK_ERROR_COUNT
+    i2c_smbus_write_byte_data(data->client, 0x41, 0x1F);
+
     //GENERAL_CONFIGURATION_1
-    i2c_smbus_write_byte_data(data->client, 0x03, 0xF8);
+    i2c_smbus_write_byte_data(data->client, 0x03, 0xf0);
 
     //I2C_CONTROL_1
-    i2c_smbus_write_byte_data(data->client, 0x05, 0x9E);
+    i2c_smbus_write_byte_data(data->client, 0x05, 0x1E);
 
     //GPIO config
     i2c_smbus_write_byte_data(data->client, 0x1F, 0x05);// GPIO 3
     i2c_smbus_write_byte_data(data->client, 0x1E, 0x53);// GPIO 2 and 1
     i2c_smbus_write_byte_data(data->client, 0x1D, 0x03);// GPIO 0
-
-    //CML_OUTPUT
-    i2c_smbus_write_byte_data(data->client, 0x56, 0x08);
-    i2c_smbus_write_byte_data(data->client, 0x57, 0x02);
 
     return 0;
 
