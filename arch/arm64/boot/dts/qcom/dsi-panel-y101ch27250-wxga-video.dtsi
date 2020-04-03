@@ -43,6 +43,7 @@
 		qcom,mdss-dsi-t-clk-pre = <0x1d>;
 		qcom,mdss-dsi-reset-sequence = <1 10>, <0 20>, <1 10>;
 		qcom,mdss-dsi-force-clock-lane-hs;
+		qcom,mdss-dsi-tx-eot-append;
 
 		qcom,mdss-dsi-display-timings {
 			timing@0 {
