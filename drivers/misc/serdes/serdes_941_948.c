@@ -39,6 +39,9 @@ static int serdes_941_init(struct serdes_941_948_data *data)
     //ds90ub941  Device initialization
     pr_info("%s\n",__func__);
 
+    //Disable DSI
+    i2c_smbus_write_byte_data(data->client, 0x01, 0x08);
+
     //Remote slave devices
     i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_0,    REMOTE_SLAVE_ADD_1);
     i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_0, REMOTE_SLAVE_ADD_1);
@@ -47,15 +50,11 @@ static int serdes_941_init(struct serdes_941_948_data *data)
     i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_2,    REMOTE_SLAVE_ADD_3);
     i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_2, REMOTE_SLAVE_ADD_3);
 
-
     i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_3, REMOTE_SLAVE_ADD_4);
     i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_3, REMOTE_SLAVE_ADD_4);
 
     //GENERAL_CFG
     i2c_smbus_write_byte_data(data->client, 0x03, 0x9A);
-
-    //Disable DSI
-    //i2c_smbus_write_byte_data(data->client, 0x01, 0x08);
 
     //Disable I2S
     i2c_smbus_write_byte_data(data->client, 0x54, 0x00);
@@ -64,6 +63,58 @@ static int serdes_941_init(struct serdes_941_948_data *data)
     i2c_smbus_write_byte_data(data->client, 0x0F, 0x03);// GPIO 3
     i2c_smbus_write_byte_data(data->client, 0x0E, 0x35);// GPIO 2 and 1
     i2c_smbus_write_byte_data(data->client, 0x0D, 0x05);// GPIO 0
+
+    // Panel configuration
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x04);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x98);
+
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x05);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x83);
+
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x06);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x51);
+
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x07);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x20);
+
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x08);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x03);
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x09);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x50);
+
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x0A);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x18);
+
+    // vertical sync width
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x0B);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x02);
+
+    // horizontal back porch width
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x0C);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x18);
+
+    // vertical back porch width
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x0D);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x0A);
+
+    // frequency N : 800 * M / N
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x03);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x38);
+
+    // frequency M : 800 * M / N
+    i2c_smbus_write_byte_data(data->client, 0x66, 0x1A);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x05);
+
+    // Set DSI register 0x05 to 0x12
+    i2c_smbus_write_byte_data(data->client, 0x40, 0x04);
+    i2c_smbus_write_byte_data(data->client, 0x41, 0x05);
+    i2c_smbus_write_byte_data(data->client, 0x42, 0x12);
+
+    // Use internal ref CLOCK instead of DSI CLOCK
+    i2c_smbus_write_byte_data(data->client, 0x56, 0x02);
+
+    //Enable DSI
+    i2c_smbus_write_byte_data(data->client, 0x01, 0x00);
 
     return 0;
 }
