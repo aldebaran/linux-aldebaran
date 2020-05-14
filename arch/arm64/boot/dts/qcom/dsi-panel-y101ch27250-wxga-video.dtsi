@@ -35,13 +35,16 @@
 		qcom,mdss-dsi-lane-3-state;
 		qcom,mdss-dsi-bl-min-level = <1>;
 		qcom,mdss-dsi-bl-max-level = <4095>;
-		qcom,mdss-pan-physical-width-dimension = <150>;
-		qcom,mdss-pan-physical-height-dimension = <94>;
+		qcom,mdss-pan-physical-width-dimension = <135>;
+		qcom,mdss-pan-physical-height-dimension = <216>;
 		qcom,mdss-dsi-dma-trigger = "trigger_sw";
 		qcom,mdss-dsi-mdp-trigger = "none";
+		qcom,mdss-dsi-panel-timings = [00 11 04 04 1E 1E 04 04 02 02 04 00];
 		qcom,mdss-dsi-t-clk-post = <0x0a>;
 		qcom,mdss-dsi-t-clk-pre = <0x1d>;
 		qcom,mdss-dsi-reset-sequence = <1 10>, <0 20>, <1 10>;
+		qcom,mdss-dsi-lp11-init;
+		qcom,mdss-dsi-init-delay-us = <500>;
 		qcom,mdss-dsi-force-clock-lane-hs;
 		qcom,mdss-dsi-tx-eot-append;
 
