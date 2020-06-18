@@ -116,6 +116,8 @@ static int serdes_941_init(struct serdes_941_948_data *data)
     //Enable DSI
     i2c_smbus_write_byte_data(data->client, 0x01, 0x00);
 
+    // Wait 20ms that SER initialises
+    msleep(20);
     return 0;
 }
 
