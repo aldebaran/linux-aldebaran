@@ -1010,8 +1010,6 @@ static void aggr_slice_amsdu(struct aggr_info *p_aggr,
 
 		if (payload_8023_len < MIN_MSDU_SUBFRAME_PAYLOAD_LEN ||
 		    payload_8023_len > MAX_MSDU_SUBFRAME_PAYLOAD_LEN) {
-			ath6kl_info("802.3 AMSDU frame bound check failed. len %d\n",
-				   payload_8023_len);
 			break;
 		}
 
