@@ -31,38 +31,75 @@
 
 struct serdes_941_948_data {
     struct i2c_client *client;
-    bool serdes; /* 0 for serializer 1 for deserializer*/
 };
 
 static int serdes_941_init(struct serdes_941_948_data *data)
 {
+    int ret;
+
     //ds90ub941  Device initialization
     pr_info("%s\n",__func__);
 
     //Disable DSI
-    i2c_smbus_write_byte_data(data->client, 0x01, 0x08);
+    ret = i2c_smbus_write_byte_data(data->client, 0x01, 0x08);
+    if (ret < 0)
+        pr_err("%s error setting DISABLE_DSI\n",__func__);
 
     //Remote slave devices
-    i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_0,    REMOTE_SLAVE_ADD_1);
-    i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_0, REMOTE_SLAVE_ADD_1);
-    i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_1,    REMOTE_SLAVE_ADD_2);
-    i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_1, REMOTE_SLAVE_ADD_2);
-    i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_2,    REMOTE_SLAVE_ADD_3);
-    i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_2, REMOTE_SLAVE_ADD_3);
+    ret = i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_0,    REMOTE_SLAVE_ADD_1);
+    if (ret < 0)
+        pr_err("%s error setting NFC I2C\n",__func__);
 
-    i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_3, REMOTE_SLAVE_ADD_4);
-    i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_3, REMOTE_SLAVE_ADD_4);
+    ret = i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_0, REMOTE_SLAVE_ADD_1);
+    if (ret < 0)
+        pr_err("%s error setting NFC I2C ALIAS\n",__func__);
+
+    ret = i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_1,    REMOTE_SLAVE_ADD_2);
+    if (ret < 0)
+        pr_err("%s error setting BACKLIGHT I2C\n",__func__);
+
+    ret = i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_1, REMOTE_SLAVE_ADD_2);
+    if (ret < 0)
+        pr_err("%s error setting BACKLIGHT I2C ALIAS\n",__func__);
+
+    ret = i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_2,    REMOTE_SLAVE_ADD_3);
+    if (ret < 0)
+        pr_err("%s error setting TOUCH I2CLINK_ERROR_COUNT\n",__func__);
+
+    ret = i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_2, REMOTE_SLAVE_ADD_3);
+    if (ret < 0)
+        pr_err("%s error setting TOUCH I2C ALIAS\n",__func__);
+
+
+    ret = i2c_smbus_write_byte_data(data->client, REG_SLAVE_ID_3, REMOTE_SLAVE_ADD_4);
+    if (ret < 0)
+        pr_err("%s error setting EEPROM I2C\n",__func__);
+
+    ret = i2c_smbus_write_byte_data(data->client, REG_SLAVE_ALIAS_3, REMOTE_SLAVE_ADD_4);
+    if (ret < 0)
+        pr_err("%s error setting EEPROM I2C ALIAS\n",__func__);
 
     //GENERAL_CFG
-    i2c_smbus_write_byte_data(data->client, 0x03, 0x9A);
+    ret = i2c_smbus_write_byte_data(data->client, 0x03, 0x9A);
+    if (ret < 0)
+        pr_err("%s error setting GENERAL_CFG\n",__func__);
 
     //Disable I2S
     i2c_smbus_write_byte_data(data->client, 0x54, 0x00);
 
     //GPIO config
-    i2c_smbus_write_byte_data(data->client, 0x0F, 0x03);// GPIO 3
-    i2c_smbus_write_byte_data(data->client, 0x0E, 0x35);// GPIO 2 and 1
-    i2c_smbus_write_byte_data(data->client, 0x0D, 0x05);// GPIO 0
+    ret = i2c_smbus_write_byte_data(data->client, 0x0F, 0x03);// GPIO 3
+    if (ret < 0)
+        pr_err("%s error setting GPIO 3\n",__func__);
+
+    ret = i2c_smbus_write_byte_data(data->client, 0x0E, 0x35);// GPIO 2 and 1
+    if (ret < 0)
+        pr_err("%s error setting GPIO 2 AND 1\n",__func__);
+
+    ret = i2c_smbus_write_byte_data(data->client, 0x0D, 0x05);// GPIO 0
+    if (ret < 0)
+        pr_err("%s error setting GPIO 0\n",__func__);
+
 
     // Panel configuration
     i2c_smbus_write_byte_data(data->client, 0x66, 0x04);
@@ -114,39 +151,74 @@ static int serdes_941_init(struct serdes_941_948_data *data)
     i2c_smbus_write_byte_data(data->client, 0x56, 0x02);
 
     //Enable DSI
-    i2c_smbus_write_byte_data(data->client, 0x01, 0x00);
+    ret = i2c_smbus_write_byte_data(data->client, 0x01, 0x00);
+    if (ret < 0)
+        pr_err("%s error setting ENABLE DSI\n",__func__);
 
-    // Wait 20ms that SER initialises
-    msleep(20);
     return 0;
 }
 
 static int serdes_948_init(struct serdes_941_948_data *data)
 {
+    int ret;
+
     //ds90ub948  Device initialization
     pr_info("%s\n",__func__);
 
     //LINK_ERROR_COUNT
-    i2c_smbus_write_byte_data(data->client, 0x41, 0x1F);
+    ret = i2c_smbus_write_byte_data(data->client, 0x41, 0x1F);
+    if (ret < 0)
+    {
+        pr_err("%s error setting LINK_ERROR_COUNT\n",__func__);
+        goto err;
+    }
 
     //GENERAL_CONFIGURATION_1
-    i2c_smbus_write_byte_data(data->client, 0x03, 0xf0);
+    ret = i2c_smbus_write_byte_data(data->client, 0x03, 0xf0);
+    if (ret < 0)
+    {
+        pr_err("%s error setting GENERAL_CONFIGURATION_1\n",__func__);
+        goto err;
+    }
 
     //I2C_CONTROL_1
-    i2c_smbus_write_byte_data(data->client, 0x05, 0x1E);
+    ret = i2c_smbus_write_byte_data(data->client, 0x05, 0x1E);
+    if (ret < 0)
+    {
+        pr_err("%s error setting I2C_CONTROL_1\n",__func__);
+        goto err;
+    }
 
     //GPIO config
-    i2c_smbus_write_byte_data(data->client, 0x1F, 0x05);// GPIO 3
-    i2c_smbus_write_byte_data(data->client, 0x1E, 0x53);// GPIO 2 and 1
-    i2c_smbus_write_byte_data(data->client, 0x1D, 0x03);// GPIO 0
+    ret = i2c_smbus_write_byte_data(data->client, 0x1F, 0x05);// GPIO 3
+    if (ret < 0)
+    {
+        pr_err("%serror setting GPIO 3 \n",__func__);
+        goto err;
+    }
+    ret = i2c_smbus_write_byte_data(data->client, 0x1E, 0x53);// GPIO 2 and 1
+    if (ret < 0)
+    {
+        pr_err("%serror setting GPIO 2 and 1\n",__func__);
+        goto err;
+    }
+    ret = i2c_smbus_write_byte_data(data->client, 0x1D, 0x03);// GPIO 0
+    if (ret < 0)
+    {
+        pr_err("%s error setting GPIO 0 \n",__func__);
+        goto err;
+    }
 
     return 0;
 
+err:
+    return ret;
 }
 
 static int serdes_941_948_probe(struct i2c_client *client,
         const struct i2c_device_id *id)
 {
+    int ret;
     struct serdes_941_948_data *data;
     pr_info("%s : %d SERDES \n",__func__, __LINE__);
 
@@ -158,10 +230,21 @@ static int serdes_941_948_probe(struct i2c_client *client,
     i2c_set_clientdata(client, data);
     //i2c_smbus_read_byte_data(client, 0x00);
 
-    //read register 0x00 if value is 0x18 call serdes_941_init() else if 0x58 call serdes_948_init();
-    serdes_941_init(data);
+    ret = serdes_941_init(data);
+    if (ret < 0)
+    {
+	    pr_err("%s error could not initialize serialiser (%d)\n",__func__, ret);
+    }
+    // Wait 100ms that SER initialises
+    msleep(100);
     data->client->addr = DES_ADDRESS;
-    serdes_948_init(data);
+    ret = serdes_948_init(data);
+    if (ret < 0)
+    {
+	    pr_err("%s error could not initialize deserialiser (%d)\n",__func__, ret);
+    }
+    // Wait 50ms that DES initialises
+    msleep(50);
 
     return 0;
 }
