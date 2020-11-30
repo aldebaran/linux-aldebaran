@@ -100,16 +100,19 @@ static int serdes_941_init(struct serdes_941_948_data *data)
     if (ret < 0)
         pr_err("%s error setting GPIO 0\n",__func__);
 
+    /*************************/
+    /* Panel configuration   */
+    /*************************/
 
-    // Panel configuration
+    // Total Horizontal Width:
     i2c_smbus_write_byte_data(data->client, 0x66, 0x04);
-    i2c_smbus_write_byte_data(data->client, 0x67, 0x98);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0xc0);
 
     i2c_smbus_write_byte_data(data->client, 0x66, 0x05);
-    i2c_smbus_write_byte_data(data->client, 0x67, 0x83);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x93);
 
     i2c_smbus_write_byte_data(data->client, 0x66, 0x06);
-    i2c_smbus_write_byte_data(data->client, 0x67, 0x51);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x52);
 
     i2c_smbus_write_byte_data(data->client, 0x66, 0x07);
     i2c_smbus_write_byte_data(data->client, 0x67, 0x20);
@@ -119,24 +122,25 @@ static int serdes_941_init(struct serdes_941_948_data *data)
     i2c_smbus_write_byte_data(data->client, 0x66, 0x09);
     i2c_smbus_write_byte_data(data->client, 0x67, 0x50);
 
+    // horizontal sync width
     i2c_smbus_write_byte_data(data->client, 0x66, 0x0A);
     i2c_smbus_write_byte_data(data->client, 0x67, 0x18);
 
     // vertical sync width
     i2c_smbus_write_byte_data(data->client, 0x66, 0x0B);
-    i2c_smbus_write_byte_data(data->client, 0x67, 0x02);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x03);
 
     // horizontal back porch width
     i2c_smbus_write_byte_data(data->client, 0x66, 0x0C);
-    i2c_smbus_write_byte_data(data->client, 0x67, 0x18);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x38);
 
     // vertical back porch width
     i2c_smbus_write_byte_data(data->client, 0x66, 0x0D);
-    i2c_smbus_write_byte_data(data->client, 0x67, 0x0A);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x14);
 
     // frequency N : 800 * M / N
     i2c_smbus_write_byte_data(data->client, 0x66, 0x03);
-    i2c_smbus_write_byte_data(data->client, 0x67, 0x38);
+    i2c_smbus_write_byte_data(data->client, 0x67, 0x34);
 
     // frequency M : 800 * M / N
     i2c_smbus_write_byte_data(data->client, 0x66, 0x1A);
