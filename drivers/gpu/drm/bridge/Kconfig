@@ -83,6 +83,22 @@ config DRM_LT_LT9611
 	help
 	  Support for the LT Devices LT9611 DSI to HDMI encoder.
 
+config DRM_TI_SN65DSI84
+	tristate "SN65DSI84 DSI to LVDS bridge (old)"
+	select REGMAP_I2C
+	select DRM_MIPI_DSI
+	---help---
+	  Support for the Texas Intruments SN65DSI84 bridge.
+
+config DRM_TI_SN65DSI83
+	tristate "SN65DSI83/4 DSI to LVDS bridge (suggested)"
+	select REGMAP_I2C
+	select DRM_MIPI_DSI
+	---help---
+	  Support for the Texas Intruments SN65DSI84 and SN65DSI83 bridges.
+
+source "drivers/gpu/drm/bridge/sn65dsi83/Kconfig"
+
 source "drivers/gpu/drm/bridge/analogix/Kconfig"
 
 source "drivers/gpu/drm/bridge/adv7511/Kconfig"
