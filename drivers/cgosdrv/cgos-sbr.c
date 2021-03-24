@@ -47,11 +47,11 @@ static ssize_t robot_type_show(struct kobject *kobj,
 {
 	switch (robot_type) {
 	case ROBOT_TYPE_PEPPER_1:
-		return sprintf(buf, "pepper1");
+		return sprintf(buf, "pepper1\n");
 	case ROBOT_TYPE_PEPPER_18:
-		return sprintf(buf, "pepper18");
+		return sprintf(buf, "pepper18\n");
 	case ROBOT_TYPE_NAO_6:
-		return sprintf(buf, "nao6");
+		return sprintf(buf, "nao6\n");
 	case ROBOT_TYPE_UNKNOWN:
 		break;
 	}
