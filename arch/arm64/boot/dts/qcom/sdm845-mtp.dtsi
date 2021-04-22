@@ -82,6 +82,12 @@
 			linux,can-disable;
 		};
 	};
+
+	qcom,sbr_ponyo_power_supply {
+		compatible = "sbr,ponyo_power_supply";
+		status = "okay";
+	};
+
 };
 
 &labibb {

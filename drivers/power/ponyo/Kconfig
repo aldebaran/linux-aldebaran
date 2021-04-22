@@ -1,0 +1,4 @@
+config PONYO_POWER_SUPPLY
+	tristate "Ponyo power supply driver"
+	help
+	  Say Y to activate this Ponyo Power Supply driver.
