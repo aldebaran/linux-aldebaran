@@ -35,7 +35,8 @@ struct usb_ponyo_power_supply {
 	struct usb_driver			driver;				/* usb_driver for this device */
 
         /* power supply data */
-	struct power_supply			battery;			/* power supply for this device */
+        struct power_supply			*battery;			/* power supply for this device */
+        struct power_supply_desc                bat_desc;
         int					capacity;			/* current charge, percent */
         int					time_to_empty;			/* remain. bat. discharge time (s) */
         int					time_to_full;			/* remain. bat. charge time (s) */
@@ -46,10 +47,7 @@ static int ponyo_power_supply_get_property(struct power_supply *psy,
                             enum power_supply_property psp,
                             union power_supply_propval *val)
 {
-        struct usb_ponyo_power_supply *upps = container_of(psy,
-                        struct usb_ponyo_power_supply,
-                        battery);
-
+        struct usb_ponyo_power_supply *upps  = power_supply_get_drvdata(psy);
         // Reply to supported power supply properties
         switch (psp) {
         case POWER_SUPPLY_PROP_STATUS:
@@ -123,7 +121,7 @@ static void ponyo_power_supply_usb_int_callback(struct urb *urb)
 		dev->time_to_empty, dev->time_to_full, dev->status, dev->capacity);
 
 		/* notify kernel of power supply changes */
-		power_supply_changed(&dev->battery);
+		power_supply_changed(dev->battery);
 	}
 	else {
 		printk_ratelimited(KERN_ERR "ponyo_power_supply:"
@@ -222,7 +220,7 @@ static int ponyo_power_supply_usb_probe(
 	usb_set_intfdata(interface, upps);
 
        	/* notify kernel battery info was updated */
-	power_supply_changed(&upps->battery);
+	power_supply_changed(upps->battery);
 
 	pr_info("ponyo_power_supply: battery configuration success");
 
@@ -244,7 +242,7 @@ static void ponyo_power_supply_usb_disconnect(struct usb_interface *interface)
 
 	/* set battery status to unknown */
 	upps->status = POWER_SUPPLY_STATUS_UNKNOWN;
-	power_supply_changed(&upps->battery);
+	power_supply_changed(upps->battery);
 
 
 	/* set interface data to null */
@@ -254,25 +252,28 @@ static void ponyo_power_supply_usb_disconnect(struct usb_interface *interface)
 static int ponyo_power_supply_plat_probe(struct platform_device *pdev) {
 	int result = 0;
 	struct usb_ponyo_power_supply* upps;
+	struct power_supply_config psy_cfg = {};
 
 	pr_info("ponyo_power_supply: init");
 
 	/* allocate usb_ponyo_power_supply structure */
 	pr_debug("ponyo_power_supply: allocate device structure");
 
-	upps = kzalloc(sizeof(struct usb_ponyo_power_supply), GFP_KERNEL);
+	upps = devm_kzalloc(&pdev->dev, sizeof(*upps), GFP_KERNEL);
 	if (!upps) {
 		pr_err("ponyo_power_supply:"
 				"could not allocate device structure");
 		return -ENOMEM;
 	}
 
+	platform_set_drvdata(pdev, upps);
+
 	/* initialize device data structure */
-	upps->battery.name                = "ponyo-battery";
-        upps->battery.type                = POWER_SUPPLY_TYPE_BATTERY;
-        upps->battery.properties          = ponyo_power_supply_props;
-        upps->battery.num_properties      = ARRAY_SIZE(ponyo_power_supply_props);
-        upps->battery.get_property        = ponyo_power_supply_get_property;
+	upps->bat_desc.name                = "ponyo-battery";
+        upps->bat_desc.type                = POWER_SUPPLY_TYPE_BATTERY;
+        upps->bat_desc.properties          = ponyo_power_supply_props;
+        upps->bat_desc.num_properties      = ARRAY_SIZE(ponyo_power_supply_props);
+        upps->bat_desc.get_property        = ponyo_power_supply_get_property;
 
         upps->capacity			= 50;
 	upps->time_to_full		= 60;
@@ -284,11 +285,13 @@ static int ponyo_power_supply_plat_probe(struct platform_device *pdev) {
 	upps->driver.probe		= ponyo_power_supply_usb_probe;
 	upps->driver.disconnect		= ponyo_power_supply_usb_disconnect;
 
+	psy_cfg.drv_data		= upps;
+
 	/* register ponyo-power-supply-battery with power supply class */
 	pr_debug("ponyo_power_supply: register battery");
-	result = power_supply_register(NULL, &upps->battery);
-
-	if (result) {
+	upps->battery = power_supply_register(&pdev->dev, &upps->bat_desc, &psy_cfg);
+	if (IS_ERR(upps->battery)) {
+		result = PTR_ERR(upps->battery);
 		pr_err("ponyo_power_supply:"
 				"power_supply register failed Error number %d"
 				, result);
@@ -331,7 +334,7 @@ static int ponyo_power_supply_plat_remove(struct platform_device *pdev) {
 
 	/* deregister ponyo-power-supply-battery with power-supply class */
 	pr_debug("ponyo_power_supply: deregister battery");
-	power_supply_unregister(&upps->battery);
+	power_supply_unregister(upps->battery);
 
 	/* free device structure */
 	kfree(&pdev->dev);
