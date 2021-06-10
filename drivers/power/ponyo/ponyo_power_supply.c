@@ -130,7 +130,7 @@ static void ponyo_power_supply_usb_int_callback(struct urb *urb)
 	}
 
 	/* register urb for next interrupt */
-	usb_submit_urb(dev->int_urb, GFP_KERNEL);
+	usb_submit_urb(dev->int_urb, GFP_ATOMIC);
 }
 
 static int ponyo_power_supply_usb_probe(
