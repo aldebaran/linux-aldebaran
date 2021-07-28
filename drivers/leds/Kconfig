@@ -321,6 +321,15 @@ config LEDS_LP8863
          This option enables support for the display LED driver using the
          I2C communication bus.
 
+config LEDS_LP8866
+        tristate "LED support for the TI LP8866 LED driver"
+        depends on LEDS_CLASS && I2C && OF
+        select REGMAP_I2C
+        help
+          If you say yes here you get support for the TI LP8866 LED driver.
+          This option enables support for the display LED driver using the
+          I2C communication bus.
+
 config LEDS_CLEVO_MAIL
 	tristate "Mail LED on Clevo notebook"
 	depends on LEDS_CLASS

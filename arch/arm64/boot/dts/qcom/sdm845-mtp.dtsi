@@ -383,6 +383,13 @@
 		reg = <0x3C>;
 	};
 
+	lp8866-q1@2B {
+		status = "okay";
+		compatible = "ti,lp8866";
+		reg = <0x2B>;
+	};
+
+
 	gt9xx: goodix@5d {
 		status = "okay";
 		compatible = "goodix,gt9xx";
