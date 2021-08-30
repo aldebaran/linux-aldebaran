@@ -2124,6 +2124,7 @@ static int gtp_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	ret = gtp_i2c_test(client);
 	if (ret) {
 		dev_err(&client->dev, "Failed communicate with IC use I2C\n");
+		ret = -EPROBE_DEFER;
 		goto exit_power_off;
 	}
 
