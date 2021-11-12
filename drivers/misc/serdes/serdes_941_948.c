@@ -151,8 +151,8 @@ static int serdes_941_init(struct serdes_941_948_data *data)
     i2c_smbus_write_byte_data(data->client, 0x41, 0x05);
     i2c_smbus_write_byte_data(data->client, 0x42, 0x12);
 
-    // Use internal ref CLOCK instead of DSI CLOCK
-    i2c_smbus_write_byte_data(data->client, 0x56, 0x02);
+    // Use DSI CLOCK
+    i2c_smbus_write_byte_data(data->client, 0x56, 0x00);
 
     //Enable DSI
     ret = i2c_smbus_write_byte_data(data->client, 0x01, 0x00);
