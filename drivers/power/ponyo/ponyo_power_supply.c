@@ -20,10 +20,13 @@
 #include <linux/platform_device.h>
 #include <linux/uaccess.h>
 #include <linux/power_supply.h>
+#include <linux/signal.h>
+#include <linux/sched.h>
 
 #define USB_PONYO_POWER_SUPPLY_VENDOR_ID	0x1d6b	/* PPS Linux Vendor ID */
 #define USB_PONYO_POWER_SUPPLY_PRODUCT_ID	0x0104	/* PPS Linux Product ID */
 #define USB_PONYO_POWER_SUPPLY_SUB_CLASS	43	/* PPS Linux Interface Subclass */
+#define SIGSHUTDOWNREQ  52
 
 /* structure to hold ponyo_power_supply device-specific data */
 struct usb_ponyo_power_supply {
@@ -41,6 +44,7 @@ struct usb_ponyo_power_supply {
         int					time_to_empty;			/* remain. bat. discharge time (s) */
         int					time_to_full;			/* remain. bat. charge time (s) */
         int					status;				/* battery status */
+        int					shutdown_request;		/* shutdown request */
 };
 
 static int ponyo_power_supply_get_property(struct power_supply *psy,
@@ -108,20 +112,29 @@ static void ponyo_power_supply_usb_int_callback(struct urb *urb)
 	}
 
 	/* unpack data from interrupt buffer */
-	if (urb->actual_length == 4*sizeof(uint32_t)) {
+	if (urb->actual_length == 5*sizeof(uint32_t)) {
 		payload = (uint32_t*) dev->int_endpoint_buffer;
 		dev->time_to_empty	= *payload;
 		dev->time_to_full	= *(payload + 1);
 	       	dev->status		= *(payload + 2);
 		dev->capacity		= *(payload + 3);
+		dev->shutdown_request	= *(payload + 4);
 
 		pr_debug("ponyo_power_supply: read time_to_empty: %d,"
 				"time_to_full: %d,"
-				"battery_status: %d, capacity: %d",
-		dev->time_to_empty, dev->time_to_full, dev->status, dev->capacity);
+				"battery_status: %d, capacity: %d, shutdown_request: %d",
+		dev->time_to_empty, dev->time_to_full, dev->status, dev->capacity,
+		dev->shutdown_request);
 
 		/* notify kernel of power supply changes */
 		power_supply_changed(dev->battery);
+
+		if(dev->shutdown_request) {
+			/* Finding task_struct corresponding to init process */
+			struct task_struct *p = find_task_by_vpid(1);
+			/* Send SIGSHUTDOWNREQ to init process */
+			send_sig(SIGSHUTDOWNREQ, p, 0);
+		}
 	}
 	else {
 		printk_ratelimited(KERN_ERR "ponyo_power_supply:"
