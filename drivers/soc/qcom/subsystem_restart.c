@@ -1746,6 +1746,7 @@ struct subsys_device *subsys_register(struct subsys_desc *desc)
 			sizeof(subsys->desc->fw_name));
 
 	subsys->notify = subsys_notif_add_subsys(desc->name);
+	subsys->restart_level = RESET_SUBSYS_COUPLED;
 
 	snprintf(subsys->wlname, sizeof(subsys->wlname), "ssr(%s)", desc->name);
 	wakeup_source_init(&subsys->ssr_wlock, subsys->wlname);
